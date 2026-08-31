@@ -1,0 +1,1732 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+>
+
+<meta name="theme-color" content="#09090b">
+
+<title>REEL CHECK — Creator Intelligence</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(
+      circle at 50% -10%,
+      rgba(124,58,237,.20),
+      transparent 35%
+    ),
+    #09090b;
+
+  color: #fafafa;
+
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Display",
+    "SF Pro Text",
+    "Segoe UI",
+    sans-serif;
+
+  min-height: 100vh;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.glass {
+  background:
+    rgba(24,24,27,.72);
+
+  backdrop-filter:
+    blur(20px);
+
+  -webkit-backdrop-filter:
+    blur(20px);
+
+  border:
+    1px solid rgba(255,255,255,.08);
+}
+
+.gradient-text {
+  background:
+    linear-gradient(
+      100deg,
+      #fff,
+      #c4b5fd,
+      #8b5cf6
+    );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+
+  color: transparent;
+}
+
+.upload-zone {
+  transition:
+    .25s ease;
+}
+
+.upload-zone:active {
+  transform:
+    scale(.985);
+}
+
+.progress-bar {
+  transition:
+    width .4s ease;
+}
+
+.score-ring {
+  background:
+    conic-gradient(
+      #8b5cf6 var(--score),
+      #27272a var(--score)
+    );
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display:none;
+}
+
+.hide-scrollbar {
+  scrollbar-width:none;
+}
+
+.fade-in {
+  animation:
+    fadeIn .45s ease both;
+}
+
+@keyframes fadeIn {
+
+  from {
+    opacity:0;
+    transform:
+      translateY(8px);
+  }
+
+  to {
+    opacity:1;
+    transform:
+      translateY(0);
+  }
+
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+<div
+  id="app"
+  class="max-w-xl mx-auto px-4 pb-16"
+>
+
+
+<!-- =====================================================
+HEADER
+===================================================== -->
+
+<header
+  class="pt-7 pb-5"
+>
+
+<div
+  class="flex items-center justify-between"
+>
+
+<div>
+
+<div
+  class="flex items-center gap-2 mb-2"
+>
+
+<div
+  class="w-2 h-2 rounded-full bg-violet-500 shadow-lg shadow-violet-500/50"
+></div>
+
+<span
+  class="text-[10px] font-bold tracking-[.18em] text-violet-300 uppercase"
+>
+CREATOR INTELLIGENCE
+</span>
+
+</div>
+
+<h1
+  class="text-3xl font-black tracking-tight"
+>
+
+REEL
+<span class="gradient-text">
+CHECK
+</span>
+
+</h1>
+
+<p
+  class="text-[11px] text-zinc-500 mt-1"
+>
+تحليل ذكي محلي لصنّاع المحتوى
+</p>
+
+</div>
+
+
+<div
+  class="glass rounded-2xl px-3 py-2 text-center"
+>
+
+<div
+  id="memoryCount"
+  class="text-lg font-black"
+>
+0
+</div>
+
+<div
+  class="text-[9px] text-zinc-500"
+>
+ريل محفوظ
+</div>
+
+</div>
+
+</div>
+
+</header>
+
+
+
+<!-- =====================================================
+DASHBOARD
+===================================================== -->
+
+<section
+  id="dashboard"
+  class="space-y-4"
+>
+
+
+<!-- ACCOUNT CARD -->
+
+<div
+  class="glass rounded-3xl p-5"
+>
+
+<div
+  class="flex justify-between items-start mb-5"
+>
+
+<div>
+
+<p
+  class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest"
+>
+ACCOUNT PROFILE
+</p>
+
+<h2
+  class="text-lg font-black mt-1"
+>
+ملف حسابك
+</h2>
+
+</div>
+
+<span
+  id="learningStatus"
+  class="text-[9px] px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-400"
+>
+بيانات غير كافية
+</span>
+
+</div>
+
+
+<div
+  class="grid grid-cols-2 gap-2"
+>
+
+
+<div
+  class="bg-zinc-950/70 rounded-2xl p-3"
+>
+
+<label
+  class="block text-[9px] text-zinc-500 mb-2"
+>
+متوسط المشاهدات
+</label>
+
+<select
+  id="accountBaseline"
+  class="w-full bg-transparent text-xs font-bold outline-none"
+>
+
+<option value="under_2k">
+أقل من 2K
+</option>
+
+<option value="2k_10k">
+2K – 10K
+</option>
+
+<option value="10k_50k">
+10K – 50K
+</option>
+
+<option value="50k_plus">
+50K+
+</option>
+
+</select>
+
+</div>
+
+
+<div
+  class="bg-zinc-950/70 rounded-2xl p-3"
+>
+
+<label
+  class="block text-[9px] text-zinc-500 mb-2"
+>
+نوع المحتوى
+</label>
+
+<select
+  id="accountNiche"
+  class="w-full bg-transparent text-xs font-bold outline-none"
+>
+
+<option value="brand">
+براند / تجارة
+</option>
+
+<option value="personal">
+شخصي / تعليمي
+</option>
+
+<option value="entertainment">
+ترفيه / لايف ستايل
+</option>
+
+</select>
+
+</div>
+
+</div>
+
+</div>
+
+
+
+<!-- =====================================================
+UPLOAD
+===================================================== -->
+
+<div
+  id="uploadCard"
+  class="glass rounded-3xl p-5"
+>
+
+<div
+  class="mb-5"
+>
+
+<p
+  class="text-[10px] font-bold text-violet-400 tracking-widest uppercase"
+>
+LOCAL ANALYSIS
+</p>
+
+<h2
+  class="text-xl font-black mt-1"
+>
+حلّل ريلك
+</h2>
+
+<p
+  class="text-[11px] text-zinc-500 mt-1"
+>
+الفيديو يبقى على جهازك.
+</p>
+
+</div>
+
+
+<label
+  for="videoInput"
+  class="upload-zone block border border-dashed border-zinc-700 rounded-3xl p-8 text-center bg-zinc-950/40"
+>
+
+<div
+  class="w-14 h-14 mx-auto rounded-2xl bg-violet-600/10 border border-violet-500/20 flex items-center justify-center mb-4"
+>
+
+<svg
+  width="25"
+  height="25"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.6"
+  class="text-violet-400"
+>
+
+<path
+  d="M15 10l4.55-2.28A1 1 0 0121 8.62v6.76a1 1 0 01-1.45.9L15 14"
+/>
+
+<rect
+  x="3"
+  y="6"
+  width="12"
+  height="12"
+  rx="2"
+/>
+
+</svg>
+
+</div>
+
+
+<h3
+  class="text-sm font-bold"
+>
+اختر فيديو الريل
+</h3>
+
+<p
+  class="text-[10px] text-zinc-500 mt-2"
+>
+MP4 / MOV • التحليل يتم محلياً
+</p>
+
+
+<div
+  class="inline-block mt-5 px-5 py-2.5 rounded-full bg-white text-black text-[11px] font-black"
+>
+اختيار الفيديو
+</div>
+
+</label>
+
+
+<input
+  id="videoInput"
+  type="file"
+  accept="video/*,.mp4,.mov,.m4v"
+  class="hidden"
+>
+
+
+<div
+  id="selectedFile"
+  class="hidden mt-4 bg-zinc-950 rounded-2xl p-3"
+>
+
+<div
+  class="flex items-center gap-3"
+>
+
+<div
+  class="w-9 h-9 rounded-xl bg-violet-600/15 flex items-center justify-center"
+>
+🎬
+</div>
+
+<div
+  class="min-w-0 flex-1"
+>
+
+<p
+  id="fileName"
+  class="text-xs font-bold truncate"
+></p>
+
+<p
+  id="fileMeta"
+  class="text-[9px] text-zinc-500 mt-1"
+></p>
+
+</div>
+
+<span
+  class="text-emerald-400 text-[10px] font-bold"
+>
+جاهز
+</span>
+
+</div>
+
+</div>
+
+
+<button
+  id="analyzeBtn"
+  disabled
+  class="w-full mt-4 py-4 rounded-2xl bg-violet-600 disabled:bg-zinc-800 disabled:text-zinc-600 text-white text-sm font-black transition"
+>
+ابدأ التحليل
+</button>
+
+
+</div>
+
+
+
+<!-- =====================================================
+LOADING
+===================================================== -->
+
+<div
+  id="loadingCard"
+  class="hidden glass rounded-3xl p-7 text-center"
+>
+
+<div
+  class="w-12 h-12 mx-auto rounded-full border-2 border-violet-500 border-t-transparent animate-spin"
+></div>
+
+<h3
+  class="text-sm font-black mt-5"
+>
+جاري تحليل الريل
+</h3>
+
+<p
+  id="loadingText"
+  class="text-[10px] text-zinc-500 mt-2"
+>
+قراءة الفيديو محلياً...
+</p>
+
+
+<div
+  class="mt-5 h-1.5 bg-zinc-800 rounded-full overflow-hidden"
+>
+
+<div
+  id="progress"
+  class="progress-bar h-full bg-violet-500 rounded-full"
+  style="width:8%"
+></div>
+
+</div>
+
+</div>
+
+
+
+<!-- =====================================================
+RESULTS
+===================================================== -->
+
+<section
+  id="results"
+  class="hidden space-y-4 fade-in"
+>
+
+
+<!-- SCORE -->
+
+<div
+  class="glass rounded-3xl p-5"
+>
+
+<div
+  class="flex items-center gap-5"
+>
+
+<div
+  id="scoreRing"
+  class="score-ring w-24 h-24 rounded-full p-2 shrink-0"
+  style="--score:0%"
+>
+
+<div
+  class="w-full h-full rounded-full bg-zinc-950 flex flex-col items-center justify-center"
+>
+
+<span
+  id="score"
+  class="text-2xl font-black"
+>
+0
+</span>
+
+<span
+  class="text-[8px] text-zinc-500"
+>
+SCORE
+</span>
+
+</div>
+
+</div>
+
+
+<div>
+
+<span
+  id="decision"
+  class="inline-block px-2.5 py-1 rounded-full text-[9px] font-black bg-violet-500/10 text-violet-300"
+>
+تحليل
+</span>
+
+<h2
+  id="verdict"
+  class="text-sm font-black mt-2 leading-relaxed"
+>
+</h2>
+
+</div>
+
+</div>
+
+</div>
+
+
+
+<!-- =====================================================
+METRICS
+===================================================== -->
+
+<div
+  class="grid grid-cols-2 gap-2"
+>
+
+<div
+  class="glass rounded-2xl p-4"
+>
+
+<span
+  class="text-[9px] text-zinc-500"
+>
+HOOK
+</span>
+
+<div
+  id="hookScore"
+  class="text-xl font-black mt-1"
+>
+—
+</div>
+
+<p
+  class="text-[9px] text-zinc-600 mt-1"
+>
+قوة البداية
+</p>
+
+</div>
+
+
+<div
+  class="glass rounded-2xl p-4"
+>
+
+<span
+  class="text-[9px] text-zinc-500"
+>
+PACING
+</span>
+
+<div
+  id="pacingScore"
+  class="text-xl font-black mt-1"
+>
+—
+</div>
+
+<p
+  class="text-[9px] text-zinc-600 mt-1"
+>
+الإيقاع
+</p>
+
+</div>
+
+
+<div
+  class="glass rounded-2xl p-4"
+>
+
+<span
+  class="text-[9px] text-zinc-500"
+>
+VISUAL
+</span>
+
+<div
+  id="visualScore"
+  class="text-xl font-black mt-1"
+>
+—
+</div>
+
+<p
+  class="text-[9px] text-zinc-600 mt-1"
+>
+القوة البصرية
+</p>
+
+</div>
+
+
+<div
+  class="glass rounded-2xl p-4"
+>
+
+<span
+  class="text-[9px] text-zinc-500"
+>
+TECHNICAL
+</span>
+
+<div
+  id="technicalScore"
+  class="text-xl font-black mt-1"
+>
+—
+</div>
+
+<p
+  class="text-[9px] text-zinc-600 mt-1"
+>
+الجودة التقنية
+</p>
+
+</div>
+
+</div>
+
+
+
+<!-- =====================================================
+VIDEO INFO
+===================================================== -->
+
+<div
+  class="glass rounded-3xl p-5"
+>
+
+<div
+  class="flex justify-between items-center mb-4"
+>
+
+<h3
+  class="text-sm font-black"
+>
+تشخيص الفيديو
+</h3>
+
+<span
+  class="text-[9px] text-zinc-600"
+>
+LOCAL ENGINE
+</span>
+
+</div>
+
+
+<div
+  id="videoInfo"
+  class="grid grid-cols-2 gap-2"
+>
+</div>
+
+</div>
+
+
+
+<!-- =====================================================
+HOOK
+===================================================== -->
+
+<div
+  class="glass rounded-3xl p-5"
+>
+
+<div
+  class="flex items-center gap-2 mb-4"
+>
+
+<div
+  class="w-8 h-8 rounded-xl bg-violet-500/10 flex items-center justify-center"
+>
+🪝
+</div>
+
+<div>
+
+<h3
+  class="text-sm font-black"
+>
+تشريح الـHook
+</h3>
+
+<p
+  class="text-[9px] text-zinc-600"
+>
+أول ثانية هي المعركة
+</p>
+
+</div>
+
+</div>
+
+
+<div
+  id="hookRisk"
+  class="text-xs font-bold mb-3"
+>
+</div>
+
+
+<ul
+  id="hookObservations"
+  class="space-y-2"
+>
+</ul>
+
+</div>
+
+
+
+<!-- =====================================================
+DIAGNOSIS
+===================================================== -->
+
+<div
+  class="glass rounded-3xl p-5"
+>
+
+<h3
+  class="text-sm font-black mb-4"
+>
+🔬 المشاكل المكتشفة
+</h3>
+
+<div
+  id="diagnosis"
+  class="space-y-2"
+>
+</div>
+
+</div>
+
+
+
+<!-- =====================================================
+RECOMMENDATIONS
+===================================================== -->
+
+<div
+  class="rounded-3xl p-5 bg-violet-950/20 border border-violet-500/20"
+>
+
+<div
+  class="flex items-center justify-between mb-4"
+>
+
+<div>
+
+<p
+  class="text-[9px] text-violet-400 font-bold tracking-widest"
+>
+ACTION PLAN
+</p>
+
+<h3
+  class="text-base font-black mt-1"
+>
+شو نعدّل؟
+</h3>
+
+</div>
+
+<span
+  class="text-xl"
+>
+⚡
+</span>
+
+</div>
+
+
+<div
+  id="recommendations"
+  class="space-y-3"
+>
+</div>
+
+</div>
+
+
+
+<!-- =====================================================
+LEARNING
+===================================================== -->
+
+<div
+  id="learningCard"
+  class="glass rounded-3xl p-5"
+>
+
+<div
+  class="flex items-center gap-3 mb-4"
+>
+
+<div
+  class="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center"
+>
+🧠
+</div>
+
+<div>
+
+<h3
+  class="text-sm font-black"
+>
+ذاكرة الحساب
+</h3>
+
+<p
+  class="text-[9px] text-zinc-600"
+>
+الأداة تتعلم من نتائجك الحقيقية
+</p>
+
+</div>
+
+</div>
+
+
+<p
+  id="learningMessage"
+  class="text-[11px] text-zinc-400 leading-relaxed"
+>
+لم يتم إدخال نتائج ريلز سابقة بعد.
+</p>
+
+</div>
+
+
+
+<button
+  id="newReelBtn"
+  class="w-full py-4 rounded-2xl bg-zinc-800 text-zinc-300 text-xs font-black"
+>
+تحليل ريل جديد
+</button>
+
+
+</section>
+
+</section>
+
+</div>
+
+
+
+<script type="module">
+
+import {
+  analyzeReel
+} from "./src/engine/reel-engine.js";
+
+import {
+  saveAnalysis,
+  getMemory,
+  getMemorySummary
+} from "./src/memory/reel-memory.js";
+
+import {
+  buildAccountProfile,
+  generateLearnedRecommendations
+} from "./src/learning/learning-engine.js";
+
+
+/* =====================================================
+ELEMENTS
+===================================================== */
+
+const videoInput =
+  document.getElementById(
+    "videoInput"
+  );
+
+const analyzeBtn =
+  document.getElementById(
+    "analyzeBtn"
+  );
+
+const uploadCard =
+  document.getElementById(
+    "uploadCard"
+  );
+
+const selectedFile =
+  document.getElementById(
+    "selectedFile"
+  );
+
+const fileName =
+  document.getElementById(
+    "fileName"
+  );
+
+const fileMeta =
+  document.getElementById(
+    "fileMeta"
+  );
+
+const loadingCard =
+  document.getElementById(
+    "loadingCard"
+  );
+
+const loadingText =
+  document.getElementById(
+    "loadingText"
+  );
+
+const progress =
+  document.getElementById(
+    "progress"
+  );
+
+const results =
+  document.getElementById(
+    "results"
+  );
+
+let currentFile = null;
+
+
+/* =====================================================
+INITIAL MEMORY
+===================================================== */
+
+updateMemoryUI();
+
+
+/* =====================================================
+VIDEO SELECT
+===================================================== */
+
+videoInput.addEventListener(
+  "change",
+  () => {
+
+    const file =
+      videoInput.files?.[0];
+
+    if (!file)
+      return;
+
+
+    currentFile =
+      file;
+
+
+    fileName.textContent =
+      file.name;
+
+
+    fileMeta.textContent =
+      `${formatBytes(file.size)} • ${file.type || "video"}`;
+
+
+    selectedFile.classList.remove(
+      "hidden"
+    );
+
+
+    analyzeBtn.disabled =
+      false;
+
+  }
+);
+
+
+/* =====================================================
+ANALYZE
+===================================================== */
+
+analyzeBtn.addEventListener(
+  "click",
+  async () => {
+
+    if (!currentFile)
+      return;
+
+
+    uploadCard.classList.add(
+      "hidden"
+    );
+
+
+    loadingCard.classList.remove(
+      "hidden"
+    );
+
+
+    setProgress(
+      10,
+      "قراءة خصائص الفيديو..."
+    );
+
+
+    try {
+
+      setProgress(
+        25,
+        "استخراج الإطارات..."
+      );
+
+
+      const analysis =
+        await analyzeReel(
+          currentFile
+        );
+
+
+      setProgress(
+        70,
+        "تحليل الـHook والإيقاع..."
+      );
+
+
+      await delay(150);
+
+
+      setProgress(
+        85,
+        "بناء التشخيص..."
+      );
+
+
+      await delay(150);
+
+
+      const record =
+        saveAnalysis(
+          analysis
+        );
+
+
+      setProgress(
+        100,
+        "اكتمل التحليل"
+      );
+
+
+      await delay(250);
+
+
+      renderResults(
+        analysis,
+        record
+      );
+
+
+    } catch (error) {
+
+      console.error(
+        error
+      );
+
+
+      loadingCard.classList.add(
+        "hidden"
+      );
+
+
+      uploadCard.classList.remove(
+        "hidden"
+      );
+
+
+      alert(
+        "تعذر تحليل الفيديو. جرّب فيديو آخر أو أعد المحاولة."
+      );
+
+    }
+
+  }
+);
+
+
+/* =====================================================
+RENDER RESULTS
+===================================================== */
+
+function renderResults(
+  analysis,
+  record
+) {
+
+  loadingCard.classList.add(
+    "hidden"
+  );
+
+
+  results.classList.remove(
+    "hidden"
+  );
+
+
+  const score =
+    Number(
+      analysis.overall
+    ) || 0;
+
+
+  document.getElementById(
+    "score"
+  ).textContent =
+    score;
+
+
+  document.getElementById(
+    "scoreRing"
+  ).style.setProperty(
+    "--score",
+    `${score}%`
+  );
+
+
+  document.getElementById(
+    "verdict"
+  ).textContent =
+    createVerdict(
+      score
+    );
+
+
+  document.getElementById(
+    "hookScore"
+  ).textContent =
+    `${analysis.scores.hook}/100`;
+
+
+  document.getElementById(
+    "pacingScore"
+  ).textContent =
+    `${analysis.scores.pacing}/100`;
+
+
+  document.getElementById(
+    "visualScore"
+  ).textContent =
+    `${analysis.scores.visual}/100`;
+
+
+  document.getElementById(
+    "technicalScore"
+  ).textContent =
+    `${analysis.scores.technical}/100`;
+
+
+  document.getElementById(
+    "decision"
+  ).textContent =
+    decisionText(
+      score
+    );
+
+
+  renderVideoInfo(
+    analysis
+  );
+
+
+  renderHook(
+    analysis.hook
+  );
+
+
+  renderDiagnosis(
+    analysis.diagnosis
+  );
+
+
+  renderRecommendations(
+    analysis.recommendations
+  );
+
+
+  renderLearning(
+    analysis
+  );
+
+
+  updateMemoryUI();
+
+}
+
+
+/* =====================================================
+VIDEO INFO
+===================================================== */
+
+function renderVideoInfo(
+  analysis
+) {
+
+  const video =
+    analysis.video.video;
+
+
+  const info =
+    document.getElementById(
+      "videoInfo"
+    );
+
+
+  info.innerHTML = `
+
+    ${infoCard(
+      "المدة",
+      `${video.duration}s`
+    )}
+
+    ${infoCard(
+      "الأبعاد",
+      `${video.width} × ${video.height}`
+    )}
+
+    ${infoCard(
+      "النسبة",
+      video.aspectRatio
+    )}
+
+    ${infoCard(
+      "المصدر",
+      "الجهاز فقط"
+    )}
+
+  `;
+
+}
+
+
+/* =====================================================
+HOOK
+===================================================== */
+
+function renderHook(
+  hook
+) {
+
+  document.getElementById(
+    "hookRisk"
+  ).textContent =
+    `مستوى الخطر: ${hook.risk}`;
+
+
+  const list =
+    document.getElementById(
+      "hookObservations"
+    );
+
+
+  list.innerHTML =
+    (hook.observations || [])
+      .map(
+        item =>
+          `<li class="text-[11px] text-zinc-400 leading-relaxed bg-zinc-950/60 rounded-xl p-3">${escapeHtml(item)}</li>`
+      )
+      .join("");
+
+}
+
+
+/* =====================================================
+DIAGNOSIS
+===================================================== */
+
+function renderDiagnosis(
+  diagnosis
+) {
+
+  const container =
+    document.getElementById(
+      "diagnosis"
+    );
+
+
+  if (
+    !diagnosis?.length
+  ) {
+
+    container.innerHTML =
+      `<div class="text-xs text-zinc-500">لم يتم اكتشاف مشاكل واضحة.</div>`;
+
+    return;
+
+  }
+
+
+  container.innerHTML =
+    diagnosis
+      .map(
+        item =>
+          `<div class="flex gap-2 bg-zinc-950/60 rounded-xl p-3">
+            <span class="text-amber-400">•</span>
+            <p class="text-[11px] text-zinc-300 leading-relaxed">${escapeHtml(item)}</p>
+          </div>`
+      )
+      .join("");
+
+}
+
+
+/* =====================================================
+RECOMMENDATIONS
+===================================================== */
+
+function renderRecommendations(
+  recommendations
+) {
+
+  const container =
+    document.getElementById(
+      "recommendations"
+    );
+
+
+  container.innerHTML =
+    recommendations
+      .map(
+        (item, index) =>
+          `<div class="bg-zinc-950/70 rounded-2xl p-4">
+            <div class="flex gap-3">
+              <span class="w-6 h-6 shrink-0 rounded-full bg-violet-500/10 text-violet-300 flex items-center justify-center text-[10px] font-black">${index + 1}</span>
+              <p class="text-[11px] text-zinc-200 leading-relaxed">${escapeHtml(item)}</p>
+            </div>
+          </div>`
+      )
+      .join("");
+
+}
+
+
+/* =====================================================
+LEARNING
+===================================================== */
+
+function renderLearning(
+  analysis
+) {
+
+  const message =
+    document.getElementById(
+      "learningMessage"
+    );
+
+
+  const profile =
+    buildAccountProfile();
+
+
+  if (
+    !profile.ready
+  ) {
+
+    message.textContent =
+      profile.message;
+
+    return;
+
+  }
+
+
+  const learned =
+    generateLearnedRecommendations(
+      analysis
+    );
+
+
+  message.innerHTML =
+    `تم تحليل ${profile.sampleSize} ريلز سابقة. ` +
+    (learned.recommendations || [])
+      .slice(0, 2)
+      .join(" ");
+
+}
+
+
+/* =====================================================
+MEMORY UI
+===================================================== */
+
+function updateMemoryUI() {
+
+  const memory =
+    getMemory();
+
+
+  document.getElementById(
+    "memoryCount"
+  ).textContent =
+    memory.length;
+
+
+  const profile =
+    buildAccountProfile();
+
+
+  const status =
+    document.getElementById(
+      "learningStatus"
+    );
+
+
+  if (
+    profile.ready
+  ) {
+
+    status.textContent =
+      `${profile.sampleSize} ريل في الذاكرة`;
+
+    status.className =
+      "text-[9px] px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-300";
+
+  } else {
+
+    status.textContent =
+      "يبني الذاكرة";
+
+  }
+
+}
+
+
+/* =====================================================
+NEW REEL
+===================================================== */
+
+document.getElementById(
+  "newReelBtn"
+).addEventListener(
+  "click",
+  () => {
+
+    currentFile =
+      null;
+
+    videoInput.value =
+      "";
+
+    selectedFile.classList.add(
+      "hidden"
+    );
+
+    analyzeBtn.disabled =
+      true;
+
+    results.classList.add(
+      "hidden"
+    );
+
+    uploadCard.classList.remove(
+      "hidden"
+    );
+
+    window.scrollTo(
+      {
+        top: 0,
+        behavior: "smooth"
+      }
+    );
+
+  }
+);
+
+
+/* =====================================================
+HELPERS
+===================================================== */
+
+function setProgress(
+  value,
+  text
+) {
+
+  progress.style.width =
+    `${value}%`;
+
+  loadingText.textContent =
+    text;
+
+}
+
+
+function delay(
+  ms
+) {
+
+  return new Promise(
+    resolve =>
+      setTimeout(
+        resolve,
+        ms
+      )
+  );
+
+}
+
+
+function formatBytes(
+  bytes
+) {
+
+  if (
+    bytes <
+    1024 * 1024
+  ) {
+
+    return `${(
+      bytes / 1024
+    ).toFixed(1)} KB`;
+
+  }
+
+
+  return `${(
+    bytes /
+    (1024 * 1024)
+  ).toFixed(1)} MB`;
+
+}
+
+
+function infoCard(
+  label,
+  value
+) {
+
+  return `
+    <div class="bg-zinc-950/60 rounded-xl p-3">
+      <div class="text-[9px] text-zinc-600">${label}</div>
+      <div class="text-xs font-bold mt-1">${escapeHtml(String(value))}</div>
+    </div>
+  `;
+
+}
+
+
+function createVerdict(
+  score
+) {
+
+  if (
+    score >= 80
+  )
+    return "الريل قوي من ناحية الإشارات التي يمكن قياسها محلياً.";
+
+  if (
+    score >= 65
+  )
+    return "الريل جيد، لكن هناك نقاط يمكن تحسينها قبل النشر.";
+
+  if (
+    score >= 50
+  )
+    return "الفكرة قابلة للعمل، لكن توجد إشارات ضعف واضحة تحتاج معالجة.";
+
+  return "لا أنصح بالاعتماد على النسخة الحالية قبل معالجة نقاط الضعف الأساسية.";
+
+}
+
+
+function decisionText(
+  score
+) {
+
+  if (
+    score >= 80
+  )
+    return "جاهز للاختبار";
+
+  if (
+    score >= 65
+  )
+    return "يحتاج تعديلات";
+
+  if (
+    score >= 50
+  )
+    return "مراجعة قوية";
+
+  return "أعد البناء";
+
+}
+
+
+function escapeHtml(
+  value
+) {
+
+  return value
+    .replaceAll(
+      "&",
+      "&amp;"
+    )
+    .replaceAll(
+      "<",
+      "&lt;"
+    )
+    .replaceAll(
+      ">",
+      "&gt;"
+    )
+    .replaceAll(
+      '"',
+      "&quot;"
+    )
+    .replaceAll(
+      "'",
+      "&#039;"
+    );
+
+}
+
+</script>
+
+</body>
+
+</html>
