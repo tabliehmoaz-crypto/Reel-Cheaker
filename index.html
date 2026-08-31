@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#080b14">
+<title>REELIQ</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+margin:0;
+min-height:100vh;
+background:#080b14;
+color:#f5f6fa;
+font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",
+"Segoe UI",sans-serif
+}
+.app{
+max-width:850px;
+margin:auto;
+padding:28px 16px 60px
+}
+header{
+padding:15px 4px 28px
+}
+.logo{
+font-size:11px;
+letter-spacing:4px;
+color:#d9c7a0;
+font-weight:800;
+margin-bottom:13px
+}
+h1{
+margin:0;
+font-size:52px;
+letter-spacing:-3px
+}
+.subtitle{
+color:#8993a8;
+font-size:13px;
+line-height:1.8;
+margin-top:10px
+}
+.card{
+background:#101522;
+border:1px solid rgba(255,255,255,.08);
+border-radius:24px;
+padding:18px;
+margin-bottom:15px
+}
+.upload-box{
+border:1px dashed rgba(217,199,160,.4);
+border-radius:20px;
+padding:35px 18px;
+text-align:center
+}
+.icon{
+font-size:34px;
+margin-bottom:12px
+}
+.title{
+font-size:18px;
+font-weight:800
+}
+.hint{
+font-size:12px;
+color:#858fa5;
+line-height:1.7;
+margin-top:8px
+}
+.choose-btn{
+display:block;
+width:100%;
+margin-top:18px;
+padding:16px;
+border:0;
+border-radius:16px;
+background:#d9c7a0;
+color:#10131a;
+font-size:15px;
+font-weight:900;
+cursor:pointer
+}
+#videoInput{
+position:absolute;
+width:1px;
+height:1px;
+opacity:0;
+pointer-events:none
+}
+#preview{
+display:none;
+width:100%;
+max-height:600px;
+margin-top:15px;
+border-radius:18px;
+background:#000
+}
+.file-info{
+display:none;
+margin-top:13px;
+padding:13px;
+border-radius:15px;
+background:rgba(255,255,255,.045)
+}
+.file-name{
+font-size:13px;
+font-weight:800;
+overflow:hidden;
+text-overflow:ellipsis;
+white-space:nowrap
+}
+.file-size{
+font-size:11px;
+color:#8993a8;
+margin-top:4px
+}
+.analyze{
+width:100%;
+margin-top:13px;
+padding:16px;
+border:0;
+border-radius:16px;
+background:#fff;
+color:#11151f;
+font-weight:900;
+font-size:15px
+}
+.analyze:disabled{
+opacity:.3
+}
+.status{
+display:none;
+text-align:center;
+margin-top:13px;
+padding:12px;
+border-radius:14px;
+background:rgba(255,255,255,.04);
+color:#b8c0d0;
+font-size:12px
+}
+.error{
+display:none;
+margin-top:13px;
+padding:13px;
+border-radius:14px;
+background:rgba(190,50,50,.12);
+color:#ffbebe;
+font-size:12px;
+line-height:1.7
+}
+.results{
+display:none
+}
+.score-card{
+text-align:center
+}
+.score-ring{
+width:150px;
+height:150px;
+border-radius:50%;
+margin:5px auto 15px;
+display:grid;
+place-items:center;
+background:conic-gradient(
+#d9c7a0 var(--score),
+rgba(255,255,255,.07) 0
+);
+position:relative
+}
+.score-ring:after{
+content:"";
+position:absolute;
+width:120px;
+height:120px;
+border-radius:50%;
+background:#101522
+}
+.score{
+position:relative;
+z-index:2;
+font-size:38px;
+font-weight:900
+}
+.score-label{
+font-size:11px;
+color:#8993a8;
+letter-spacing:2px
+}
+.grid{
+display:grid;
+grid-template-columns:repeat(2,1fr);
+gap:9px
+}
+.metric{
+background:rgba(255,255,255,.035);
+border:1px solid rgba(255,255,255,.05);
+border-radius:17px;
+padding:15px
+}
+.metric-label{
+font-size:10px;
+color:#8993a8
+}
+.metric-value{
+font-size:27px;
+font-weight:900;
+margin-top:6px
+}
+.section-title{
+font-size:17px;
+font-weight:850;
+margin-bottom:13px
+}
+.item{
+padding:12px 0;
+border-bottom:1px solid rgba(255,255,255,.07);
+font-size:13px;
+line-height:1.8;
+color:#c8cfdd
+}
+.tech,.transcript{
+font-size:13px;
+line-height:1.9;
+color:#b7c0d1
+}
+.transcript{
+background:rgba(255,255,255,.035);
+padding:14px;
+border-radius:15px;
+white-space:pre-wrap
+}
+@media(min-width:700px){
+.grid{grid-template-columns:repeat(3,1fr)}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+<div class="logo">CONTENT INTELLIGENCE</div>
+<h1>REELIQ</h1>
+<div class="subtitle">
+حلّل الريل، افهم الـHook والإيقاع والقوة البصرية،
+وابنِ مع الوقت ذاكرة حقيقية لأداء محتواك.
+</div>
+</header>
+<section class="card">
+<div class="upload-box">
+<div class="icon">🎬</div>
+<div class="title">
+جاهز لتحليل الريل؟
+</div>
+<div class="hint">
+الفيديو يبقى على جهازك أثناء التحليل المحلي.
+</div>
+<button
+type="button"
+class="choose-btn"
+id="chooseBtn"
+>
+اختيار فيديو
+</button>
+<input
+id="videoInput"
+type="file"
+accept="video/*"
+>
+</div>
+<video
+id="preview"
+controls
+playsinline
+webkit-playsinline
+preload="metadata"
+></video>
+<div
+id="fileInfo"
+class="file-info"
+>
+<div
+id="fileName"
+class="file-name"
+></div>
+<div
+id="fileSize"
+class="file-size"
+></div>
+</div>
+<button
+id="analyzeBtn"
+class="analyze"
+disabled
+>
+تحليل الريل
+</button>
+<div
+id="status"
+class="status"
+></div>
+<div
+id="error"
+class="error"
+></div>
+</section>
+<section
+id="results"
+class="results"
+>
+<div class="card score-card">
+<div
+id="scoreRing"
+class="score-ring"
+>
+<div
+id="overallScore"
+class="score"
+>
+—
+</div>
+</div>
+<div class="score-label">
+REELIQ SCORE
+</div>
+</div>
+<div class="card">
+<div class="section-title">
+الأداء
+</div>
+<div class="grid">
+<div class="metric">
+<div class="metric-label">HOOK</div>
+<div id="hookScore" class="metric-value">—</div>
+</div>
+<div class="metric">
+<div class="metric-label">PACING</div>
+<div id="pacingScore" class="metric-value">—</div>
+</div>
+<div class="metric">
+<div class="metric-label">VISUAL</div>
+<div id="visualScore" class="metric-value">—</div>
+</div>
+<div class="metric">
+<div class="metric-label">SPEECH</div>
+<div id="speechScore" class="metric-value">—</div>
+</div>
+<div class="metric">
+<div class="metric-label">IDEA</div>
+<div id="ideaScore" class="metric-value">—</div>
+</div>
+<div class="metric">
+<div class="metric-label">TECHNICAL</div>
+<div id="technicalScore" class="metric-value">—</div>
+</div>
+</div>
+</div>
+<div class="card">
+<div class="section-title">
+🪝 تشريح الـHook
+</div>
+<div
+id="hookRisk"
+class="tech"
+></div>
+<div id="hookObservations"></div>
+</div>
+<div class="card">
+<div class="section-title">
+⏱️ الإيقاع
+</div>
+<div
+id="pacingText"
+class="tech"
+></div>
+</div>
+<div class="card">
+<div class="section-title">
+🧠 الفكرة
+</div>
+<div
+id="ideaText"
+class="tech"
+></div>
+</div>
+<div class="card">
+<div class="section-title">
+🎙️ الكلام
+</div>
+<div
+id="transcript"
+class="transcript"
+>
+لم يتم تحليل الصوت.
+</div>
+</div>
+<div class="card">
+<div class="section-title">
+📉 مناطق الخطر المحتملة
+</div>
+<div id="dropOff"></div>
+</div>
+<div class="card">
+<div class="section-title">
+🔎 التشخيص
+</div>
+<div id="diagnosis"></div>
+</div>
+<div class="card">
+<div class="section-title">
+🚀 ماذا نعدّل؟
+</div>
+<div
+id="priority"
+class="tech"
+></div>
+<div id="recommendations"></div>
+</div>
+<div class="card">
+<div class="section-title">
+⚙️ بيانات الفيديو
+</div>
+<div
+id="technical"
+class="tech"
+></div>
+</div>
+</section>
+</div>
+<script type="module">
+import {
+analyzeReel
+} from "./src/engine/reel-engine.js";
+const chooseBtn =
+document.getElementById("chooseBtn");
+const input =
+document.getElementById("videoInput");
+const preview =
+document.getElementById("preview");
+const fileInfo =
+document.getElementById("fileInfo");
+const fileName =
+document.getElementById("fileName");
+const fileSize =
+document.getElementById("fileSize");
+const analyzeBtn =
+document.getElementById("analyzeBtn");
+const status =
+document.getElementById("status");
+const errorBox =
+document.getElementById("error");
+const results =
+document.getElementById("results");
+let selectedFile = null;
+let previewURL = null;
+/*
+  فتح منتقي الملفات مباشرة.
+  هذا أكثر موثوقية على iPhone Safari.
+*/
+chooseBtn.addEventListener(
+"click",
+function(){
+try{
+input.click();
+}catch(error){
+showError(
+"تعذر فتح اختيار الفيديو."
+);
+}
+});
+/*
+  عند اختيار الفيديو
+*/
+input.addEventListener(
+"change",
+function(event){
+const files =
+event.target.files;
+if(
+!files ||
+!files.length
+){
+return;
+}
+const file =
+files[0];
+selectedFile =
+file;
+errorBox.style.display =
+"none";
+if(previewURL){
+URL.revokeObjectURL(
+previewURL
+);
+}
+previewURL =
+URL.createObjectURL(
+file
+);
+preview.src =
+previewURL;
+preview.style.display =
+"block";
+fileInfo.style.display =
+"block";
+fileName.textContent =
+file.name;
+fileSize.textContent =
+formatBytes(file.size);
+analyzeBtn.disabled =
+false;
+status.style.display =
+"block";
+status.textContent =
+"✓ تم اختيار الفيديو";
+});
+/*
+  تحليل
+*/
+analyzeBtn.addEventListener(
+"click",
+async function(){
+if(!selectedFile)
+return;
+errorBox.style.display =
+"none";
+status.style.display =
+"block";
+status.textContent =
+"⏳ عم نحلل الريل…";
+analyzeBtn.disabled =
+true;
+try{
+const result =
+await analyzeReel(
+selectedFile
+);
+renderResults(
+result
+);
+results.style.display =
+"block";
+status.textContent =
+"✓ اكتمل التحليل";
+results.scrollIntoView({
+behavior:"smooth"
+});
+}catch(error){
+console.error(error);
+showError(
+error?.message ||
+"حدث خطأ أثناء التحليل."
+);
+status.style.display =
+"none";
+}finally{
+analyzeBtn.disabled =
+false;
+}
+});
+function renderResults(result){
+const overall =
+Number(
+result?.overall
+) || 0;
+document.getElementById(
+"overallScore"
+).textContent =
+`${overall}%`;
+document.getElementById(
+"scoreRing"
+).style.setProperty(
+"--score",
+`${overall * 3.6}deg`
+);
+setScore(
+"hookScore",
+result?.scores?.hook
+);
+setScore(
+"pacingScore",
+result?.scores?.pacing
+);
+setScore(
+"visualScore",
+result?.scores?.visual
+);
+setScore(
+"speechScore",
+result?.scores?.speech
+);
+setScore(
+"ideaScore",
+result?.scores?.idea
+);
+setScore(
+"technicalScore",
+result?.scores?.technical
+);
+document.getElementById(
+"hookRisk"
+).textContent =
+`مستوى الخطر: ${
+result?.hook?.risk || "غير محدد"
+}`;
+renderList(
+"hookObservations",
+result?.hook?.observations
+);
+document.getElementById(
+"pacingText"
+).textContent =
+result?.pacing?.assessment ||
+"غير متوفر";
+document.getElementById(
+"ideaText"
+).textContent =
+result?.idea?.reason ||
+"تحليل الفكرة غير متوفر حالياً.";
+document.getElementById(
+"transcript"
+).textContent =
+result?.speech?.text ||
+"لم يتم استخراج الكلام حالياً.";
+renderList(
+"diagnosis",
+result?.diagnosis
+);
+renderList(
+"recommendations",
+result?.recommendations?.changes ||
+result?.recommendations
+);
+document.getElementById(
+"priority"
+).textContent =
+result?.recommendations?.priority ||
+"لا توجد أولوية محددة.";
+const technical =
+document.getElementById(
+"technical"
+);
+const v =
+result?.video || {};
+const dimensions =
+v.dimensions ||
+v.video ||
+{};
+const f =
+v.file ||
+{};
+technical.innerHTML =
+`
+المدة: ${escapeHTML(
+String(dimensions.duration ?? "—")
+)} ثانية<br>
+الأبعاد:
+${escapeHTML(
+String(dimensions.width ?? "—")
+)}
+×
+${escapeHTML(
+String(dimensions.height ?? "—")
+)}<br>
+النسبة:
+${escapeHTML(
+String(dimensions.aspectRatio ?? "—")
+)}<br>
+الملف:
+${escapeHTML(
+String(f.name ?? "—")
+)}<br>
+الحجم:
+${escapeHTML(
+String(
+f.sizeFormatted ??
+formatBytes(f.size)
+)
+)}
+`;
+}
+function setScore(
+id,
+value
+){
+document.getElementById(
+id
+).textContent =
+`${Number(value) || 0}%`;
+}
+function renderList(
+id,
+items
+){
+const box =
+document.getElementById(
+id
+);
+box.innerHTML =
+"";
+if(
+!Array.isArray(items) ||
+!items.length
+){
+box.textContent =
+"لا توجد ملاحظات.";
+return;
+}
+items.forEach(
+function(text){
+const item =
+document.createElement(
+"div"
+);
+item.className =
+"item";
+item.textContent =
+text;
+box.appendChild(
+item
+);
+});
+}
+function showError(
+message
+){
+errorBox.textContent =
+message;
+errorBox.style.display =
+"block";
+}
+function formatBytes(
+bytes
+){
+if(!bytes)
+return "0 B";
+if(bytes < 1024)
+return `${bytes} B`;
+if(bytes < 1024 * 1024)
+return `${(
+bytes / 1024
+).toFixed(1)} KB`;
+return `${(
+bytes /
+(1024 * 1024)
+).toFixed(1)} MB`;
+}
+function escapeHTML(
+value
+){
+return String(value ?? "")
+.replaceAll("&","&amp;")
+.replaceAll("<","&lt;")
+.replaceAll(">","&gt;")
+.replaceAll('"',"&quot;")
+.replaceAll("'","&#039;");
+}
+</script>
+</body>
+</html>
