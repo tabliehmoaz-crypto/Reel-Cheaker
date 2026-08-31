@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1020">
+
+  <title>REEL CHECK</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top right, #1c2745 0, transparent 35%),
+        linear-gradient(160deg, #070b16, #0d1324 55%, #090d18);
+      color: #f5f7fb;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+                   "Segoe UI", sans-serif;
+    }
+
+    .app {
+      width: min(1100px, 100%);
+      margin: auto;
+      padding: 24px 16px 60px;
+    }
+
+    header {
+      text-align: center;
+      margin: 10px 0 28px;
+    }
+
+    .brand {
+      font-size: 12px;
+      letter-spacing: 4px;
+      opacity: .65;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(32px, 8vw, 58px);
+      font-weight: 800;
+      letter-spacing: -2px;
+    }
+
+    .subtitle {
+      margin: 10px auto 0;
+      max-width: 650px;
+      color: #aeb7cb;
+      line-height: 1.7;
+      font-size: 14px;
+    }
+
+    .card {
+      background: rgba(18, 25, 43, .78);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 24px;
+      padding: 18px;
+      box-shadow: 0 20px 70px rgba(0,0,0,.28);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      margin-bottom: 16px;
+    }
+
+    .upload {
+      border: 1.5px dashed rgba(255,255,255,.22);
+      border-radius: 20px;
+      padding: 30px 18px;
+      text-align: center;
+      cursor: pointer;
+      transition: .2s ease;
+    }
+
+    .upload:active {
+      transform: scale(.99);
+    }
+
+    .upload-icon {
+      font-size: 42px;
+      margin-bottom: 8px;
+    }
+
+    .upload-title {
+      font-size: 19px;
+      font-weight: 700;
+    }
+
+    .upload-text {
+      color: #929db4;
+      margin-top: 7px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    #preview {
+      display: none;
+      width: 100%;
+      max-height: 520px;
+      object-fit: contain;
+      border-radius: 18px;
+      background: #000;
+      margin-top: 16px;
+    }
+
+    .file-info {
+      display: none;
+      margin-top: 12px;
+      color: #aeb7cb;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    button {
+      width: 100%;
+      border: 0;
+      border-radius: 16px;
+      padding: 16px;
+      margin-top: 14px;
+      background: linear-gradient(135deg, #ffffff, #d9e0ee);
+      color: #0a0f1d;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+    }
+
+    .status {
+      display: none;
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.05);
+      color: #cbd3e2;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .results {
+      display: none;
+    }
+
+    .overall {
+      text-align: center;
+      padding: 10px 0 20px;
+    }
+
+    .score-ring {
+      width: 150px;
+      height: 150px;
+      margin: 10px auto 16px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background:
+        conic-gradient(#fff var(--score), rgba(255,255,255,.08) 0);
+      position: relative;
+    }
+
+    .score-ring::after {
+      content: "";
+      position: absolute;
+      width: 122px;
+      height: 122px;
+      border-radius: 50%;
+      background: #11182a;
+    }
+
+    .score-number {
+      position: relative;
+      z-index: 1;
+      font-size: 38px;
+      font-weight: 850;
+    }
+
+    .overall-label {
+      color: #929db4;
+      font-size: 13px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .metric {
+      background: rgba(255,255,255,.045);
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: 17px;
+      padding: 16px;
+    }
+
+    .metric-label {
+      color: #909bb1;
+      font-size: 12px;
+      margin-bottom: 7px;
+    }
+
+    .metric-value {
+      font-size: 29px;
+      font-weight: 800;
+    }
+
+    .metric small {
+      color: #778299;
+      font-size: 11px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 14px;
+    }
+
+    .section-subtitle {
+      color: #8994aa;
+      font-size: 12px;
+      margin-top: -8px;
+      margin-bottom: 15px;
+    }
+
+    .item {
+      padding: 13px 0;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      color: #c8cfdd;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .item:last-child {
+      border-bottom: 0;
+    }
+
+    .priority {
+      padding: 16px;
+      border-radius: 16px;
+      background: rgba(255,255,255,.06);
+      font-weight: 700;
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+
+    .drop {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      padding: 12px;
+      margin-bottom: 8px;
+      border-radius: 13px;
+      background: rgba(255,255,255,.045);
+    }
+
+    .time {
+      font-weight: 800;
+      min-width: 65px;
+    }
+
+    .confidence {
+      color: #8d98ad;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .transcript {
+      white-space: pre-wrap;
+      color: #cbd3e2;
+      line-height: 1.9;
+      background: rgba(255,255,255,.04);
+      border-radius: 15px;
+      padding: 15px;
+      font-size: 14px;
+    }
+
+    .technical {
+      color: #aab4c7;
+      font-size: 13px;
+      line-height: 1.9;
+    }
+
+    .error {
+      display: none;
+      padding: 14px;
+      border-radius: 14px;
+      background: rgba(180, 40, 40, .15);
+      border: 1px solid rgba(255, 80, 80, .2);
+      color: #ffb7b7;
+      margin-top: 12px;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    @media (min-width: 720px) {
+      .app {
+        padding-top: 45px;
+      }
+
+      .grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .upload {
+        padding: 45px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="app">
+
+  <header>
+    <div class="brand">LOCAL CONTENT INTELLIGENCE</div>
+    <h1>REEL CHECK</h1>
+    <div class="subtitle">
+      حلّل الريل محلياً، افهم نقاط القوة والضعف،
+      واكتشف المناطق التي تستحق المراجعة قبل النشر.
+    </div>
+  </header>
+
+
+  <section class="card">
+
+    <label class="upload" for="videoInput">
+
+      <div class="upload-icon">🎬</div>
+
+      <div class="upload-title">
+        اختر الريل
+      </div>
+
+      <div class="upload-text">
+        الفيديو يبقى على جهازك أثناء التحليل المحلي.
+        لا حاجة لرفع الفيديو إلى Gemini أو Claude.
+      </div>
+
+    </label>
+
+    <input
+      id="videoInput"
+      type="file"
+      accept="video/*"
+    >
+
+    <video
+      id="preview"
+      controls
+      playsinline
+      webkit-playsinline
+    ></video>
+
+    <div
+      id="fileInfo"
+      class="file-info"
+    ></div>
+
+    <button
+      id="analyzeBtn"
+      disabled
+    >
+      تحليل الريل
+    </button>
+
+    <div
+      id="status"
+      class="status"
+    ></div>
+
+    <div
+      id="error"
+      class="error"
+    ></div>
+
+  </section>
+
+
+  <section
+    id="results"
+    class="results"
+  >
+
+    <div class="card overall">
+
+      <div class="score-ring" id="scoreRing">
+        <div
+          class="score-number"
+          id="overallScore"
+        >
+          —
+        </div>
+      </div>
+
+      <div class="overall-label">
+        التقييم التشخيصي العام
+      </div>
+
+    </div>
+
+
+    <div class="card">
+
+      <div class="section-title">
+        📊 لوحة الأداء
+      </div>
+
+      <div class="grid">
+
+        <div class="metric">
+          <div class="metric-label">الـ Hook</div>
+          <div
+            class="metric-value"
+            id="hookScore"
+          >—</div>
+          <small>قوة البداية</small>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">الإيقاع</div>
+          <div
+            class="metric-value"
+            id="pacingScore"
+          >—</div>
+          <small>التغير البصري</small>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">القوة البصرية</div>
+          <div
+            class="metric-value"
+            id="visualScore"
+          >—</div>
+          <small>الصورة والتباين</small>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">الكلام</div>
+          <div
+            class="metric-value"
+            id="speechScore"
+          >—</div>
+          <small>الصوت والنص</small>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">الفكرة</div>
+          <div
+            class="metric-value"
+            id="ideaScore"
+          >—</div>
+          <small>إشارات الفكرة</small>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">الجودة التقنية</div>
+          <div
+            class="metric-value"
+            id="technicalScore"
+          >—</div>
+          <small>الأبعاد والدقة</small>
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="card">
+
+      <div class="section-title">
+        🪝 تشريح الـ Hook
+      </div>
+
+      <div
+        class="section-subtitle"
+        id="hookRisk"
+      ></div>
+
+      <div id="hookObservations"></div>
+
+    </div>
+
+
+    <div class="card">
+
+      <div class="section-title">
+        ⏱️ الإيقاع
+      </div>
+
+      <div
+        class="technical"
+        id="pacingText"
+      ></div>
+
+    </div>
+
+
+    <div class="card">
+
+      <div class="section-title">
+        🧠 تحليل الفكرة
+      </div>
+
+      <div
+        class="technical"
+        id="ideaText"
+      ></div>
+
+    </div>
+
+
+    <div class="card">
+
+      <div class="section-title">
+        🎙️ الكلام المستخرج
+      </div>
+
+      <div
+        id="transcript"
+        class="transcript"
+      >
+        لم يتم تحليل الصوت بعد.
+      </div>
+
+    </div>
+
+
+    <div class="card">
+
+      <div class="section-title">
+        ⚠️ نقاط تستحق المراجعة
+      </div>
+
+      <div
+        class="section-subtitle"
+      >
+        هذه ليست بيانات Retention حقيقية؛
+        إنها مناطق يشتبه المحرك أنها تحتاج مراجعة.
+      </div>
+
+      <div id="dropOff"></div>
+
+    </div>
+
+
+    <div class="card">
+
+      <div class="section-title">
+        🔎 التشخيص
+      </div>
+
+      <div id="diagnosis"></div>
+
+    </div>
+
+
+    <div class="card">
+
+      <div class="section-title">
+        🚀 ماذا نعدّل؟
+      </div>
+
+      <div
+        id="priority"
+        class="priority"
+      ></div>
+
+      <div id="recommendations"></div>
+
+    </div>
+
+
+    <div class="card">
+
+      <div class="section-title">
+        ⚙️ بيانات الفيديو
+      </div>
+
+      <div
+        id="technical"
+        class="technical"
+      ></div>
+
+    </div>
+
+  </section>
+
+</div>
+
+
+<script type="module">
+
+  import {
+    analyzeReel
+  } from "./src/engine/reel-engine.js";
+
+
+  const videoInput =
+    document.getElementById(
+      "videoInput"
+    );
+
+
+  const preview =
+    document.getElementById(
+      "preview"
+    );
+
+
+  const fileInfo =
+    document.getElementById(
+      "fileInfo"
+    );
+
+
+  const analyzeBtn =
+    document.getElementById(
+      "analyzeBtn"
+    );
+
+
+  const status =
+    document.getElementById(
+      "status"
+    );
+
+
+  const errorBox =
+    document.getElementById(
+      "error"
+    );
+
+
+  const results =
+    document.getElementById(
+      "results"
+    );
+
+
+  let selectedFile =
+    null;
+
+
+  videoInput.addEventListener(
+    "change",
+    () => {
+
+      errorBox.style.display =
+        "none";
+
+      const file =
+        videoInput.files?.[0];
+
+
+      if (!file)
+        return;
+
+
+      selectedFile =
+        file;
+
+
+      const url =
+        URL.createObjectURL(
+          file
+        );
+
+
+      preview.src =
+        url;
+
+
+      preview.style.display =
+        "block";
+
+
+      fileInfo.style.display =
+        "block";
+
+
+      fileInfo.textContent =
+        `${file.name} — ${formatBytes(file.size)}`;
+
+
+      analyzeBtn.disabled =
+        false;
+
+
+      results.style.display =
+        "none";
+
+    }
+  );
+
+
+  analyzeBtn.addEventListener(
+    "click",
+    async () => {
+
+      if (!selectedFile)
+        return;
+
+
+      errorBox.style.display =
+        "none";
+
+
+      status.style.display =
+        "block";
+
+
+      status.textContent =
+        "⏳ عم نقرأ الفيديو ونحلله محلياً…";
+
+
+      analyzeBtn.disabled =
+        true;
+
+
+      try {
+
+        const result =
+          await analyzeReel(
+            selectedFile
+          );
+
+
+        renderResults(
+          result
+        );
+
+
+        results.style.display =
+          "block";
+
+
+        status.textContent =
+          "✅ اكتمل التحليل المحلي";
+
+
+      } catch (error) {
+
+        console.error(
+          error
+        );
+
+
+        errorBox.textContent =
+          error?.message ||
+          "حدث خطأ أثناء التحليل.";
+
+
+        errorBox.style.display =
+          "block";
+
+
+        status.style.display =
+          "none";
+
+      } finally {
+
+        analyzeBtn.disabled =
+          false;
+
+      }
+
+    }
+  );
+
+
+  function renderResults(
+    result
+  ) {
+
+    const score =
+      Number(
+        result.overall
+      ) || 0;
+
+
+    const scoreRing =
+      document.getElementById(
+        "scoreRing"
+      );
+
+
+    scoreRing.style.setProperty(
+      "--score",
+      `${score * 3.6}deg`
+    );
+
+
+    document.getElementById(
+      "overallScore"
+    ).textContent =
+      `${score}%`;
+
+
+    setScore(
+      "hookScore",
+      result.scores.hook
+    );
+
+
+    setScore(
+      "pacingScore",
+      result.scores.pacing
+    );
+
+
+    setScore(
+      "visualScore",
+      result.scores.visual
+    );
+
+
+    setScore(
+      "speechScore",
+      result.scores.speech
+    );
+
+
+    setScore(
+      "ideaScore",
+      result.scores.idea
+    );
+
+
+    setScore(
+      "technicalScore",
+      result.scores.technical
+    );
+
+
+    document.getElementById(
+      "hookRisk"
+    ).textContent =
+      `مستوى الخطر: ${result.hook.risk}`;
+
+
+    renderList(
+      "hookObservations",
+      result.hook.observations
+    );
+
+
+    document.getElementById(
+      "pacingText"
+    ).textContent =
+      `${result.pacing.assessment}. مؤشر التغير البصري: ${result.pacing.changeRate}%`;
+
+
+    document.getElementById(
+      "ideaText"
+    ).textContent =
+      result.idea.reason ||
+      "لا توجد بيانات كافية.";
+
+
+    const transcript =
+      document.getElementById(
+        "transcript"
+      );
+
+
+    if (
+      result.speech?.available &&
+      result.speech.text
+    ) {
+
+      transcript.textContent =
+        result.speech.text;
+
+    } else {
+
+      transcript.textContent =
+        "لم يتوفر تحليل كلام محلي. قد يحتاج Whisper إلى التحميل أو قد لا يحتوي الفيديو على كلام واضح.";
+
+    }
+
+
+    const dropOff =
+      document.getElementById(
+        "dropOff"
+      );
+
+
+    dropOff.innerHTML =
+      "";
+
+
+    if (
+      result.dropOff?.length
+    ) {
+
+      result.dropOff.forEach(
+        point => {
+
+          const row =
+            document.createElement(
+              "div"
+            );
+
+
+          row.className =
+            "drop";
+
+
+          row.innerHTML = `
+            <div>
+              <div class="time">
+                ${Number(point.time).toFixed(1)}s
+              </div>
+              <div>
+                ${escapeHtml(point.reason)}
+              </div>
+            </div>
+            <div class="confidence">
+              ${escapeHtml(point.confidence)}
+            </div>
+          `;
+
+
+          dropOff.appendChild(
+            row
+          );
+
+        }
+      );
+
+    } else {
+
+      dropOff.textContent =
+        "لم تظهر مناطق تستحق المراجعة ضمن القياسات الحالية.";
+
+    }
+
+
+    renderList(
+      "diagnosis",
+      result.diagnosis
+    );
+
+
+    const priority =
+      document.getElementById(
+        "priority"
+      );
+
+
+    priority.textContent =
+      result.recommendations?.priority ||
+      "لا توجد أولوية واضحة.";
+
+
+    renderList(
+      "recommendations",
+      result.recommendations?.changes
+    );
+
+
+    const tech =
+      result.technical;
+
+
+    document.getElementById(
+      "technical"
+    ).innerHTML = `
+      المدة: ${result.video.dimensions.duration}s<br>
+      الأبعاد: ${result.video.dimensions.width} × ${result.video.dimensions.height}<br>
+      النسبة: ${escapeHtml(String(result.video.dimensions.aspectRatio))}<br>
+      الملف: ${escapeHtml(result.video.file.name)}<br>
+      الحجم: ${escapeHtml(result.video.file.sizeFormatted)}
+    `;
+
+  }
+
+
+  function setScore(
+    id,
+    value
+  ) {
+
+    document.getElementById(
+      id
+    ).textContent =
+      `${Number(value) || 0}%`;
+
+  }
+
+
+  function renderList(
+    id,
+    items
+  ) {
+
+    const container =
+      document.getElementById(
+        id
+      );
+
+
+    container.innerHTML =
+      "";
+
+
+    if (
+      !Array.isArray(items) ||
+      !items.length
+    ) {
+
+      container.textContent =
+        "لا توجد ملاحظات.";
+
+      return;
+
+    }
+
+
+    items.forEach(
+      text => {
+
+        const item =
+          document.createElement(
+            "div"
+          );
+
+
+        item.className =
+          "item";
+
+
+        item.textContent =
+          text;
+
+
+        container.appendChild(
+          item
+        );
+
+      }
+    );
+
+  }
+
+
+  function formatBytes(
+    bytes
+  ) {
+
+    if (!bytes)
+      return "0 B";
+
+
+    if (
+      bytes < 1024
+    )
+      return `${bytes} B`;
+
+
+    if (
+      bytes <
+      1024 * 1024
+    ) {
+
+      return `${(
+        bytes / 1024
+      ).toFixed(1)} KB`;
+
+    }
+
+
+    return `${(
+      bytes /
+      (1024 * 1024)
+    ).toFixed(1)} MB`;
+
+  }
+
+
+  function escapeHtml(
+    value
+  ) {
+
+    return String(
+      value ?? ""
+    )
+      .replaceAll(
+        "&",
+        "&amp;"
+      )
+      .replaceAll(
+        "<",
+        "&lt;"
+      )
+      .replaceAll(
+        ">",
+        "&gt;"
+      )
+      .replaceAll(
+        '"',
+        "&quot;"
+      )
+      .replaceAll(
+        "'",
+        "&#039;"
+      );
+
+  }
+
+</script>
+
+</body>
+</html>
