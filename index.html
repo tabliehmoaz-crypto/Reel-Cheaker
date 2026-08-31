@@ -1,0 +1,2644 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#09090b">
+
+  <title>REEL CHECK — AI Reel Analyzer</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    .progress-bar {
+      transition: width .35s ease;
+    }
+
+    .fade-in {
+      animation: fadeIn .35s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .metric-card {
+      background: rgba(23,23,23,.85);
+      border: 1px solid rgba(64,64,64,.8);
+    }
+  </style>
+</head>
+
+<body class="bg-neutral-950 text-neutral-100 min-h-screen p-4 pb-20">
+
+<div class="max-w-md mx-auto">
+
+  <!-- HEADER -->
+  <header class="text-center my-6">
+    <div class="inline-flex items-center gap-2 bg-purple-950/60 border border-purple-800 px-3 py-1 rounded-full text-xs text-purple-300 mb-2">
+      <span class="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></span>
+      AI Reel Psychology Analyzer
+    </div>
+
+    <h1 class="text-2xl font-black tracking-tight">
+      REEL CHECK
+    </h1>
+
+    <p class="text-xs text-neutral-400 mt-1">
+      تحليل الفيديو + الصوت + الهوك + الاحتفاظ + قابلية المشاركة
+    </p>
+  </header>
+
+
+  <!-- UPLOAD SECTION -->
+  <section id="uploadSection"
+    class="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 shadow-xl space-y-4">
+
+    <!-- API KEY -->
+    <div class="bg-neutral-950 p-3 rounded-xl border border-neutral-800 text-right">
+
+      <label class="block text-[11px] font-bold text-neutral-400 mb-1">
+        Gemini API Key
+      </label>
+
+      <input
+        type="password"
+        id="customApiKey"
+        placeholder="الصق المفتاح هنا..."
+        autocomplete="off"
+        class="w-full bg-neutral-900 border border-neutral-700 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-purple-500"
+      >
+
+      <p class="text-[9px] text-neutral-600 mt-2">
+        المفتاح يُحفظ محلياً على جهازك فقط.
+      </p>
+
+    </div>
+
+
+    <!-- ACCOUNT CONTEXT -->
+    <div class="grid grid-cols-2 gap-2 text-right">
+
+      <div class="bg-neutral-950 p-2.5 rounded-xl border border-neutral-800">
+
+        <label class="block text-[10px] font-bold text-neutral-400 mb-1">
+          متوسط المشاهدات
+        </label>
+
+        <select id="accountBaseline"
+          class="w-full bg-neutral-900 text-neutral-200 border border-neutral-700 rounded-lg p-1.5 text-xs">
+
+          <option value="under_2k">أقل من 2,000</option>
+          <option value="2k_10k">2,000 - 10,000</option>
+          <option value="10k_50k">10,000 - 50,000</option>
+          <option value="50k_plus">أكثر من 50,000</option>
+
+        </select>
+      </div>
+
+
+      <div class="bg-neutral-950 p-2.5 rounded-xl border border-neutral-800">
+
+        <label class="block text-[10px] font-bold text-neutral-400 mb-1">
+          نوع الحساب
+        </label>
+
+        <select id="accountNiche"
+          class="w-full bg-neutral-900 text-neutral-200 border border-neutral-700 rounded-lg p-1.5 text-xs">
+
+          <option value="brand">براند / أزياء / متجر</option>
+          <option value="personal">شخصي / تعليم / تطوير</option>
+          <option value="entertainment">ترفيه / لايف ستايل</option>
+
+        </select>
+      </div>
+
+    </div>
+
+
+    <!-- VIDEO PICKER -->
+    <div
+      id="dropZone"
+      class="border-2 border-dashed border-neutral-700 rounded-xl p-6 text-center">
+
+      <svg class="w-10 h-10 mx-auto text-neutral-400 mb-2"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24">
+
+        <path stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="1.5"
+          d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+
+      </svg>
+
+      <p class="text-sm font-medium mb-1">
+        اختر الريل
+      </p>
+
+      <p class="text-xs text-neutral-500">
+        MP4 / MOV / WebM — يفضل أقل من 100MB
+      </p>
+
+      <input
+        type="file"
+        id="videoInput"
+        accept="video/*,.mp4,.mov,.webm,.m4v"
+        class="hidden"
+      >
+
+      <button
+        id="pickVideoBtn"
+        class="mt-4 bg-white text-black font-semibold text-xs py-2.5 px-5 rounded-full">
+
+        تحديد الفيديو
+
+      </button>
+
+    </div>
+
+
+    <!-- SELECTED FILE -->
+    <div id="selectedFileBox"
+      class="hidden bg-neutral-950 border border-neutral-800 rounded-xl p-3">
+
+      <div class="flex items-center justify-between">
+
+        <div class="min-w-0">
+
+          <div id="selectedFileText"
+            class="text-xs font-bold truncate">
+          </div>
+
+          <div id="videoMeta"
+            class="text-[10px] text-neutral-500 mt-1">
+          </div>
+
+        </div>
+
+        <button
+          id="removeVideoBtn"
+          class="text-[10px] text-rose-400 mr-2">
+          حذف
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <!-- PROGRESS -->
+    <div id="progressSection" class="hidden">
+
+      <div class="flex justify-between text-[10px] text-neutral-400 mb-1">
+
+        <span id="progressLabel">
+          تجهيز الفيديو...
+        </span>
+
+        <span id="progressPercent">
+          0%
+        </span>
+
+      </div>
+
+      <div class="h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+
+        <div
+          id="progressBar"
+          class="progress-bar h-full bg-purple-600"
+          style="width:0%">
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- ANALYZE -->
+    <button
+      id="analyzeBtn"
+      class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-xl text-sm transition disabled:opacity-40 hidden">
+
+      تحليل الريل بالكامل
+
+    </button>
+
+
+    <!-- LOADING -->
+    <div id="loading"
+      class="hidden py-6 text-center space-y-3">
+
+      <div class="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+
+      <p id="loadingText"
+        class="text-xs text-neutral-300 font-medium">
+        جاري التحليل...
+      </p>
+
+      <p class="text-[10px] text-neutral-600">
+        قد يستغرق التحليل عدة ثوانٍ حسب حجم الفيديو وحالة خوادم Gemini.
+      </p>
+
+    </div>
+
+
+    <!-- ERROR -->
+    <div id="errorBox"
+      class="hidden bg-rose-950/30 border border-rose-800/50 rounded-xl p-3">
+
+      <div class="text-xs font-bold text-rose-400 mb-1">
+        حصلت مشكلة
+      </div>
+
+      <div id="errorText"
+        class="text-[11px] text-rose-200 leading-relaxed">
+      </div>
+
+      <button
+        id="retryBtn"
+        class="hidden mt-3 w-full bg-rose-900/50 border border-rose-700 text-rose-200 text-xs font-bold py-2.5 rounded-lg">
+
+        إعادة المحاولة
+
+      </button>
+
+    </div>
+
+  </section>
+
+
+  <!-- REPORT -->
+  <section id="reportSection"
+    class="hidden space-y-4 mt-6 fade-in">
+
+
+    <!-- SCORE -->
+    <div class="bg-neutral-900 border border-neutral-800 rounded-2xl p-5">
+
+      <div class="flex items-center justify-between mb-3">
+
+        <span id="decisionBadge"
+          class="text-xs font-bold px-3 py-1 rounded-full border">
+        </span>
+
+        <div class="text-left">
+
+          <span id="totalScore"
+            class="text-3xl font-black text-purple-400">
+          </span>
+
+          <span class="text-neutral-500 text-xs">
+            /100
+          </span>
+
+        </div>
+
+      </div>
+
+      <p id="verdictText"
+        class="text-xs text-neutral-200 leading-relaxed font-medium">
+      </p>
+
+    </div>
+
+
+    <!-- CONFIDENCE -->
+    <div class="metric-card rounded-xl p-3">
+
+      <div class="flex justify-between">
+
+        <span class="text-[10px] text-neutral-400">
+          ثقة التحليل
+        </span>
+
+        <span id="confidenceText"
+          class="text-[10px] font-bold text-purple-300">
+        </span>
+
+      </div>
+
+      <div class="mt-2 h-1 bg-neutral-800 rounded-full overflow-hidden">
+
+        <div id="confidenceBar"
+          class="h-full bg-purple-600"
+          style="width:0%">
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- SCORE BREAKDOWN -->
+    <div class="bg-neutral-900 border border-neutral-800 rounded-2xl p-4">
+
+      <h3 class="text-xs font-bold text-neutral-300 mb-3">
+        تفكيك النتيجة
+      </h3>
+
+      <div id="scoreBreakdown"
+        class="grid grid-cols-2 gap-2">
+      </div>
+
+    </div>
+
+
+    <!-- VIEW RANGE -->
+    <div class="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 space-y-3">
+
+      <h3 class="text-xs font-bold text-neutral-300">
+        📊 تقدير الأداء
+      </h3>
+
+      <div class="grid grid-cols-2 gap-2">
+
+        <div class="bg-neutral-950 border border-neutral-800 rounded-xl p-3">
+
+          <span class="text-[10px] text-neutral-400 font-bold block mb-1">
+            حالياً
+          </span>
+
+          <div id="viewsAsIs"
+            class="text-sm font-black text-rose-400">
+          </div>
+
+          <p id="whyStops"
+            class="text-[10px] text-neutral-500 mt-1 leading-tight">
+          </p>
+
+        </div>
+
+
+        <div class="bg-purple-950/40 border border-purple-800/60 rounded-xl p-3">
+
+          <span class="text-[10px] text-purple-300 font-bold block mb-1">
+            بعد الإصلاح
+          </span>
+
+          <div id="viewsPotential"
+            class="text-sm font-black text-purple-300">
+          </div>
+
+          <p id="howToReach"
+            class="text-[10px] text-purple-400/80 mt-1 leading-tight">
+          </p>
+
+        </div>
+
+      </div>
+
+      <p class="text-[9px] text-neutral-600">
+        هذا تقدير احتمالي مبني على خصائص المحتوى وسياق الحساب، وليس وعداً بعدد مشاهدات.
+      </p>
+
+    </div>
+
+
+    <!-- TIMING -->
+    <div class="grid grid-cols-2 gap-2">
+
+      <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-3.5">
+
+        <div class="text-[10px] font-bold text-blue-400 mb-1">
+          ⏰ التوقيت
+        </div>
+
+        <div id="bestTime"
+          class="text-xs font-bold">
+        </div>
+
+        <p id="bestDays"
+          class="text-[10px] text-neutral-400 mt-1">
+        </p>
+
+      </div>
+
+
+      <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-3.5">
+
+        <div class="text-[10px] font-bold text-emerald-400 mb-1">
+          🔄 قابلية المشاركة
+        </div>
+
+        <div id="shareabilityScore"
+          class="text-xs font-bold">
+        </div>
+
+        <p id="shareabilityTip"
+          class="text-[10px] text-neutral-400 mt-1">
+        </p>
+
+      </div>
+
+    </div>
+
+
+    <!-- HOOK -->
+    <div class="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 space-y-3">
+
+      <div class="text-xs font-bold text-amber-400">
+        🧠 تشريح الهوك
+      </div>
+
+      <div id="hookScore"
+        class="text-xl font-black text-amber-300">
+      </div>
+
+      <p id="hookPsychology"
+        class="text-xs text-neutral-300 leading-relaxed">
+      </p>
+
+      <div id="hookStrengths"
+        class="space-y-1">
+      </div>
+
+      <div id="hookWeaknesses"
+        class="space-y-1">
+      </div>
+
+    </div>
+
+
+    <!-- TIMELINE -->
+    <div class="bg-neutral-900 border border-neutral-800 rounded-2xl p-4">
+
+      <h3 class="text-xs font-bold text-neutral-300 mb-3">
+        ⏱️ نقاط الخطر داخل الفيديو
+      </h3>
+
+      <div id="timelineList"
+        class="space-y-2">
+      </div>
+
+    </div>
+
+
+    <!-- PSYCHOLOGY -->
+    <div class="bg-neutral-900 border border-neutral-800 rounded-2xl p-4">
+
+      <h3 class="text-xs font-bold text-purple-300 mb-3">
+        🧠 المحركات النفسية
+      </h3>
+
+      <div id="psychologyList"
+        class="space-y-2">
+      </div>
+
+    </div>
+
+
+    <!-- HOOKS -->
+    <div class="bg-neutral-900 border border-neutral-800 rounded-2xl p-4">
+
+      <h3 class="text-xs font-bold text-purple-300 mb-3">
+        🎯 Hooks بديلة
+      </h3>
+
+      <div id="hooksList"
+        class="space-y-3">
+      </div>
+
+    </div>
+
+
+    <!-- ACTION PLAN -->
+    <div class="bg-neutral-900 border border-neutral-800 rounded-2xl p-4">
+
+      <h3 class="text-xs font-bold text-emerald-400 mb-3">
+        🛠️ خطة التعديل
+      </h3>
+
+      <div id="actionPlan"
+        class="space-y-3">
+      </div>
+
+    </div>
+
+
+    <!-- CUT / CHANGE -->
+    <div class="grid grid-cols-2 gap-2">
+
+      <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-3">
+
+        <h4 class="text-[11px] font-bold text-red-400 mb-2">
+          احذف
+        </h4>
+
+        <ul id="cutList"
+          class="text-[10px] text-neutral-300 list-disc pr-3 space-y-1">
+        </ul>
+
+      </div>
+
+
+      <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-3">
+
+        <h4 class="text-[11px] font-bold text-emerald-400 mb-2">
+          عدّل
+        </h4>
+
+        <ul id="changeList"
+          class="text-[10px] text-neutral-300 list-disc pr-3 space-y-1">
+        </ul>
+
+      </div>
+
+    </div>
+
+
+    <!-- FINAL VERDICT -->
+    <div class="bg-purple-950/30 border border-purple-800/50 rounded-2xl p-4">
+
+      <div class="text-[10px] font-bold text-purple-300 mb-2">
+        الخلاصة التنفيذية
+      </div>
+
+      <p id="finalAction"
+        class="text-xs text-purple-100 leading-relaxed">
+      </p>
+
+    </div>
+
+
+    <button
+      id="newAnalysisBtn"
+      class="w-full bg-neutral-800 text-neutral-300 text-xs font-bold py-3 rounded-xl">
+
+      فحص ريل آخر
+
+    </button>
+
+  </section>
+
+</div>
+
+
+<script>
+
+/* ============================================================
+   REEL CHECK V2
+   Gemini Video Analysis
+   ============================================================ */
+
+
+/* ---------- ELEMENTS ---------- */
+
+const videoInput = document.getElementById("videoInput");
+const pickVideoBtn = document.getElementById("pickVideoBtn");
+const analyzeBtn = document.getElementById("analyzeBtn");
+
+const selectedFileBox = document.getElementById("selectedFileBox");
+const selectedFileText = document.getElementById("selectedFileText");
+const videoMeta = document.getElementById("videoMeta");
+
+const removeVideoBtn = document.getElementById("removeVideoBtn");
+
+const progressSection = document.getElementById("progressSection");
+const progressBar = document.getElementById("progressBar");
+const progressLabel = document.getElementById("progressLabel");
+const progressPercent = document.getElementById("progressPercent");
+
+const loading = document.getElementById("loading");
+const loadingText = document.getElementById("loadingText");
+
+const errorBox = document.getElementById("errorBox");
+const errorText = document.getElementById("errorText");
+const retryBtn = document.getElementById("retryBtn");
+
+const uploadSection = document.getElementById("uploadSection");
+const reportSection = document.getElementById("reportSection");
+
+const apiKeyInput = document.getElementById("customApiKey");
+const baselineSelect = document.getElementById("accountBaseline");
+const nicheSelect = document.getElementById("accountNiche");
+
+
+/* ---------- SETTINGS ---------- */
+
+const MODELS = [
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite"
+];
+
+const INLINE_LIMIT = 18 * 1024 * 1024;
+
+const MAX_RETRIES_PER_MODEL = 3;
+
+let currentFile = null;
+let lastAnalysisFile = null;
+
+
+/* ---------- API KEY MEMORY ---------- */
+
+try {
+  const savedKey = localStorage.getItem("gemini_api_key");
+
+  if (savedKey) {
+    apiKeyInput.value = savedKey;
+  }
+} catch (_) {}
+
+
+/* ---------- HELPERS ---------- */
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+
+function setProgress(percent, label) {
+
+  const p = Math.max(0, Math.min(100, percent));
+
+  progressSection.classList.remove("hidden");
+
+  progressBar.style.width = p + "%";
+
+  progressPercent.textContent = p + "%";
+
+  progressLabel.textContent = label;
+}
+
+
+function setLoading(text) {
+
+  loading.classList.remove("hidden");
+
+  loadingText.textContent = text;
+
+}
+
+
+function hideLoading() {
+
+  loading.classList.add("hidden");
+
+}
+
+
+function clearError() {
+
+  errorBox.classList.add("hidden");
+
+  retryBtn.classList.add("hidden");
+
+  errorText.textContent = "";
+
+}
+
+
+function showError(message, retryable = false) {
+
+  errorBox.classList.remove("hidden");
+
+  errorText.textContent = message;
+
+  retryBtn.classList.toggle("hidden", !retryable);
+
+}
+
+
+function formatMB(bytes) {
+
+  return (bytes / 1024 / 1024).toFixed(1) + " MB";
+
+}
+
+
+function escapeHTML(value) {
+
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+
+}
+
+
+function clampNumber(value, min, max, fallback = min) {
+
+  const n = Number(value);
+
+  if (!Number.isFinite(n)) return fallback;
+
+  return Math.max(min, Math.min(max, n));
+
+}
+
+
+/* ---------- VIDEO METADATA ---------- */
+
+function readVideoMetadata(file) {
+
+  return new Promise((resolve, reject) => {
+
+    const url = URL.createObjectURL(file);
+
+    const video = document.createElement("video");
+
+    video.preload = "metadata";
+
+    video.muted = true;
+
+    video.playsInline = true;
+
+    video.onloadedmetadata = () => {
+
+      const metadata = {
+        duration: Number(video.duration || 0),
+        width: Number(video.videoWidth || 0),
+        height: Number(video.videoHeight || 0),
+        type: file.type || "video/mp4",
+        size: file.size
+      };
+
+      URL.revokeObjectURL(url);
+
+      resolve(metadata);
+
+    };
+
+    video.onerror = () => {
+
+      URL.revokeObjectURL(url);
+
+      reject(new Error("تعذر على المتصفح قراءة ملف الفيديو. جرّب حفظ الريل كـMP4 ثم أعد المحاولة."));
+
+    };
+
+    video.src = url;
+
+  });
+
+}
+
+
+/* ---------- PICK VIDEO ---------- */
+
+pickVideoBtn.addEventListener("click", () => {
+
+  videoInput.click();
+
+});
+
+
+videoInput.addEventListener("change", async () => {
+
+  clearError();
+
+  const file = videoInput.files?.[0];
+
+  if (!file) return;
+
+  try {
+
+    setProgress(5, "فحص ملف الفيديو...");
+
+    currentFile = file;
+
+    lastAnalysisFile = file;
+
+    const metadata = await readVideoMetadata(file);
+
+    selectedFileBox.classList.remove("hidden");
+
+    selectedFileText.textContent = file.name;
+
+    videoMeta.textContent =
+      `${formatMB(file.size)} • ${metadata.duration.toFixed(1)} ثانية • ${metadata.width}×${metadata.height}`;
+
+    analyzeBtn.classList.remove("hidden");
+
+    setProgress(100, "الفيديو جاهز للتحليل");
+
+    setTimeout(() => {
+      progressSection.classList.add("hidden");
+    }, 700);
+
+  } catch (err) {
+
+    currentFile = null;
+
+    videoInput.value = "";
+
+    showError(
+      err.message ||
+      "تعذر قراءة الفيديو.",
+      false
+    );
+
+  }
+
+});
+
+
+/* ---------- REMOVE ---------- */
+
+removeVideoBtn.addEventListener("click", () => {
+
+  currentFile = null;
+
+  lastAnalysisFile = null;
+
+  videoInput.value = "";
+
+  selectedFileBox.classList.add("hidden");
+
+  analyzeBtn.classList.add("hidden");
+
+  clearError();
+
+});
+
+
+/* ============================================================
+   JSON SCHEMA
+   ============================================================ */
+
+const ANALYSIS_SCHEMA = {
+
+  type: "object",
+
+  properties: {
+
+    score: {
+      type: "object",
+      properties: {
+        total: { type: "integer" },
+        hook: { type: "integer" },
+        retention: { type: "integer" },
+        clarity: { type: "integer" },
+        emotionalImpact: { type: "integer" },
+        shareability: { type: "integer" },
+        payoff: { type: "integer" }
+      },
+      required: [
+        "total",
+        "hook",
+        "retention",
+        "clarity",
+        "emotionalImpact",
+        "shareability",
+        "payoff"
+      ]
+    },
+
+    decision: {
+      type: "string"
+    },
+
+    confidence: {
+      type: "object",
+      properties: {
+        score: { type: "integer" },
+        reason: { type: "string" }
+      },
+      required: ["score", "reason"]
+    },
+
+    verdict: {
+      type: "string"
+    },
+
+    videoSummary: {
+      type: "string"
+    },
+
+    viewsPrediction: {
+      type: "object",
+      properties: {
+        currentRange: { type: "string" },
+        improvedRange: { type: "string" },
+        confidence: { type: "string" },
+        whyCurrent: { type: "string" },
+        howToImprove: { type: "string" }
+      },
+      required: [
+        "currentRange",
+        "improvedRange",
+        "confidence",
+        "whyCurrent",
+        "howToImprove"
+      ]
+    },
+
+    hook: {
+      type: "object",
+      properties: {
+        score: { type: "integer" },
+        firstThreeSeconds: { type: "string" },
+        visualHook: { type: "string" },
+        verbalHook: { type: "string" },
+        curiosityGap: { type: "string" },
+        patternInterrupt: { type: "string" },
+        strengths: {
+          type: "array",
+          items: { type: "string" }
+        },
+        weaknesses: {
+          type: "array",
+          items: { type: "string" }
+        }
+      },
+      required: [
+        "score",
+        "firstThreeSeconds",
+        "visualHook",
+        "verbalHook",
+        "curiosityGap",
+        "patternInterrupt",
+        "strengths",
+        "weaknesses"
+      ]
+    },
+
+    timeline: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          timestamp: { type: "string" },
+          risk: { type: "integer" },
+          observation: { type: "string" },
+          reason: { type: "string" },
+          fix: { type: "string" }
+        },
+        required: [
+          "timestamp",
+          "risk",
+          "observation",
+          "reason",
+          "fix"
+        ]
+      }
+    },
+
+    psychology: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          principle: { type: "string" },
+          score: { type: "integer" },
+          observed: { type: "string" },
+          implication: { type: "string" }
+        },
+        required: [
+          "principle",
+          "score",
+          "observed",
+          "implication"
+        ]
+      }
+    },
+
+    shareability: {
+      type: "object",
+      properties: {
+        score: { type: "integer" },
+        savePotential: { type: "integer" },
+        sharePotential: { type: "integer" },
+        commentPotential: { type: "integer" },
+        reason: { type: "string" },
+        improvement: { type: "string" }
+      },
+      required: [
+        "score",
+        "savePotential",
+        "sharePotential",
+        "commentPotential",
+        "reason",
+        "improvement"
+      ]
+    },
+
+    timing: {
+      type: "object",
+      properties: {
+        window: { type: "string" },
+        days: { type: "string" },
+        caveat: { type: "string" }
+      },
+      required: [
+        "window",
+        "days",
+        "caveat"
+      ]
+    },
+
+    hooks: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          type: { type: "string" },
+          script: { type: "string" },
+          action: { type: "string" },
+          principle: { type: "string" },
+          whyBetter: { type: "string" }
+        },
+        required: [
+          "type",
+          "script",
+          "action",
+          "principle",
+          "whyBetter"
+        ]
+      }
+    },
+
+    actionPlan: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          priority: { type: "integer" },
+          timestamp: { type: "string" },
+          problem: { type: "string" },
+          exactChange: { type: "string" },
+          expectedEffect: { type: "string" },
+          evidenceBasis: { type: "string" }
+        },
+        required: [
+          "priority",
+          "timestamp",
+          "problem",
+          "exactChange",
+          "expectedEffect",
+          "evidenceBasis"
+        ]
+      }
+    },
+
+    cut: {
+      type: "array",
+      items: { type: "string" }
+    },
+
+    change: {
+      type: "array",
+      items: { type: "string" }
+    },
+
+    finalAction: {
+      type: "string"
+    }
+
+  },
+
+  required: [
+    "score",
+    "decision",
+    "confidence",
+    "verdict",
+    "videoSummary",
+    "viewsPrediction",
+    "hook",
+    "timeline",
+    "psychology",
+    "shareability",
+    "timing",
+    "hooks",
+    "actionPlan",
+    "cut",
+    "change",
+    "finalAction"
+  ]
+
+};
+
+
+/* ============================================================
+   PROMPT
+   ============================================================ */
+
+function buildPrompt(duration, baseline, niche) {
+
+  return `
+أنت محلل محترف للأداء الإبداعي للمحتوى القصير، ومتخصص في:
+- علم نفس الانتباه
+- سلوك المشاهد
+- short-form storytelling
+- retention mechanics
+- persuasion
+- social media creative strategy
+- تحليل hooks
+- cognitive load
+- curiosity
+- emotional arousal
+- shareability
+- saveability
+- narrative payoff
+
+حلل الفيديو المرفق نفسه، بما فيه:
+الصورة + الحركة + الصوت + الكلام + الموسيقى + النصوص على الشاشة + الانتقالات + التوقيت.
+
+مدة الفيديو: ${duration.toFixed(2)} ثانية.
+
+سياق الحساب:
+- متوسط المشاهدات: ${baseline}
+- المجال: ${niche}
+
+==================================================
+قواعد التحليل
+==================================================
+
+1. لا تعطِ نصائح عامة.
+كل نصيحة يجب أن ترتبط بمشكلة لاحظتها فعلياً في الفيديو.
+
+2. لا تفترض وجود شيء لم تره.
+إذا لم تستطع التأكد من عنصر معين، قل إن الدليل غير كافٍ.
+
+3. لا تدّع معرفة خوارزمية Instagram الداخلية.
+حلل المحتوى بناءً على مؤشرات سلوكية وإبداعية معروفة، ولا تقدم أي ادعاء كحقيقة عن الخوارزمية.
+
+4. لا تتوقع رقماً دقيقاً للمشاهدات.
+أعط نطاقاً احتماليًا فقط، مع درجة ثقة.
+النطاق يجب أن يأخذ متوسط مشاهدات الحساب كخط أساس.
+
+5. لا تستخدم كلمة "Neuro" كزخرفة.
+عندما تذكر مبدأ نفسياً، اشرح كيف ظهر في الفيديو وكيف يمكن تحسينه.
+
+6. ركّز بشدة على أول:
+0.0–1.0 ثانية
+1.0–2.0 ثانية
+2.0–3.0 ثانية
+
+7. حدد اللحظات التي قد ينخفض فيها اهتمام المشاهد، مع timestamp تقريبي.
+
+8. افحص:
+- clarity
+- relevance
+- novelty
+- pattern interrupt
+- curiosity gap
+- open loop
+- payoff
+- emotional intensity
+- cognitive load
+- pacing
+- visual movement
+- text readability
+- spoken language
+- scene changes
+- story progression
+- information density
+- expectation violation
+- tension
+- identification
+- social currency
+- practical value
+- entertainment value
+- save trigger
+- share trigger
+- comment trigger
+- CTA
+
+9. إذا كان هناك Hook جيد، لا تقترح تغييره لمجرد التغيير.
+قل إنه جيد ووضح لماذا.
+
+10. إذا كان هناك مشكلة في الهوك، اقترح تعديلاً محدداً:
+ماذا يقول؟
+ماذا يفعل بصرياً؟
+في أي ثانية؟
+ماذا نحذف؟
+
+11. التعديلات يجب أن تكون قابلة للتنفيذ أثناء المونتاج.
+
+12. افصل بين:
+- المشكلة
+- السبب السلوكي المحتمل
+- التعديل
+- النتيجة المتوقعة
+
+13. لا تعتبر likes وحدها مؤشراً كافياً.
+ركز على retention، rewatch، shares، saves، comments، والـvalue exchange.
+
+14. لا تقل "هذا سيصبح viral".
+استخدم لغة احتمالية.
+
+15. إذا كان الفيديو سيئاً، قل ذلك بوضوح.
+إذا كان جيداً، لا تخترع مشاكل.
+
+==================================================
+المطلوب
+==================================================
+
+أعطني:
+- تقييم عام /100
+- تفكيك الدرجات
+- قرار واضح: نشر / تعديل بسيط / تعديل جوهري / إعادة تصوير
+- ملخص الفيديو
+- تقدير احتمالي للأداء الحالي وبعد الإصلاح
+- درجة ثقة
+- تحليل أول 3 ثواني
+- قوة الهوك
+- التحليل النفسي
+- timeline لنقاط الخطر
+- قابلية المشاركة والحفظ والتعليق
+- أفضل وقت نشر كاقتراح عام فقط، مع التنبيه أن بيانات الحساب الحقيقية أهم
+- 3 إلى 5 hooks بديلة
+- لكل Hook: النص + الحركة + المبدأ + لماذا أفضل
+- خطة تعديل مرتبة حسب الأولوية
+- ماذا نحذف
+- ماذا نغير
+- الخلاصة التنفيذية
+
+الأهم:
+إذا كان التعديل المقترح لا يتوقع أن يحدث فرقاً واضحاً، لا تقترحه.
+`;
+}
+
+
+/* ============================================================
+   API ERROR CLASSIFICATION
+   ============================================================ */
+
+function classifyAPIError(status, data) {
+
+  const message =
+    data?.error?.message ||
+    data?.message ||
+    "";
+
+  const lower = message.toLowerCase();
+
+  if (status === 400) {
+
+    return {
+      retryable: false,
+      message:
+        "Gemini رفض الطلب. غالباً هناك مشكلة في صيغة الفيديو أو حجم/نوع البيانات المرسلة."
+    };
+
+  }
+
+  if (status === 401) {
+
+    return {
+      retryable: false,
+      message:
+        "مفتاح Gemini غير صالح أو منتهي. تأكد من API Key الموجود في Google AI Studio."
+    };
+
+  }
+
+  if (status === 403) {
+
+    return {
+      retryable: false,
+      message:
+        "المفتاح موجود لكن المشروع لا يملك صلاحية استخدام هذا المورد أو النموذج."
+    };
+
+  }
+
+  if (status === 404) {
+
+    return {
+      retryable: true,
+      message:
+        "النموذج المطلوب غير متاح حالياً لهذا المفتاح. سيتم تجربة نموذج بديل."
+    };
+
+  }
+
+  if (status === 429) {
+
+    return {
+      retryable: true,
+      message:
+        "Gemini وصل إلى حد الاستخدام أو الضغط الحالي. سأنتظر قليلاً وأعيد المحاولة تلقائياً."
+    };
+
+  }
+
+  if ([500, 502, 503, 504].includes(status)) {
+
+    return {
+      retryable: true,
+      message:
+        "خوادم Gemini مشغولة أو حدث خطأ مؤقت. سيتم إعادة المحاولة تلقائياً."
+    };
+
+  }
+
+  if (
+    lower.includes("quota") ||
+    lower.includes("resource exhausted") ||
+    lower.includes("overloaded")
+  ) {
+
+    return {
+      retryable: true,
+      message:
+        "Gemini رفض الطلب مؤقتاً بسبب الضغط أو حدود الاستخدام. سيتم إعادة المحاولة."
+    };
+
+  }
+
+  return {
+    retryable: false,
+    message:
+      "حدث خطأ غير متوقع أثناء الاتصال بـ Gemini."
+  };
+
+}
+
+
+/* ============================================================
+   RETRY DELAY
+   ============================================================ */
+
+function getRetryDelay(attempt) {
+
+  const base = 1800;
+
+  const exponential = base * Math.pow(2, attempt);
+
+  const jitter = Math.random() * 700;
+
+  return Math.min(
+    15000,
+    exponential + jitter
+  );
+
+}
+
+
+/* ============================================================
+   INLINE VIDEO
+   ============================================================ */
+
+async function fileToBase64(file) {
+
+  return new Promise((resolve, reject) => {
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+
+      try {
+
+        const result = reader.result;
+
+        const base64 =
+          String(result).split(",")[1];
+
+        if (!base64) {
+          reject(new Error("تعذر تجهيز الفيديو."));
+          return;
+        }
+
+        resolve(base64);
+
+      } catch (err) {
+
+        reject(err);
+
+      }
+
+    };
+
+    reader.onerror = () => {
+      reject(new Error("تعذر قراءة ملف الفيديو."));
+    };
+
+    reader.readAsDataURL(file);
+
+  });
+
+}
+
+
+/* ============================================================
+   FILE API UPLOAD
+   ============================================================ */
+
+async function uploadToGeminiFiles(file, apiKey) {
+
+  const startUrl =
+    "https://generativelanguage.googleapis.com/upload/v1beta/files";
+
+  const startResponse = await fetch(startUrl, {
+
+    method: "POST",
+
+    headers: {
+
+      "x-goog-api-key": apiKey,
+
+      "X-Goog-Upload-Protocol": "resumable",
+
+      "X-Goog-Upload-Command": "start",
+
+      "X-Goog-Upload-Header-Content-Length":
+        String(file.size),
+
+      "X-Goog-Upload-Header-Content-Type":
+        file.type || "video/mp4",
+
+      "Content-Type":
+        "application/json"
+
+    },
+
+    body: JSON.stringify({
+
+      file: {
+
+        display_name:
+          file.name || "reel-video"
+
+      }
+
+    })
+
+  });
+
+
+  if (!startResponse.ok) {
+
+    let data = {};
+
+    try {
+      data = await startResponse.json();
+    } catch (_) {}
+
+    throw {
+      status: startResponse.status,
+      data
+    };
+
+  }
+
+
+  const uploadUrl =
+    startResponse.headers.get("X-Goog-Upload-URL") ||
+    startResponse.headers.get("x-goog-upload-url");
+
+
+  if (!uploadUrl) {
+
+    throw new Error(
+      "Gemini لم يعطِ رابط رفع للفيديو."
+    );
+
+  }
+
+
+  const uploadResponse = await fetch(uploadUrl, {
+
+    method: "POST",
+
+    headers: {
+
+      "Content-Length":
+        String(file.size),
+
+      "X-Goog-Upload-Offset":
+        "0",
+
+      "X-Goog-Upload-Command":
+        "upload, finalize"
+
+    },
+
+    body: file
+
+  });
+
+
+  if (!uploadResponse.ok) {
+
+    let data = {};
+
+    try {
+      data = await uploadResponse.json();
+    } catch (_) {}
+
+    throw {
+      status: uploadResponse.status,
+      data
+    };
+
+  }
+
+
+  const result =
+    await uploadResponse.json();
+
+
+  const uploadedFile =
+    result?.file;
+
+  if (!uploadedFile?.uri) {
+
+    throw new Error(
+      "تم رفع الفيديو لكن Gemini لم يعطِ File URI."
+    );
+
+  }
+
+
+  return uploadedFile;
+
+}
+
+
+/* ============================================================
+   WAIT FOR FILE ACTIVE
+   ============================================================ */
+
+async function waitForFileActive(fileName, apiKey) {
+
+  const maxChecks = 30;
+
+  for (let i = 0; i < maxChecks; i++) {
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/${fileName}`,
+      {
+        headers: {
+          "x-goog-api-key": apiKey
+        }
+      }
+    );
+
+
+    if (!response.ok) {
+
+      let data = {};
+
+      try {
+        data = await response.json();
+      } catch (_) {}
+
+      throw {
+        status: response.status,
+        data
+      };
+
+    }
+
+
+    const data =
+      await response.json();
+
+
+    const state =
+      data?.state;
+
+
+    if (state === "ACTIVE") {
+
+      return data;
+
+    }
+
+
+    if (state === "FAILED") {
+
+      throw new Error(
+        "Gemini فشل في معالجة ملف الفيديو."
+      );
+
+    }
+
+
+    setProgress(
+      30 + Math.round((i / maxChecks) * 20),
+      "Gemini يعالج ملف الفيديو..."
+    );
+
+
+    await sleep(2000);
+
+  }
+
+
+  throw new Error(
+    "استغرق تجهيز الفيديو وقتاً أطول من المتوقع. جرّب مرة أخرى بعد قليل."
+  );
+
+}
+
+
+/* ============================================================
+   GENERATE CONTENT
+   ============================================================ */
+
+async function callGemini(model, parts, apiKey) {
+
+  const url =
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+
+  const body = {
+
+    contents: [
+      {
+        parts
+      }
+    ],
+
+    generationConfig: {
+
+      temperature: 0.35,
+
+      responseMimeType:
+        "application/json",
+
+      responseJsonSchema:
+        ANALYSIS_SCHEMA
+
+    }
+
+  };
+
+
+  const response = await fetch(url, {
+
+    method: "POST",
+
+    headers: {
+
+      "x-goog-api-key":
+        apiKey,
+
+      "Content-Type":
+        "application/json"
+
+    },
+
+    body: JSON.stringify(body)
+
+  });
+
+
+  let data = {};
+
+  try {
+
+    data = await response.json();
+
+  } catch (_) {}
+
+
+  if (!response.ok) {
+
+    throw {
+      status: response.status,
+      data
+    };
+
+  }
+
+
+  const text =
+    data?.candidates?.[0]?.content?.parts?.find(
+      p => typeof p.text === "string"
+    )?.text;
+
+
+  if (!text) {
+
+    throw new Error(
+      "Gemini ردّ بدون نتيجة تحليل."
+    );
+
+  }
+
+
+  return JSON.parse(text);
+
+}
+
+
+/* ============================================================
+   ANALYSIS
+   ============================================================ */
+
+async function performAnalysis(file) {
+
+  const apiKey =
+    apiKeyInput.value.trim();
+
+
+  if (!apiKey) {
+
+    throw new Error(
+      "ضع Gemini API Key أولاً."
+    );
+
+  }
+
+
+  try {
+
+    localStorage.setItem(
+      "gemini_api_key",
+      apiKey
+    );
+
+  } catch (_) {}
+
+
+  const metadata =
+    await readVideoMetadata(file);
+
+
+  if (!metadata.duration || metadata.duration <= 0) {
+
+    throw new Error(
+      "لم أستطع معرفة مدة الفيديو."
+    );
+
+  }
+
+
+  if (metadata.duration > 180) {
+
+    throw new Error(
+      "الفيديو طويل جداً لهذه الأداة. استخدم ريل/Short أقصر من 3 دقائق."
+    );
+
+  }
+
+
+  const baseline =
+    baselineSelect.options[
+      baselineSelect.selectedIndex
+    ].textContent;
+
+
+  const niche =
+    nicheSelect.options[
+      nicheSelect.selectedIndex
+    ].textContent;
+
+
+  const prompt =
+    buildPrompt(
+      metadata.duration,
+      baseline,
+      niche
+    );
+
+
+  let videoPart;
+
+
+  /* -----------------------------------------
+     SMALL FILE: INLINE
+     ----------------------------------------- */
+
+  if (file.size <= INLINE_LIMIT) {
+
+    setProgress(
+      25,
+      "تجهيز الفيديو للتحليل..."
+    );
+
+    setLoading(
+      "جاري تجهيز الفيديو وإرساله إلى Gemini..."
+    );
+
+
+    const base64 =
+      await fileToBase64(file);
+
+
+    videoPart = {
+
+      inlineData: {
+
+        mimeType:
+          file.type || "video/mp4",
+
+        data:
+          base64
+
+      }
+
+    };
+
+  }
+
+
+  /* -----------------------------------------
+     LARGE FILE: FILE API
+     ----------------------------------------- */
+
+  else {
+
+    setProgress(
+      15,
+      "رفع الفيديو إلى Gemini..."
+    );
+
+    setLoading(
+      "الفيديو كبير، جاري رفعه إلى Gemini..."
+    );
+
+
+    let uploaded;
+
+    try {
+
+      uploaded =
+        await uploadToGeminiFiles(
+          file,
+          apiKey
+        );
+
+    } catch (err) {
+
+      if (err?.status) {
+
+        const classified =
+          classifyAPIError(
+            err.status,
+            err.data
+          );
+
+        throw new Error(
+          classified.message
+        );
+
+      }
+
+      throw err;
+
+    }
+
+
+    setProgress(
+      35,
+      "انتظار تجهيز الفيديو..."
+    );
+
+
+    const activeFile =
+      await waitForFileActive(
+        uploaded.name,
+        apiKey
+      );
+
+
+    videoPart = {
+
+      fileData: {
+
+        mimeType:
+          activeFile.mimeType ||
+          file.type ||
+          "video/mp4",
+
+        fileUri:
+          activeFile.uri
+
+      }
+
+    };
+
+  }
+
+
+  setProgress(
+    55,
+    "جاري تحليل الفيديو والصوت والهوك..."
+  );
+
+
+  const textPart = {
+
+    text: prompt
+
+  };
+
+
+  const parts = [
+    textPart,
+    videoPart
+  ];
+
+
+  let lastError = null;
+
+
+  /* -----------------------------------------
+     MODEL FALLBACK + RETRY
+     ----------------------------------------- */
+
+  for (const model of MODELS) {
+
+    for (
+      let attempt = 0;
+      attempt < MAX_RETRIES_PER_MODEL;
+      attempt++
+    ) {
+
+      try {
+
+        setLoading(
+          `جاري التحليل باستخدام Gemini...`
+        );
+
+
+        const result =
+          await callGemini(
+            model,
+            parts,
+            apiKey
+          );
+
+
+        setProgress(
+          100,
+          "اكتمل التحليل"
+        );
+
+
+        return result;
+
+      } catch (err) {
+
+        lastError = err;
+
+        const status =
+          err?.status || 0;
+
+        let classified;
+
+
+        if (status) {
+
+          classified =
+            classifyAPIError(
+              status,
+              err.data
+            );
+
+        } else {
+
+          classified = {
+            retryable: false,
+            message:
+              err?.message ||
+              "حدث خطأ أثناء التحليل."
+          };
+
+        }
+
+
+        console.warn(
+          "Gemini attempt failed:",
+          model,
+          attempt + 1,
+          err
+        );
+
+
+        /* Don't retry authentication / permission / bad request */
+
+        if (!classified.retryable) {
+
+          /* Try next model only for model-not-found */
+
+          if (status === 404) {
+            break;
+          }
+
+          throw new Error(
+            classified.message
+          );
+
+        }
+
+
+        if (
+          attempt <
+          MAX_RETRIES_PER_MODEL - 1
+        ) {
+
+          const delay =
+            getRetryDelay(attempt);
+
+
+          setLoading(
+            `${classified.message} إعادة المحاولة بعد ${Math.ceil(delay / 1000)} ث...`
+          );
+
+
+          await sleep(delay);
+
+        }
+
+      }
+
+    }
+
+  }
+
+
+  if (lastError?.status === 429) {
+
+    throw new Error(
+      "Gemini مشغول أو وصلت إلى حد الاستخدام حالياً. انتظر دقيقة أو دقيقتين ثم جرّب مرة أخرى."
+    );
+
+  }
+
+
+  if (
+    [500, 502, 503, 504]
+      .includes(lastError?.status)
+  ) {
+
+    throw new Error(
+      "خوادم Gemini مشغولة حالياً. الأداة حاولت تلقائياً أكثر من مرة. جرّب بعد قليل."
+    );
+
+  }
+
+
+  throw new Error(
+    "تعذر إكمال التحليل حالياً. جرّب مرة أخرى."
+  );
+
+}
+
+
+/* ============================================================
+   START
+   ============================================================ */
+
+async function startAnalysis() {
+
+  clearError();
+
+  if (!currentFile) {
+
+    showError(
+      "اختر فيديو أولاً.",
+      false
+    );
+
+    return;
+
+  }
+
+
+  analyzeBtn.disabled = true;
+
+  uploadSection.scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
+
+
+  try {
+
+    setProgress(
+      5,
+      "بدء الفحص..."
+    );
+
+
+    setLoading(
+      "جاري فحص الفيديو..."
+    );
+
+
+    const report =
+      await performAnalysis(
+        currentFile
+      );
+
+
+    renderReport(report);
+
+
+  } catch (err) {
+
+    console.error(
+      "REEL CHECK ERROR:",
+      err
+    );
+
+
+    hideLoading();
+
+    progressSection.classList.add("hidden");
+
+    const retryable =
+      String(err.message || "")
+        .includes("مشغول") ||
+      String(err.message || "")
+        .includes("انتظر");
+
+
+    showError(
+      err.message ||
+      "حدث خطأ غير معروف.",
+      retryable
+    );
+
+
+  } finally {
+
+    analyzeBtn.disabled = false;
+
+  }
+
+}
+
+
+analyzeBtn.addEventListener(
+  "click",
+  startAnalysis
+);
+
+
+retryBtn.addEventListener(
+  "click",
+  () => {
+
+    clearError();
+
+    if (lastAnalysisFile) {
+
+      currentFile =
+        lastAnalysisFile;
+
+      startAnalysis();
+
+    }
+
+  }
+);
+
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+
+function scoreClass(score) {
+
+  if (score >= 80)
+    return "text-emerald-400";
+
+  if (score >= 60)
+    return "text-amber-400";
+
+  return "text-rose-400";
+
+}
+
+
+function renderReport(r) {
+
+  uploadSection.classList.add("hidden");
+
+  reportSection.classList.remove("hidden");
+
+
+  /* SCORE */
+
+  const total =
+    clampNumber(
+      r.score?.total,
+      0,
+      100,
+      50
+    );
+
+
+  document.getElementById(
+    "totalScore"
+  ).textContent =
+    Math.round(total);
+
+
+  document.getElementById(
+    "verdictText"
+  ).textContent =
+    r.verdict || "";
+
+
+  const badge =
+    document.getElementById(
+      "decisionBadge"
+    );
+
+
+  badge.textContent =
+    r.decision || "تقييم";
+
+
+  badge.className =
+    "text-xs font-bold px-3 py-1 rounded-full border " +
+    (
+      total >= 80
+        ? "bg-emerald-950 text-emerald-400 border-emerald-600"
+        : total >= 60
+          ? "bg-amber-950 text-amber-400 border-amber-600"
+          : "bg-rose-950 text-rose-400 border-rose-600"
+    );
+
+
+  /* CONFIDENCE */
+
+  const confidence =
+    clampNumber(
+      r.confidence?.score,
+      0,
+      100,
+      50
+    );
+
+
+  document.getElementById(
+    "confidenceText"
+  ).textContent =
+    `${confidence}% — ${r.confidence?.reason || ""}`;
+
+
+  document.getElementById(
+    "confidenceBar"
+  ).style.width =
+    confidence + "%";
+
+
+  /* BREAKDOWN */
+
+  const breakdown = [
+    ["Hook", r.score?.hook],
+    ["Retention", r.score?.retention],
+    ["Clarity", r.score?.clarity],
+    ["Emotion", r.score?.emotionalImpact],
+    ["Share", r.score?.shareability],
+    ["Payoff", r.score?.payoff]
+  ];
+
+
+  document.getElementById(
+    "scoreBreakdown"
+  ).innerHTML =
+    breakdown.map(([name, score]) => {
+
+      const value =
+        clampNumber(
+          score,
+          0,
+          100,
+          50
+        );
+
+      return `
+        <div class="bg-neutral-950 border border-neutral-800 rounded-xl p-3">
+          <div class="flex justify-between">
+            <span class="text-[10px] text-neutral-400">${escapeHTML(name)}</span>
+            <span class="text-xs font-black ${scoreClass(value)}">${value}</span>
+          </div>
+        </div>
+      `;
+
+    }).join("");
+
+
+  /* VIEWS */
+
+  document.getElementById(
+    "viewsAsIs"
+  ).textContent =
+    r.viewsPrediction?.currentRange ||
+    "غير كافٍ للتقدير";
+
+
+  document.getElementById(
+    "viewsPotential"
+  ).textContent =
+    r.viewsPrediction?.improvedRange ||
+    "غير كافٍ للتقدير";
+
+
+  document.getElementById(
+    "whyStops"
+  ).textContent =
+    r.viewsPrediction?.whyCurrent || "";
+
+
+  document.getElementById(
+    "howToReach"
+  ).textContent =
+    r.viewsPrediction?.howToImprove || "";
+
+
+  /* TIMING */
+
+  document.getElementById(
+    "bestTime"
+  ).textContent =
+    r.timing?.window ||
+    "بيانات الحساب أولى";
+
+
+  document.getElementById(
+    "bestDays"
+  ).textContent =
+    `${r.timing?.days || ""} — ${r.timing?.caveat || ""}`;
+
+
+  /* SHARE */
+
+  document.getElementById(
+    "shareabilityScore"
+  ).textContent =
+    `${r.shareability?.score || 0}/100`;
+
+
+  document.getElementById(
+    "shareabilityTip"
+  ).textContent =
+    r.shareability?.reason || "";
+
+
+  /* HOOK */
+
+  document.getElementById(
+    "hookScore"
+  ).textContent =
+    `${r.hook?.score || 0}/100`;
+
+
+  document.getElementById(
+    "hookPsychology"
+  ).textContent =
+    r.hook?.firstThreeSeconds || "";
+
+
+  document.getElementById(
+    "hookStrengths"
+  ).innerHTML =
+    (r.hook?.strengths || [])
+      .map(x =>
+        `<div class="text-[10px] text-emerald-300">✓ ${escapeHTML(x)}</div>`
+      )
+      .join("");
+
+
+  document.getElementById(
+    "hookWeaknesses"
+  ).innerHTML =
+    (r.hook?.weaknesses || [])
+      .map(x =>
+        `<div class="text-[10px] text-rose-300">✕ ${escapeHTML(x)}</div>`
+      )
+      .join("");
+
+
+  /* TIMELINE */
+
+  document.getElementById(
+    "timelineList"
+  ).innerHTML =
+    (r.timeline || [])
+      .map(item => {
+
+        const risk =
+          clampNumber(
+            item.risk,
+            0,
+            100,
+            50
+          );
+
+        return `
+          <div class="bg-neutral-950 border border-neutral-800 rounded-xl p-3">
+
+            <div class="flex justify-between mb-1">
+
+              <span class="text-[10px] font-bold text-purple-300">
+                ${escapeHTML(item.timestamp)}
+              </span>
+
+              <span class="text-[10px] font-bold ${scoreClass(100-risk)}">
+                خطر ${risk}/100
+              </span>
+
+            </div>
+
+            <p class="text-[10px] text-neutral-300 leading-relaxed">
+              ${escapeHTML(item.observation)}
+            </p>
+
+            <p class="text-[10px] text-neutral-500 mt-1">
+              السبب: ${escapeHTML(item.reason)}
+            </p>
+
+            <p class="text-[10px] text-emerald-300 mt-1">
+              الحل: ${escapeHTML(item.fix)}
+            </p>
+
+          </div>
+        `;
+
+      }).join("");
+
+
+  /* PSYCHOLOGY */
+
+  document.getElementById(
+    "psychologyList"
+  ).innerHTML =
+    (r.psychology || [])
+      .map(item => {
+
+        const score =
+          clampNumber(
+            item.score,
+            0,
+            100,
+            50
+          );
+
+        return `
+          <div class="bg-neutral-950 border border-neutral-800 rounded-xl p-3">
+
+            <div class="flex justify-between">
+
+              <span class="text-[11px] font-bold text-purple-300">
+                ${escapeHTML(item.principle)}
+              </span>
+
+              <span class="text-[10px] font-black ${scoreClass(score)}">
+                ${score}/100
+              </span>
+
+            </div>
+
+            <p class="text-[10px] text-neutral-300 mt-1">
+              ${escapeHTML(item.observed)}
+            </p>
+
+            <p class="text-[10px] text-neutral-500 mt-1">
+              التأثير: ${escapeHTML(item.implication)}
+            </p>
+
+          </div>
+        `;
+
+      }).join("");
+
+
+  /* HOOKS */
+
+  document.getElementById(
+    "hooksList"
+  ).innerHTML =
+    (r.hooks || [])
+      .map((hook, index) => {
+
+        return `
+          <div class="bg-neutral-950 border border-purple-900/40 rounded-xl p-3">
+
+            <div class="text-[10px] text-purple-400 font-bold mb-1">
+              HOOK ${index + 1} — ${escapeHTML(hook.type)}
+            </div>
+
+            <div class="text-sm text-white font-black leading-relaxed">
+              "${escapeHTML(hook.script)}"
+            </div>
+
+            <div class="text-[10px] text-neutral-400 mt-2">
+              🎬 الحركة: ${escapeHTML(hook.action)}
+            </div>
+
+            <div class="text-[10px] text-neutral-400 mt-1">
+              🧠 المبدأ: ${escapeHTML(hook.principle)}
+            </div>
+
+            <div class="text-[10px] text-purple-300 mt-1">
+              لماذا أفضل: ${escapeHTML(hook.whyBetter)}
+            </div>
+
+          </div>
+        `;
+
+      }).join("");
+
+
+  /* ACTION PLAN */
+
+  document.getElementById(
+    "actionPlan"
+  ).innerHTML =
+    (r.actionPlan || [])
+      .sort((a,b) =>
+        Number(a.priority || 99) -
+        Number(b.priority || 99)
+      )
+      .map(item => {
+
+        return `
+          <div class="bg-neutral-950 border border-neutral-800 rounded-xl p-3">
+
+            <div class="flex justify-between">
+
+              <span class="text-[10px] font-black text-emerald-400">
+                #${escapeHTML(item.priority)} — ${escapeHTML(item.timestamp)}
+              </span>
+
+            </div>
+
+            <p class="text-[11px] font-bold text-white mt-1">
+              المشكلة: ${escapeHTML(item.problem)}
+            </p>
+
+            <p class="text-[10px] text-neutral-300 mt-1 leading-relaxed">
+              التعديل: ${escapeHTML(item.exactChange)}
+            </p>
+
+            <p class="text-[10px] text-emerald-300 mt-1">
+              المتوقع: ${escapeHTML(item.expectedEffect)}
+            </p>
+
+            <p class="text-[9px] text-neutral-600 mt-1">
+              الأساس: ${escapeHTML(item.evidenceBasis)}
+            </p>
+
+          </div>
+        `;
+
+      }).join("");
+
+
+  /* CUT */
+
+  document.getElementById(
+    "cutList"
+  ).innerHTML =
+    (r.cut || []).length
+      ? r.cut.map(x =>
+          `<li>${escapeHTML(x)}</li>`
+        ).join("")
+      : "<li>لا يوجد حذف ضروري</li>";
+
+
+  /* CHANGE */
+
+  document.getElementById(
+    "changeList"
+  ).innerHTML =
+    (r.change || []).length
+      ? r.change.map(x =>
+          `<li>${escapeHTML(x)}</li>`
+        ).join("")
+      : "<li>لا يوجد تعديل ضروري</li>";
+
+
+  /* FINAL */
+
+  document.getElementById(
+    "finalAction"
+  ).textContent =
+    r.finalAction || "";
+
+
+  reportSection.scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
+
+}
+
+
+/* ============================================================
+   NEW ANALYSIS
+   ============================================================ */
+
+document.getElementById(
+  "newAnalysisBtn"
+).addEventListener(
+  "click",
+  () => {
+
+    location.reload();
+
+  }
+);
+
+</script>
+
+</body>
+</html>
