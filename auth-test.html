@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>REELIQ — Google Login Test</title>
+
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #111;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+
+    .box {
+      width: min(90%, 400px);
+      padding: 30px;
+      text-align: center;
+      border-radius: 20px;
+      background: #1d1d1d;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 15px;
+      border: 0;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    #googleLoginBtn {
+      background: white;
+      color: #111;
+    }
+
+    #googleLogoutBtn {
+      display: none;
+      background: #333;
+      color: white;
+    }
+
+    #googleUserInfo {
+      margin-top: 20px;
+      color: #ccc;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="box">
+    <h1>REELIQ</h1>
+    <p>اختبار تسجيل الدخول بواسطة Google</p>
+
+    <button id="googleLoginBtn">
+      تسجيل الدخول بواسطة Google
+    </button>
+
+    <button id="googleLogoutBtn">
+      تسجيل الخروج
+    </button>
+
+    <div id="googleUserInfo">
+      غير مسجل الدخول
+    </div>
+  </div>
+
+  <script type="module">
+    import { initAuthTest } from "./src/auth/authTest.js";
+
+    initAuthTest();
+  </script>
+
+</body>
+</html>
