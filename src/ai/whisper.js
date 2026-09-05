@@ -1,7 +1,7 @@
 import {
   pipeline,
   env
-} from "@huggingface/transformers";
+} from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2/+esm";
 
 /*
   REEL CHECK
@@ -23,8 +23,18 @@ env.useBrowserCache = true;
 // إعدادات آمنة وخفيفة
 // -----------------------------------------------------
 
+/*
+  ملاحظة اختيار النموذج:
+  whisper-tiny أخف وأسرع، لكن دقته ضعيفة نسبياً
+  باللغة العربية تحديداً (نماذج Whisper الصغيرة
+  أضعف بكثير في اللغات غير الإنجليزية).
+
+  whisper-base أدق بشكل ملحوظ بالعربي مع بقائه
+  خفيفاً بما يكفي للعمل داخل المتصفح.
+*/
+
 const MODEL =
-  "Xenova/whisper-tiny";
+  "Xenova/whisper-base";
 
 
 let transcriber = null;
@@ -45,17 +55,7 @@ async function loadWhisper() {
 
 
   loadingPromise =
-    pipeline(
-      "automatic-speech-recognition",
-      MODEL,
-      {
-        device:
-          getBestDevice(),
-
-        dtype:
-          getBestDtype()
-      }
-    );
+    createTranscriberWithFallback();
 
 
   try {
@@ -69,6 +69,62 @@ async function loadWhisper() {
 
     loadingPromise =
       null;
+
+  }
+
+}
+
+
+// -----------------------------------------------------
+// إنشاء المحرك مع خطة بديلة إذا فشل WebGPU
+// -----------------------------------------------------
+
+async function createTranscriberWithFallback() {
+
+  const preferredDevice =
+    getBestDevice();
+
+
+  try {
+
+    return await pipeline(
+      "automatic-speech-recognition",
+      MODEL,
+      {
+        device:
+          preferredDevice,
+
+        dtype:
+          getBestDtype()
+      }
+    );
+
+  } catch (error) {
+
+    /*
+      WebGPU موجود بالمتصفح لكن ممكن يفشل فعلياً
+      بأجهزة/متصفحات كتير. لا نترك المستخدم بدون
+      نتيجة — نرجع نحاول عبر CPU (wasm).
+    */
+
+    if (preferredDevice === "wasm") {
+
+      throw error;
+
+    }
+
+
+    return await pipeline(
+      "automatic-speech-recognition",
+      MODEL,
+      {
+        device:
+          "wasm",
+
+        dtype:
+          "q8"
+      }
+    );
 
   }
 
