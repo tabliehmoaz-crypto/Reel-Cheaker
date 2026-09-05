@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MTI — Content Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0A192F;
+    --navy-light:#112240;
+    --gold:#C5A059;
+    --cream:#FAF5F0;
+    --slate:#3A4750;
+    --green:#4CAF50;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    font-family:'Inter',sans-serif;
+    background:var(--navy);
+    color:var(--cream);
+    min-height:100vh;
+  }
+  h1,h2,h3,.brand{font-family:'Syne',sans-serif;}
+
+  .app{display:flex;min-height:100vh;}
+
+  .sidebar{
+    width:76px;
+    background:var(--navy-light);
+    display:flex;flex-direction:column;align-items:center;
+    padding:24px 0;gap:28px;
+    border-left:1px solid rgba(255,255,255,.06);
+  }
+  .sidebar .logo{
+    font-size:22px;font-weight:800;color:var(--gold);
+    margin-bottom:20px;
+  }
+  .nav-icon{
+    width:42px;height:42px;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--cream);opacity:.55;cursor:pointer;
+    font-size:18px;transition:.2s;
+  }
+  .nav-icon:hover{opacity:.85;}
+  .nav-icon.active{
+    background:var(--gold);color:var(--navy);opacity:1;
+  }
+
+  .main{flex:1;padding:32px 40px;max-width:1100px;}
+
+  .topbar{
+    display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:28px;
+  }
+  .tabs{display:flex;gap:8px;}
+  .tab{
+    padding:8px 18px;border-radius:999px;font-size:14px;
+    cursor:pointer;color:var(--cream);opacity:.6;
+  }
+  .tab.active{background:var(--navy-light);opacity:1;color:var(--gold);}
+
+  .btn{
+    font-family:'Inter',sans-serif;font-weight:600;font-size:14px;
+    padding:11px 22px;border-radius:999px;border:none;cursor:pointer;
+    display:inline-flex;align-items:center;gap:8px;
+  }
+  .btn-gold{background:var(--gold);color:var(--navy);}
+  .btn-outline{background:transparent;color:var(--cream);border:1px solid rgba(255,255,255,.25);}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+
+  .panel{
+    background:var(--navy-light);
+    border-radius:18px;
+    padding:24px;
+    margin-bottom:20px;
+    border:1px solid rgba(255,255,255,.05);
+  }
+  .panel h3{font-size:16px;font-weight:700;margin-bottom:14px;color:var(--cream);}
+  .muted{color:var(--slate);opacity:.9;font-size:13px;}
+
+  .upload-zone{
+    border:1.5px dashed rgba(197,160,89,.4);
+    border-radius:16px;
+    padding:40px;text-align:center;
+    cursor:pointer;
+  }
+  .upload-zone:hover{border-color:var(--gold);}
+
+  .score-row{display:flex;gap:16px;margin-bottom:20px;}
+  .score-card{
+    flex:1;background:var(--navy-light);border-radius:16px;
+    padding:20px;border:1px solid rgba(255,255,255,.05);
+  }
+  .score-card .label{font-size:12px;color:var(--slate);margin-bottom:8px;}
+  .score-card .value{font-size:34px;font-weight:800;font-family:'Syne',sans-serif;color:var(--gold);}
+  .bar-track{height:5px;background:rgba(255,255,255,.08);border-radius:99px;margin-top:10px;overflow:hidden;}
+  .bar-fill{height:100%;background:var(--gold);border-radius:99px;}
+
+  .scene-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;}
+  .scene-block{
+    min-width:90px;height:70px;border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:11px;text-align:center;padding:6px;
+    background:rgba(255,255,255,.05);color:var(--cream);
+  }
+  .scene-block.risk{background:rgba(197,89,89,.35);color:#ffd7d7;}
+  .scene-block.high{background:rgba(76,175,80,.3);color:#c9f0cb;}
+  .scene-block.cta{background:rgba(197,160,89,.35);color:var(--gold);}
+
+  ul.clean{list-style:none;}
+  ul.clean li{
+    padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05);
+    font-size:14px;line-height:1.6;
+  }
+  ul.clean li:last-child{border-bottom:none;}
+
+  .pill{
+    display:inline-block;padding:3px 10px;border-radius:999px;
+    font-size:11px;background:rgba(197,160,89,.15);color:var(--gold);
+    margin-inline-end:6px;
+  }
+
+  textarea,select,input[type=text]{
+    width:100%;background:var(--navy);color:var(--cream);
+    border:1px solid rgba(255,255,255,.12);border-radius:10px;
+    padding:12px 14px;font-family:'Inter',sans-serif;font-size:14px;
+    margin-bottom:14px;
+  }
+  label{font-size:13px;color:var(--slate);display:block;margin-bottom:6px;}
+
+  .hook-variant{
+    background:rgba(255,255,255,.04);border-radius:10px;
+    padding:12px 14px;margin-bottom:8px;font-size:14px;
+  }
+
+  .hidden{display:none !important;}
+
+  .loading{
+    display:flex;align-items:center;gap:10px;color:var(--gold);
+    font-size:14px;padding:20px 0;
+  }
+  .spinner{
+    width:16px;height:16px;border-radius:50%;
+    border:2px solid rgba(197,160,89,.3);border-top-color:var(--gold);
+    animation:spin 0.8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  @media (max-width:720px){
+    .main{padding:20px;}
+    .score-row{flex-direction:column;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="sidebar">
+    <div class="logo">M</div>
+    <div class="nav-icon active" data-tab="analyze" title="تحليل فيديو">▶</div>
+    <div class="nav-icon" data-tab="ideas" title="مولّد الأفكار">✦</div>
+  </div>
+
+  <div class="main">
+
+    <div class="topbar">
+      <h1 style="font-size:22px;">Content Intelligence</h1>
+      <div class="tabs">
+        <div class="tab active" data-tab="analyze">تحليل الفيديو</div>
+        <div class="tab" data-tab="ideas">مولّد الأفكار</div>
+      </div>
+    </div>
+
+    <section id="view-analyze">
+
+      <div class="panel">
+        <h3>ارفع الريل</h3>
+        <div class="upload-zone" id="uploadZone">
+          <input type="file" id="fileInput" accept="video/*" class="hidden">
+          <div id="uploadLabel">اسحب الفيديو هون أو دوس للاختيار</div>
+        </div>
+
+        <div style="margin-top:16px;">
+          <label>المجال (اختياري، بيحسّن دقة التحليل)</label>
+          <select id="nicheSelect"><option value="">— بدون تحديد —</option></select>
+        </div>
+
+        <button class="btn btn-gold" id="analyzeBtn" style="margin-top:10px;" disabled>حلّل الفيديو</button>
+      </div>
+
+      <div id="loadingBox" class="loading hidden">
+        <div class="spinner"></div>
+        <span id="loadingText">عم نحلل الفيديو محلياً على جهازك...</span>
+      </div>
+
+      <div id="results" class="hidden">
+
+        <div class="score-row">
+          <div class="score-card overall">
+            <div class="label">الدرجة العامة</div>
+            <div class="value" id="scoreOverall">—</div>
+          </div>
+          <div class="score-card">
+            <div class="label">الهوك</div>
+            <div class="value" id="scoreHook">—</div>
+            <div class="bar-track"><div class="bar-fill" id="barHook"></div></div>
+          </div>
+          <div class="score-card">
+            <div class="label">الإيقاع</div>
+            <div class="value" id="scorePacing">—</div>
+            <div class="bar-track"><div class="bar-fill" id="barPacing"></div></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>ملخص الأداة</h3>
+          <p id="humanSummary" style="line-height:1.9;font-size:14.5px;"></p>
+        </div>
+
+        <div class="panel">
+          <h3>خريطة الانتباه (Attention Map)</h3>
+          <div class="scene-row" id="attentionMapRow"></div>
+        </div>
+
+        <div class="panel">
+          <h3>أول شي تصلحه</h3>
+          <ul class="clean" id="fixFirstList"></ul>
+        </div>
+
+        <div class="panel">
+          <h3>يستاهل تجربته</h3>
+          <ul class="clean" id="worthTestingList"></ul>
+        </div>
+
+        <div class="panel">
+          <h3>لا تغيّره (نقاط قوة)</h3>
+          <div id="keepList"></div>
+        </div>
+
+        <div class="panel">
+          <h3>جوهر الفكرة + نوع المحتوى + CTA</h3>
+          <p class="muted" style="margin-bottom:10px;" id="ideaGistLine"></p>
+          <span class="pill" id="contentTypePill"></span>
+          <span class="pill" id="ctaPill"></span>
+        </div>
+
+      </div>
+
+      <div id="errorBox" class="panel hidden" style="border-color:rgba(197,89,89,.4);"></div>
+
+    </section>
+
+    <section id="view-ideas" class="hidden">
+
+      <div class="panel">
+        <h3>مولّد الأفكار والهوكات</h3>
+
+        <label>المجال</label>
+        <select id="ideaNicheSelect"></select>
+
+        <label>فكرتك (اختياري — سيبها فاضية للحصول على أفكار جديدة من الصفر)</label>
+        <textarea id="ideaInput" rows="3" placeholder="مثال: كيف اوفر فلوس وأنا موظف براتب محدود"></textarea>
+
+        <button class="btn btn-gold" id="generateBtn">ولّد</button>
+      </div>
+
+      <div id="ideaResults" class="hidden">
+
+        <div class="panel" id="freshIdeasPanel" style="display:none;">
+          <h3>أفكار مقترحة لهالمجال</h3>
+          <ul class="clean" id="freshIdeasList"></ul>
+        </div>
+
+        <div class="panel">
+          <h3>خيارات الهوك</h3>
+          <div id="hookOptionsBox"></div>
+        </div>
+
+        <div class="panel">
+          <h3>هيكل السكربت</h3>
+          <div id="scriptBox" style="font-size:14px;line-height:1.9;"></div>
+        </div>
+
+        <div class="panel">
+          <h3>تقسيم المونتاج</h3>
+          <ul class="clean" id="montageList"></ul>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+</div>
+
+<script type="module">
+import { analyzeReel } from "./src/engine/reel-engine.js";
+import { generateContentPlan, generateFreshIdeas } from "./src/generation/IdeaToContentEngine.js";
+import { MTIKnowledgeData } from "./src/knowledge/MTIKnowledgeData.js";
+
+document.querySelectorAll("[data-tab]").forEach(el => {
+  el.addEventListener("click", () => {
+    const tab = el.dataset.tab;
+    document.querySelectorAll("[data-tab]").forEach(x => x.classList.toggle("active", x.dataset.tab === tab));
+    document.getElementById("view-analyze").classList.toggle("hidden", tab !== "analyze");
+    document.getElementById("view-ideas").classList.toggle("hidden", tab !== "ideas");
+  });
+});
+
+function fillNicheSelect(select) {
+  MTIKnowledgeData.niches.forEach(n => {
+    const opt = document.createElement("option");
+    opt.value = n.id;
+    opt.textContent = n.name;
+    select.appendChild(opt);
+  });
+}
+fillNicheSelect(document.getElementById("nicheSelect"));
+fillNicheSelect(document.getElementById("ideaNicheSelect"));
+
+const uploadZone = document.getElementById("uploadZone");
+const fileInput = document.getElementById("fileInput");
+const analyzeBtn = document.getElementById("analyzeBtn");
+let selectedFile = null;
+
+uploadZone.addEventListener("click", () => fileInput.click());
+fileInput.addEventListener("change", () => {
+  if (fileInput.files[0]) {
+    selectedFile = fileInput.files[0];
+    document.getElementById("uploadLabel").textContent = "الملف المختار: " + selectedFile.name;
+    analyzeBtn.disabled = false;
+  }
+});
+
+analyzeBtn.addEventListener("click", async () => {
+  if (!selectedFile) return;
+
+  document.getElementById("results").classList.add("hidden");
+  document.getElementById("errorBox").classList.add("hidden");
+  document.getElementById("loadingBox").classList.remove("hidden");
+  analyzeBtn.disabled = true;
+
+  try {
+    const nicheId = document.getElementById("nicheSelect").value || undefined;
+    const result = await analyzeReel(selectedFile, { nicheId });
+    renderAnalysis(result);
+  } catch (err) {
+    const box = document.getElementById("errorBox");
+    box.textContent = "صار خطأ أثناء التحليل: " + err.message;
+    box.classList.remove("hidden");
+  } finally {
+    document.getElementById("loadingBox").classList.add("hidden");
+    analyzeBtn.disabled = false;
+  }
+});
+
+function renderAnalysis(r) {
+  document.getElementById("results").classList.remove("hidden");
+
+  document.getElementById("scoreOverall").textContent = r.overall;
+  document.getElementById("scoreHook").textContent = r.scores.hook;
+  document.getElementById("scorePacing").textContent = r.scores.pacing;
+  document.getElementById("barHook").style.width = r.scores.hook + "%";
+  document.getElementById("barPacing").style.width = r.scores.pacing + "%";
+
+  document.getElementById("humanSummary").textContent = r.summary;
+
+  const mapRow = document.getElementById("attentionMapRow");
+  mapRow.innerHTML = "";
+  (r.attentionMap || []).forEach(scene => {
+    const div = document.createElement("div");
+    let cls = "scene-block";
+    if (scene.label.includes("خطر")) cls += " risk";
+    else if (scene.label.includes("عالي")) cls += " high";
+    else if (scene.label.includes("CTA")) cls += " cta";
+    div.className = cls;
+    div.title = scene.reason;
+    div.textContent = scene.timeRange;
+    mapRow.appendChild(div);
+  });
+
+  const fixFirst = document.getElementById("fixFirstList");
+  fixFirst.innerHTML = "";
+  (r.recommendationPriority?.fixFirst || []).forEach(txt => {
+    const li = document.createElement("li");
+    li.textContent = txt;
+    fixFirst.appendChild(li);
+  });
+
+  const worthTesting = document.getElementById("worthTestingList");
+  worthTesting.innerHTML = "";
+  (r.recommendationPriority?.worthTesting || []).forEach(txt => {
+    const li = document.createElement("li");
+    li.textContent = txt;
+    worthTesting.appendChild(li);
+  });
+
+  const keep = document.getElementById("keepList");
+  keep.innerHTML = "";
+  (r.recommendationPriority?.keep || []).forEach(txt => {
+    const span = document.createElement("span");
+    span.className = "pill";
+    span.textContent = txt;
+    keep.appendChild(span);
+  });
+
+  document.getElementById("ideaGistLine").textContent =
+    r.ideaGist?.available ? `"${r.ideaGist.coreMessage}"` : "ما قدرنا نحدد جوهر واضح (كلام قليل أو غير متوفر).";
+
+  document.getElementById("contentTypePill").textContent = "النوع: " + r.contentType.primaryType;
+  document.getElementById("ctaPill").textContent = r.cta.hasCTA ? "CTA: موجودة (" + r.cta.type + ")" : "CTA: غير موجودة";
+}
+
+document.getElementById("generateBtn").addEventListener("click", () => {
+  const nicheId = document.getElementById("ideaNicheSelect").value || undefined;
+  const idea = document.getElementById("ideaInput").value.trim();
+
+  document.getElementById("ideaResults").classList.remove("hidden");
+  document.getElementById("freshIdeasPanel").style.display = "none";
+
+  let plan;
+
+  if (!idea) {
+    const fresh = generateFreshIdeas({ nicheId, count: 5 });
+    if (!fresh.success) { alert(fresh.error); return; }
+
+    document.getElementById("freshIdeasPanel").style.display = "block";
+    const list = document.getElementById("freshIdeasList");
+    list.innerHTML = "";
+    fresh.ideas.forEach(i => {
+      const li = document.createElement("li");
+      li.textContent = i.idea;
+      list.appendChild(li);
+    });
+
+    plan = generateContentPlan({ idea: fresh.ideas[0]?.idea || "فكرة عامة", nicheId });
+  } else {
+    plan = generateContentPlan({ idea, nicheId });
+  }
+
+  if (!plan.success) { alert(plan.error); return; }
+
+  const hookBox = document.getElementById("hookOptionsBox");
+  hookBox.innerHTML = "";
+  plan.hookOptions.forEach(opt => {
+    opt.variants.forEach(v => {
+      const div = document.createElement("div");
+      div.className = "hook-variant";
+      div.textContent = v;
+      hookBox.appendChild(div);
+    });
+  });
+
+  const script = plan.script;
+  document.getElementById("scriptBox").innerHTML = `
+    <p><b>الهوك:</b> ${script.hook.text}</p>
+    <p><b>السياق:</b> ${script.setup.guidance}</p>
+    <p><b>التصعيد:</b> ${script.escalation.guidance}</p>
+    <p><b>الجواب:</b> ${script.payoff.guidance}</p>
+    <p><b>CTA:</b> ${script.cta ? script.cta.text : "—"}</p>
+  `;
+
+  const montage = document.getElementById("montageList");
+  montage.innerHTML = "";
+  plan.montage.forEach(m => {
+    const li = document.createElement("li");
+    li.textContent = `${m.timeRange} — ${m.purpose} (${m.editingNote})`;
+    montage.appendChild(li);
+  });
+});
+</script>
+
+</body>
+</html>
