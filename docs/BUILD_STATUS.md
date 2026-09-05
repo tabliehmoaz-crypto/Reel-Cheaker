@@ -62,7 +62,7 @@
 
 | الميزة | الحالة |
 |---|---|
-| Google Auth موصول بالتطبيق الرئيسي | ⏳ (موجود بصفحة تجربة منفصلة بس) |
+| Google Auth موصول بالتطبيق الرئيسي | 🔨 Firebase Google Redirect + account memory — يحتاج اختبار OAuth على الدومين النهائي |
 | Account Profile (niche, جمهور, أهداف...) | ⏳ |
 | Private Memory مفعّلة | ⏳ (بنية جاهزة: `MTIResultMemoryBridge`) |
 | محادثة ما بعد النشر (إدخال Views/Shares...) | ⏳ |
@@ -91,9 +91,9 @@
 | الميزة | الحالة |
 |---|---|
 | index.html موحد يستخدم كل الطبقات فوق | 🔨 مبني، متصل فعلياً بـ analyzeReel + IdeaToContentEngine، صحيح نحوياً — محتاج اختبار حقيقي بمتصفح |
-| الهوية البصرية (ألوان/خطوط/لوغو) | ✅ Navy/Gold/Syne/Inter مطبّقة بالكامل حسب مرجع المستخدم `docs/BRAND_IDENTITY.md` |
-| واجهة ثنائية اللغة (عربي/English) | ⏳ |
-| تجربة موبايل/ديسكتوب منفصلة | ⏳ |
+| الهوية البصرية (ألوان/خطوط/لوغو) | 🔨 MTI Navy/Gold/Syne/Inter + Dashboard/Landing responsive مطابق للمرجع — يحتاج اختبار بصري نهائي |
+| واجهة ثنائية اللغة (عربي/English) | 🔨 مطبقة على الواجهة الأساسية والأزرار والحالات |
+| تجربة موبايل/ديسكتوب منفصلة | 🔨 Responsive desktop/mobile layout |
 | MTI Chat (محادثة واعية بسياق الحساب) | ⏳ |
 
 ---
