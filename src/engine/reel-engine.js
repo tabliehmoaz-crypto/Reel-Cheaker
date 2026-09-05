@@ -282,7 +282,9 @@ export async function analyzeReel(
     detectDropOffPoints(
       frames,
       pacing,
-      speech
+      speech,
+      video.duration,
+      hook
     );
 
 
@@ -297,6 +299,70 @@ export async function analyzeReel(
     analyzeIdea(
       speech,
       video.duration
+    );
+
+
+
+  /*
+    --------------------------------------------------
+    9-ج. جوهر الكلام (Idea Gist)
+    --------------------------------------------------
+  */
+
+  const ideaGist =
+    extractIdeaGist(
+      speech
+    );
+
+
+
+  /*
+    --------------------------------------------------
+    9-ب. تحليل CTA (دعوة لاتخاذ إجراء)
+    --------------------------------------------------
+  */
+
+  const cta =
+    analyzeCTA(
+      speech,
+      video.duration
+    );
+
+
+
+  /*
+    --------------------------------------------------
+    9-د. تصنيف نوع المحتوى
+    --------------------------------------------------
+  */
+
+  const contentType =
+    classifyContentType(
+      speech,
+      options.nicheId
+    );
+
+
+
+  /*
+    --------------------------------------------------
+    9-هـ. المشاهد وخريطة الانتباه
+    --------------------------------------------------
+  */
+
+  const scenes =
+    buildScenes(
+      frames,
+      video.duration
+    );
+
+
+  const attentionMap =
+    buildAttentionMap(
+      scenes,
+      dropOff,
+      hook,
+      cta
     );
 
 
@@ -352,6 +418,7 @@ export async function analyzeReel(
       technical,
       speechAnalysis,
       idea,
+      cta,
       dropOff
     });
 
@@ -372,7 +439,47 @@ export async function analyzeReel(
       technical,
       speechAnalysis,
       idea,
+      cta,
       dropOff
+    });
+
+
+
+  /*
+    --------------------------------------------------
+    12-أ. ترتيب أولوية التوصيات
+    --------------------------------------------------
+  */
+
+  const recommendationPriority =
+    prioritizeRecommendations(
+      recommendations.changes,
+      scores
+    );
+
+
+
+  /*
+    --------------------------------------------------
+    12-ب. الملخص البشري
+    --------------------------------------------------
+
+    فقرة واحدة، بلغة طبيعية، توضح "شو صار بالفيديو"
+    ككل — بدل ما يضطر المستخدم يجمّع الصورة بنفسه
+    من أرقام متفرقة.
+  */
+
+  const summary =
+    buildHumanSummary({
+      scores,
+      overall,
+      hook,
+      idea,
+      ideaGist,
+      cta,
+      dropOff,
+      duration:
+        video.duration
     });
 
 
@@ -542,13 +649,27 @@ export async function analyzeReel(
 
     idea,
 
+    ideaGist,
+
+    cta,
+
+    contentType,
+
     dropOff,
+
+    scenes,
+
+    attentionMap,
 
 
     diagnosis,
 
+    summary,
+
 
     recommendations,
+
+    recommendationPriority,
 
 
     /*
@@ -2380,6 +2501,224 @@ function analyzeSpeech(
    IDEA
 ===================================================== */
 
+/* =====================================================
+   IDEA GIST (جوهر الكلام)
+   -----------------------------------------------------
+   ملاحظة صادقة: هاد استخراج استخلاصي (Extractive) —
+   بيلقط أهم جملة/جمل *قيلت فعلياً* بالفيديو، مش فهم
+   دلالي عميق يعيد صياغة المعنى بكلام جديد (هاد بيحتاج
+   نموذج لغوي حقيقي). كل الحساب هون محلي وحتمي، بدون
+   أي استدعاء خارجي.
+===================================================== */
+
+function extractIdeaGist(
+  speech
+) {
+
+  if (
+    !speech?.available ||
+    !speech.text
+  ) {
+
+    return {
+
+      available:
+        false,
+
+      coreMessage:
+        null,
+
+      problemAddressed:
+        null,
+
+      promiseOrValue:
+        null
+
+    };
+
+  }
+
+
+  const text =
+    speech.text.trim();
+
+
+  const sentences =
+    text
+      .split(/[.!?؟\n]+/)
+      .map(s => s.trim())
+      .filter(s => s.length >= 8);
+
+
+  if (
+    !sentences.length
+  ) {
+
+    return {
+
+      available:
+        false,
+
+      coreMessage:
+        null,
+
+      problemAddressed:
+        null,
+
+      promiseOrValue:
+        null
+
+    };
+
+  }
+
+
+  const problemRegex =
+    /(مشكلة|ليش|لماذا|خطأ|غلط|بتخسر|خسارة|ما عم|ما عاد|صعوبة|تعاني)/i;
+
+  const promiseRegex =
+    /(رح|سوف|طريقة|سر|حل|نتيجة|هيك بتقدر|بتضمن|بتحقق)/i;
+
+
+  let problemAddressed =
+    null;
+
+  let promiseOrValue =
+    null;
+
+
+  let bestSentence =
+    sentences[0];
+
+  let bestScore =
+    -Infinity;
+
+
+  sentences.forEach(
+    (sentence, index) => {
+
+      let score =
+        0;
+
+
+      const isProblem =
+        problemRegex.test(
+          sentence
+        );
+
+      const isPromise =
+        promiseRegex.test(
+          sentence
+        );
+
+
+      if (
+        isProblem
+      ) {
+
+        score += 2;
+
+        if (
+          !problemAddressed
+        ) {
+
+          problemAddressed =
+            sentence;
+
+        }
+
+      }
+
+
+      if (
+        isPromise
+      ) {
+
+        score += 2;
+
+        if (
+          !promiseOrValue
+        ) {
+
+          promiseOrValue =
+            sentence;
+
+        }
+
+      }
+
+
+      /*
+        طول معتدل أفضل مؤشر على جملة "خلاصة" مقارنة
+        بجملة قصيرة جداً (غالباً حشو) أو طويلة جداً
+        (غالباً جملة مركّبة تحتوي أكتر من فكرة).
+      */
+
+      if (
+        sentence.length >= 20 &&
+        sentence.length <= 140
+      ) {
+
+        score += 1;
+
+      }
+
+
+      /*
+        أولوية بسيطة للجمل الأقرب لبداية الكلام،
+        لأنو غالباً هون بتنقال الفكرة الأساسية —
+        بدون ما يلغي دور premature-payoff detection
+        المنفصل يلي بيحكم إذا التوقيت هالة خطر أو لأ.
+      */
+
+      if (
+        index <=
+        Math.ceil(
+          sentences.length * 0.4
+        )
+      ) {
+
+        score += 1;
+
+      }
+
+
+      if (
+        score >= bestScore
+      ) {
+
+        bestScore =
+          score;
+
+        bestSentence =
+          sentence;
+
+      }
+
+    }
+  );
+
+
+  return {
+
+    available:
+      true,
+
+    coreMessage:
+      bestSentence,
+
+    problemAddressed,
+
+    promiseOrValue,
+
+    sentenceCount:
+      sentences.length
+
+  };
+
+}
+
+
 function analyzeIdea(
   speech,
   duration
@@ -2536,17 +2875,354 @@ function analyzeIdea(
 
 
 /* =====================================================
+   CONTENT TYPE CLASSIFICATION
+   -----------------------------------------------------
+   تصنيف heuristic مبني على كلمات مفتاحية بالنص المفرّغ +
+   مجال المستخدم (لو محدد). تصنيف واحد أساسي + ثقة، مش
+   قرار قطعي — فيديو ممكن يجمع أكتر من نوع فعلياً.
+===================================================== */
+
+function classifyContentType(
+  speech,
+  nicheId
+) {
+
+  const text =
+    speech?.available && speech.text
+      ? speech.text
+      : "";
+
+
+  const signals = [
+
+    {
+      type: "educational",
+      regex: /(كيف|خطوات|طريقة|تعلم|شرح|درس)/i
+    },
+
+    {
+      type: "storytelling",
+      regex: /(قصة|صار معي|حكاية|تجربتي|مرة)/i
+    },
+
+    {
+      type: "opinion",
+      regex: /(برأيي|أنا بشوف|بحس إنو|وجهة نظري)/i
+    },
+
+    {
+      type: "promotional",
+      regex: /(الرابط بالبايو|احجز|اطلب|خصم|عرض خاص)/i
+    },
+
+    {
+      type: "transformation",
+      regex: /(قبل و بعد|قبل وبعد|تحول|تغيرت|فرق كبير)/i
+    },
+
+    {
+      type: "tutorial",
+      regex: /(خطوة أولى|أول شي|ثاني شي|بعدين|بالنهاية)/i
+    },
+
+    {
+      type: "commentary",
+      regex: /(بخصوص يلي صار|تعليقي على|رأيي بموضوع)/i
+    }
+
+  ];
+
+
+  const matches =
+    signals.filter(
+      s => s.regex.test(text)
+    );
+
+
+  let primaryType =
+    matches[0]?.type || null;
+
+
+  /*
+    المجال (لو محدد) بيرجّح النوع بحالة عدم وجود
+    إشارة لغوية قوية.
+  */
+
+  if (
+    !primaryType &&
+    nicheId
+  ) {
+
+    const nicheDefaults = {
+
+      niche_marketing:
+        "promotional",
+
+      niche_educational:
+        "educational",
+
+      niche_motivational:
+        "storytelling",
+
+      niche_comedy:
+        "entertainment",
+
+      niche_real_estate:
+        "promotional",
+
+      niche_makeup:
+        "tutorial",
+
+      niche_fashion:
+        "lifestyle"
+
+    };
+
+
+    primaryType =
+      nicheDefaults[nicheId] ||
+      null;
+
+  }
+
+
+  return {
+
+    primaryType:
+      primaryType || "غير محدد",
+
+    matchedSignals:
+      matches.map(m => m.type),
+
+    confidence:
+      matches.length >= 2
+        ? "متوسطة"
+        : matches.length === 1
+        ? "منخفضة"
+        : "منخفضة جداً",
+
+    note:
+      "تصنيف heuristic مبني على كلمات مفتاحية، مو تحليل دلالي كامل — فيديو ممكن يجمع أكتر من نوع فعلياً."
+
+  };
+
+}
+
+
+/* =====================================================
+   CTA (CALL TO ACTION)
+===================================================== */
+
+function analyzeCTA(
+  speech,
+  duration
+) {
+
+  if (
+    !speech?.available ||
+    !speech.text
+  ) {
+
+    return {
+
+      hasCTA:
+        false,
+
+      type:
+        null,
+
+      confidence:
+        "منخفضة",
+
+      reason:
+        "لا يوجد نص كلام كافٍ لتحديد وجود دعوة لاتخاذ إجراء."
+
+    };
+
+  }
+
+
+  const text =
+    speech.text.trim();
+
+
+  /*
+    نركز على آخر جزء من النص (آخر ~35%)
+    لأن الـ CTA غالباً بتكون قرب نهاية الفيديو.
+  */
+
+  /*
+    نركز على آخر جزء من النص (آخر ~40% أو آخر 100
+    حرف، أيهما أكبر) لأن الـ CTA غالباً بتكون قرب
+    نهاية الفيديو. النصوص القصيرة (شائعة بالريلز)
+    محتاجة نافذة أوسع نسبياً حتى ما نقص جزء الدعوة
+    بالغلط.
+  */
+
+  const tailChars =
+    Math.max(
+      100,
+      Math.floor(
+        text.length * 0.4
+      )
+    );
+
+  const tailStart =
+    Math.max(
+      0,
+      text.length -
+      tailChars
+    );
+
+  const tailText =
+    text.slice(
+      tailStart
+    );
+
+
+  const patterns = [
+
+    {
+      type:
+        "hard-conversion",
+
+      regex:
+        /(الرابط بالبايو|رابط البايو|احجز|اطلب|تواصل معنا|تواصلوا|واتساب|دي إم|DM|تسوق الآن)/i
+
+    },
+
+    {
+      type:
+        "soft-engagement",
+
+      regex:
+        /(احفظوا|احفظ|شارك الفيديو|شاركوا الفيديو)/i
+
+    },
+
+    {
+      type:
+        "question-engagement",
+
+      regex:
+        /(شو رأيكن|قولولي|اكتبولي|علقوا|بالتعليقات)/i
+
+    },
+
+    {
+      type:
+        "follow-identity",
+
+      regex:
+        /(تابعوني|تابعونا|فولو|follow)/i
+
+    },
+
+    {
+      type:
+        "challenge-share",
+
+      regex:
+        /(شاركوا مع|شارك مع صاحب|تاغ صاحب|tag)/i
+
+    }
+
+  ];
+
+
+  let matched =
+    null;
+
+
+  for (
+    const pattern
+    of patterns
+  ) {
+
+    if (
+      pattern.regex.test(
+        tailText
+      )
+    ) {
+
+      matched =
+        pattern.type;
+
+      break;
+
+    }
+
+  }
+
+
+  if (matched) {
+
+    return {
+
+      hasCTA:
+        true,
+
+      type:
+        matched,
+
+      confidence:
+        "متوسطة",
+
+      reason:
+        "تم العثور على مؤشر لغوي لدعوة اتخاذ إجراء قرب نهاية الفيديو."
+
+    };
+
+  }
+
+
+  return {
+
+    hasCTA:
+      false,
+
+    type:
+      null,
+
+    confidence:
+      "متوسطة",
+
+    reason:
+      "لم يظهر أي مؤشر لغوي واضح على دعوة لاتخاذ إجراء قرب نهاية الفيديو. هذا لا يعني بالضرورة عدم وجودها بصرياً (نص على الشاشة)، فالتحليل هنا يعتمد على الكلام المفرّغ فقط."
+
+  };
+
+}
+
+
+/* =====================================================
    DROP-OFF
 ===================================================== */
 
 function detectDropOffPoints(
   frames,
   pacing,
-  speech
+  speech,
+  duration,
+  hook
 ) {
 
   const points =
     [];
+
+
+  /*
+    مقاطع ثابتة بصرياً لفترة طويلة (Long Static Stretch)
+
+    بدل ما نبلّغ عن كل فريمين متتاليين فيهم تغير
+    بسيط (شي بيصير كتير وبيصير ضجيج مش مفيد)، نراقب
+    التتابع: إذا استمر التغير البصري منخفض لفترة
+    حقيقية (~3 ثواني فأكتر)، هاد مؤشر أقوى بكتير على
+    خطر ملل/سكرول من نقطة واحدة معزولة.
+  */
+
+  let staticRunStart =
+    null;
 
 
   for (
@@ -2576,25 +3252,290 @@ function detectDropOffPoints(
       );
 
 
+    const isStatic =
+      visualChange < 4;
+
+
     if (
-      visualChange < 4
+      isStatic &&
+      staticRunStart === null
     ) {
 
-      points.push({
+      staticRunStart =
+        previous.time;
 
-        time:
-          current.time,
+    }
 
-        type:
-          "low_visual_change",
 
-        confidence:
-          "منخفضة",
+    const runEndsHere =
+      !isStatic ||
+      i === frames.length - 1;
 
-        reason:
-          "تغير بصري منخفض نسبياً؛ قد تستحق هذه المنطقة مراجعة من ناحية الإيقاع."
 
-      });
+    if (
+      runEndsHere &&
+      staticRunStart !== null
+    ) {
+
+      const runEnd =
+        isStatic
+          ? current.time
+          : previous.time;
+
+      const runLength =
+        runEnd -
+        staticRunStart;
+
+
+      if (
+        runLength >= 3
+      ) {
+
+        points.push({
+
+          time:
+            round(
+              staticRunStart,
+              1
+            ),
+
+          type:
+            "long_static_stretch",
+
+          principle:
+            "processing_fluency",
+
+          confidence:
+            "متوسطة",
+
+          reason:
+            `مقطع ثابت بصرياً لحوالي ${round(runLength, 1)} ثانية بدون تغيير ملحوظ؛ منطقة عالية الخطورة لتوقف السكرول لأنو ما في محفز بصري جديد.`
+
+        });
+
+      }
+
+
+      staticRunStart =
+        null;
+
+    }
+
+  }
+
+
+  /*
+    هوك افتتاحي ضعيف (Weak Opening Hook)
+
+    أول لحظة قرار عند المشاهد فعلياً هي أول 0.5-1
+    ثانية. إذا الهوك سجل درجة منخفضة، هاد بحد ذاته
+    أخطر نقطة هروب بالفيديو كله ولازم تظهر ضمن نفس
+    قائمة نقاط الخطر، مش بس بتقرير الهوك المنفصل.
+  */
+
+  if (
+    hook &&
+    hook.score < 55
+  ) {
+
+    points.push({
+
+      time:
+        0,
+
+      type:
+        "weak_opening_hook",
+
+      principle:
+        "pattern_interrupt",
+
+      confidence:
+        "عالية",
+
+      reason:
+        "درجة الهوك منخفضة؛ أعلى خطر هروب فعلياً هو بأول لحظة من الفيديو، قبل أي مشكلة تانية بالمحتوى."
+
+    });
+
+  }
+
+
+  /*
+    إرهاق منتصف الفيديو (Mid-Video Fatigue)
+
+    بالفيديوهات الأطول نسبياً (٢٥ ثانية فأكتر)، إذا
+    الثلث الأوسط ما فيه أي تغيير بصري حقيقي مقارنة
+    بباقي الفيديو، هاد مؤشر على منطقة ركود بالمنتصف
+    ممكن يخلي المشاهد يسكرول حتى لو البداية كانت قوية.
+  */
+
+  if (
+    duration >= 25 &&
+    frames.length >= 6
+  ) {
+
+    const middleStart =
+      duration * 0.35;
+
+    const middleEnd =
+      duration * 0.65;
+
+
+    const middleFrames =
+      frames.filter(
+        f =>
+          f.time >= middleStart &&
+          f.time <= middleEnd
+      );
+
+
+    if (
+      middleFrames.length >= 2
+    ) {
+
+      let middleChanges =
+        0;
+
+
+      for (
+        let i = 1;
+        i < middleFrames.length;
+        i++
+      ) {
+
+        const change =
+
+          Math.abs(
+            middleFrames[i].brightness -
+            middleFrames[i - 1].brightness
+          ) +
+
+          Math.abs(
+            middleFrames[i].contrast -
+            middleFrames[i - 1].contrast
+          );
+
+
+        if (
+          change > 12
+        ) {
+
+          middleChanges++;
+
+        }
+
+      }
+
+
+      const middleRate =
+        middleChanges /
+        Math.max(
+          1,
+          middleFrames.length - 1
+        );
+
+
+      if (
+        middleRate === 0
+      ) {
+
+        points.push({
+
+          time:
+            round(
+              middleStart,
+              1
+            ),
+
+          type:
+            "mid_video_fatigue",
+
+          principle:
+            "novelty",
+
+          confidence:
+            "منخفضة",
+
+          reason:
+            "منطقة منتصف الفيديو ما فيها أي تغيير بصري ملحوظ مقارنة بباقي الفيديو؛ خطر ركود حتى لو البداية كانت قوية."
+
+        });
+
+      }
+
+    }
+
+  }
+
+
+  /*
+    فجوات الصمت (Silence Gaps)
+
+    فجوة كبيرة بين مقطعين من الكلام بمنتصف الفيديو
+    ممكن تكون منطقة "هواء ميت" بتخلي المشاهد يكمل سكرول
+    لأنو مافي محفز واضح (لا كلام، لا سبب انتباه).
+  */
+
+  if (
+    speech?.available &&
+    speech.segments?.length > 1
+  ) {
+
+    for (
+      let i = 1;
+      i < speech.segments.length;
+      i++
+    ) {
+
+      const previous =
+        speech.segments[i - 1];
+
+      const current =
+        speech.segments[i];
+
+
+      if (
+        previous.end === null ||
+        current.start === null
+      ) {
+
+        continue;
+
+      }
+
+
+      const gap =
+        current.start -
+        previous.end;
+
+
+      if (
+        gap >= 2.5
+      ) {
+
+        points.push({
+
+          time:
+            round(
+              previous.end,
+              1
+            ),
+
+          type:
+            "silence_gap",
+
+          principle:
+            "curiosity_gap",
+
+          confidence:
+            "متوسطة",
+
+          reason:
+            `فجوة صمت حوالي ${round(gap, 1)} ثانية بدون كلام؛ من دون محفز بصري قوي بهالفترة، الخطر إنو المشاهد يكمل سكرول.`
+
+        });
+
+      }
 
     }
 
@@ -2623,6 +3564,9 @@ function detectDropOffPoints(
         type:
           "late_speech_start",
 
+        principle:
+          "cognitive_load",
+
         confidence:
           "متوسطة",
 
@@ -2630,6 +3574,124 @@ function detectDropOffPoints(
           "الكلام يبدأ بعد فترة من بداية الفيديو؛ راجع ما إذا كانت هذه الفترة تخدم الهوك."
 
       });
+
+    }
+
+  }
+
+
+  /*
+    الجواب/الفكرة المبكرة (Premature Payoff)
+
+    إذا انحكى جوهر الفكرة أو الجواب أو النتيجة
+    بوقت مبكر من الفيديو، وما فيه سبب جديد يخلي
+    المشاهد يكمل (سؤال جديد، تفصيل إضافي، تحدي)،
+    فالخطر إنو المشاهد ياخد المعلومة ويسكرول قبل
+    ما يخلص الفيديو، حتى لو المحتوى نفسه ممتاز.
+  */
+
+  if (
+    speech?.available &&
+    speech.segments?.length > 1 &&
+    duration > 8
+  ) {
+
+    const payoffRegex =
+      /(السر هو|الجواب هو|الحل هو|النتيجة هي|بالمختصر|بكل بساطة|يعني ببساطة|خلاصة الموضوع|أهم شي)/i;
+
+    const renewalRegex =
+      /(بس|لكن|كمان|بالإضافة|مشكلة|سؤال|؟)/;
+
+
+    let payoffSegment =
+      null;
+
+
+    for (
+      const segment
+      of speech.segments
+    ) {
+
+      if (
+        segment.start === null
+      ) {
+
+        continue;
+
+      }
+
+
+      if (
+        payoffRegex.test(
+          segment.text
+        )
+      ) {
+
+        payoffSegment =
+          segment;
+
+        break;
+
+      }
+
+    }
+
+
+    if (payoffSegment) {
+
+      const relativePosition =
+        payoffSegment.start /
+        duration;
+
+
+      const laterText =
+        speech.segments
+          .filter(
+            s =>
+              s.start !== null &&
+              s.start >
+                payoffSegment.start
+          )
+          .map(
+            s => s.text
+          )
+          .join(" ");
+
+
+      const hasRenewal =
+        renewalRegex.test(
+          laterText
+        );
+
+
+      if (
+        relativePosition < 0.45 &&
+        !hasRenewal
+      ) {
+
+        points.push({
+
+          time:
+            round(
+              payoffSegment.start,
+              1
+            ),
+
+          type:
+            "premature_payoff",
+
+          principle:
+            "information_gain",
+
+          confidence:
+            "متوسطة",
+
+          reason:
+            "يبدو إنو جوهر الفكرة أو الجواب انحكى بوقت مبكر نسبياً (قبل تقريباً نص الفيديو) بدون سبب واضح يخلي المشاهد يكمل — خطر إنو ياخد المعلومة ويسكرول."
+
+        });
+
+      }
 
     }
 
@@ -2645,6 +3707,284 @@ function detectDropOffPoints(
 
 
 /* =====================================================
+   SCENE-BY-SCENE ANALYSIS
+   -----------------------------------------------------
+   تقسيم الفيديو لمشاهد بناءً على نقاط التغير البصري
+   الحقيقية بين الفريمات الملتقطة. الدقة محدودة بعدد
+   الفريمات المتوفر فعلياً (مش تحليل كل فريم بالفيديو).
+===================================================== */
+
+function buildScenes(
+  frames,
+  duration
+) {
+
+  if (
+    !frames?.length ||
+    frames.length < 2
+  ) {
+
+    return [{
+      index: 0,
+      start: 0,
+      end: duration,
+      duration
+    }];
+
+  }
+
+
+  const cutPoints =
+    [0];
+
+
+  for (
+    let i = 1;
+    i < frames.length;
+    i++
+  ) {
+
+    const previous =
+      frames[i - 1];
+
+    const current =
+      frames[i];
+
+
+    const change =
+
+      Math.abs(
+        current.brightness -
+        previous.brightness
+      ) +
+
+      Math.abs(
+        current.contrast -
+        previous.contrast
+      );
+
+
+    if (
+      change > 15
+    ) {
+
+      cutPoints.push(
+        current.time
+      );
+
+    }
+
+  }
+
+
+  cutPoints.push(
+    duration
+  );
+
+
+  const uniqueSorted =
+    [...new Set(cutPoints)]
+      .sort((a, b) => a - b);
+
+
+  const scenes =
+    [];
+
+
+  for (
+    let i = 0;
+    i < uniqueSorted.length - 1;
+    i++
+  ) {
+
+    const start =
+      uniqueSorted[i];
+
+    const end =
+      uniqueSorted[i + 1];
+
+
+    if (
+      end - start < 0.3
+    ) {
+
+      continue;
+
+    }
+
+
+    scenes.push({
+      index: scenes.length,
+      start:
+        round(start, 1),
+      end:
+        round(end, 1),
+      duration:
+        round(end - start, 1)
+    });
+
+  }
+
+
+  return scenes.length
+    ? scenes
+    : [{
+        index: 0,
+        start: 0,
+        end: duration,
+        duration
+      }];
+
+}
+
+
+/* =====================================================
+   ATTENTION MAP
+   -----------------------------------------------------
+   خريطة زمنية مبنية على نفس نقاط الخطر المكتشفة فعلياً
+   (dropOff) + سجل الهوك + الـ CTA. مش "قراءة عقل
+   المشاهد" — هي عرض منظم لنفس الإشارات المتوفرة أصلاً،
+   موزعة على المشاهد.
+===================================================== */
+
+function buildAttentionMap(
+  scenes,
+  dropOff,
+  hook,
+  cta
+) {
+
+  return scenes.map(
+    (scene, i) => {
+
+      const risksInScene =
+        dropOff.filter(
+          p =>
+            p.time >= scene.start &&
+            p.time < scene.end
+        );
+
+
+      let label;
+
+      let reason;
+
+
+      if (
+        risksInScene.length
+      ) {
+
+        label =
+          "خطر (Risk)";
+
+        reason =
+          risksInScene
+            .map(r => r.reason)
+            .join(" ");
+
+      } else if (
+        i === 0 &&
+        hook &&
+        hook.score >= 65
+      ) {
+
+        label =
+          "احتمال انتباه عالي";
+
+        reason =
+          "درجة هوك قوية بأول مشهد.";
+
+      } else if (
+        i === scenes.length - 1 &&
+        cta?.hasCTA
+      ) {
+
+        label =
+          "منطقة CTA";
+
+        reason =
+          "دعوة لاتخاذ إجراء قرب النهاية.";
+
+      } else {
+
+        label =
+          "منطقة مستقرة";
+
+        reason =
+          "لا توجد إشارة خطر أو تميّز خاص بناءً على المعطيات المتوفرة.";
+
+      }
+
+
+      return {
+
+        scene:
+          scene.index,
+
+        timeRange:
+          `${scene.start}s - ${scene.end}s`,
+
+        label,
+
+        reason
+
+      };
+
+    }
+  );
+
+}
+
+
+/* =====================================================
+   RECOMMENDATION PRIORITY
+   -----------------------------------------------------
+   إعادة ترتيب نفس التوصيات المبنية أصلاً (changes[])
+   لثلاث فئات: أول شي تصلحه، يستاهل تجربته، لا تغيره.
+===================================================== */
+
+function prioritizeRecommendations(
+  changes,
+  scores
+) {
+
+  const labels = {
+
+    hook: "الهوك",
+    pacing: "الإيقاع",
+    visual: "العنصر البصري",
+    technical: "الجانب التقني",
+    speech: "الكلام",
+    idea: "وضوح الفكرة"
+
+  };
+
+
+  const keep =
+    Object.entries(scores)
+      .filter(([, v]) => v >= 80)
+      .map(([k]) => labels[k] || k);
+
+
+  return {
+
+    fixFirst:
+      changes.slice(0, 3),
+
+    worthTesting:
+      changes.slice(3),
+
+    keep:
+      keep.length
+        ? keep
+        : ["لا يوجد عنصر بدرجة عالية بما يكفي ليُصنَّف كـ Keep بعد."]
+
+  };
+
+}
+
+
+/* =====================================================
    DIAGNOSIS
 ===================================================== */
 
@@ -2655,6 +3995,7 @@ function buildDiagnosis({
   technical,
   speechAnalysis,
   idea,
+  cta,
   dropOff
 }) {
 
@@ -2732,11 +4073,24 @@ function buildDiagnosis({
 
 
   if (
+    cta &&
+    !cta.hasCTA &&
+    speechAnalysis.score >= 40
+  ) {
+
+    list.push(
+      cta.reason
+    );
+
+  }
+
+
+  if (
     dropOff.length
   ) {
 
     list.push(
-      `هناك ${dropOff.length} مناطق زمنية تستحق المراجعة من ناحية التغير البصري أو بداية الكلام.`
+      `هناك ${dropOff.length} مناطق زمنية تستحق المراجعة من ناحية التغير البصري أو بداية الكلام أو فجوات الصمت.`
     );
 
   }
@@ -2769,6 +4123,7 @@ function buildRecommendations({
   technical,
   speechAnalysis,
   idea,
+  cta,
   dropOff
 }) {
 
@@ -2847,6 +4202,19 @@ function buildRecommendations({
 
 
   if (
+    cta &&
+    !cta.hasCTA &&
+    speechAnalysis.score >= 40
+  ) {
+
+    changes.push(
+      "أضف دعوة واضحة لاتخاذ إجراء قرب نهاية الفيديو (تعليق، حفظ، متابعة، أو رابط) بدل ما تخلي الفيديو ينتهي بدون طلب واضح."
+    );
+
+  }
+
+
+  if (
     dropOff.length
   ) {
 
@@ -2880,6 +4248,208 @@ function buildRecommendations({
     changes
 
   };
+
+}
+
+
+/* =====================================================
+   HUMAN SUMMARY
+===================================================== */
+
+/*
+  فقرة ملخص واحدة بلغة طبيعية — الهدف إنو المستخدم
+  يفهم "شو صار بالفيديو" بقراءة واحدة، بدل ما يجمّع
+  الصورة بنفسه من 6-7 أرقام متفرقة.
+
+  هاد تجميع نصي لنتائج موجودة أصلاً (مش تحليل جديد)،
+  فمافي خطر تناقض مع باقي التحليل.
+*/
+
+function buildHumanSummary({
+  scores,
+  overall,
+  hook,
+  idea,
+  ideaGist,
+  cta,
+  dropOff,
+  duration
+}) {
+
+  const parts =
+    [];
+
+
+  /*
+    الجملة الأولى: تقييم عام
+  */
+
+  let overallLine =
+    `الفيديو (${round(duration, 1)} ثانية) `;
+
+
+  if (
+    overall >= 75
+  ) {
+
+    overallLine +=
+      "بمستوى قوي بشكل عام.";
+
+  } else if (
+    overall >= 55
+  ) {
+
+    overallLine +=
+      "بمستوى متوسط، فيه نقاط قوة وأخرى محتاجة تحسين.";
+
+  } else {
+
+    overallLine +=
+      "بمستوى ضعيف نسبياً ومحتاج مراجعة جدية قبل النشر.";
+
+  }
+
+
+  parts.push(
+    overallLine
+  );
+
+
+  /*
+    الجملة الثانية: جوهر الكلام (إن وُجد)
+  */
+
+  if (
+    ideaGist?.available
+  ) {
+
+    parts.push(
+      `أقرب جملة للفكرة الأساسية اللي انحكت: "${ideaGist.coreMessage}".`
+    );
+
+  }
+
+
+  /*
+    الجملة الثانية: أقوى وأضعف عنصر
+  */
+
+  const entries =
+    Object.entries(
+      scores
+    );
+
+
+  const strongest =
+    entries.reduce(
+      (a, b) =>
+        b[1] > a[1] ? b : a
+    );
+
+
+  const weakest =
+    entries.reduce(
+      (a, b) =>
+        b[1] < a[1] ? b : a
+    );
+
+
+  const labels = {
+
+    hook:
+      "الهوك",
+
+    pacing:
+      "الإيقاع",
+
+    visual:
+      "العنصر البصري",
+
+    technical:
+      "الجانب التقني",
+
+    speech:
+      "الكلام",
+
+    idea:
+      "وضوح الفكرة"
+
+  };
+
+
+  parts.push(
+    `أقوى نقطة هي ${labels[strongest[0]] || strongest[0]} (${strongest[1]})، بينما ${labels[weakest[0]] || weakest[0]} (${weakest[1]}) هو الجزء الأكتر احتياجاً للتحسين.`
+  );
+
+
+  /*
+    الجملة الثالثة: أخطر خطر هروب (إن وجد)
+  */
+
+  if (
+    dropOff.length
+  ) {
+
+    const topRisk =
+      dropOff[0];
+
+
+    const riskLabels = {
+
+      weak_opening_hook:
+        "ضعف بأول لحظة من الفيديو",
+
+      premature_payoff:
+        "كشف الفكرة الأساسية بدري بدون سبب يخلي المشاهد يكمل",
+
+      silence_gap:
+        "فجوة صمت طويلة بدون محفز",
+
+      long_static_stretch:
+        "مقطع ثابت بصرياً لفترة طويلة",
+
+      mid_video_fatigue:
+        "ركود بمنتصف الفيديو",
+
+      late_speech_start:
+        "تأخر بداية الكلام"
+
+    };
+
+
+    parts.push(
+      `أخطر منطقة لاحتمال توقف المشاهد عن السكرول هي حوالي الثانية ${round(topRisk.time, 1)} — بسبب ${riskLabels[topRisk.type] || topRisk.type}.`
+    );
+
+  } else {
+
+    parts.push(
+      "ما في مناطق خطر واضحة لتوقف المشاهد بناءً على الإشارات المتوفرة."
+
+    );
+
+  }
+
+
+  /*
+    الجملة الرابعة: CTA
+  */
+
+  if (
+    cta &&
+    !cta.hasCTA
+  ) {
+
+    parts.push(
+      "الفيديو ينتهي بدون دعوة واضحة لاتخاذ إجراء."
+    );
+
+  }
+
+
+  return parts.join(
+    " "
+  );
 
 }
 
