@@ -235,31 +235,43 @@ async function handleLogin() {
   const buttons = [$('loginBtn'), $('landingLoginBtn')].filter(Boolean);
   buttons.forEach(b => { b.disabled = true; b.dataset.original = b.innerHTML; b.textContent = 'جاري فتح Google… · Opening Google…'; });
 
-  // Watchdog: signInWithRedirect() should navigate the whole page away.
-  // If the page is embedded in an iframe/webview that blocks top-level
-  // navigation, the promise can hang forever with no error — this
-  // safety timer un-sticks the button and tells the user what to check.
+  // Watchdog: if the sign-in promise never settles (e.g. a redirect
+  // fallback blocked by an iframe/preview that won't allow top-level
+  // navigation), this safety timer un-sticks the button instead of
+  // leaving it stuck on "Opening Google…" forever.
   let settled = false;
   const watchdog = setTimeout(() => {
     if (settled) return;
     buttons.forEach(b => { b.disabled = false; if (b.dataset.original) b.innerHTML = b.dataset.original; });
     showLoginError(
-      'تعذر فتح نافذة تسجيل الدخول (قد تكون الصفحة داخل إطار iframe أو معاينة تمنع التنقّل). افتح الرابط في تبويب مباشر وتأكد أن نطاق الموقع مضاف ضمن Authorized domains في Firebase.\n' +
-      'Google sign-in did not open (the page may be inside an iframe/preview that blocks navigation). Open this link in a direct browser tab, and confirm this domain (' + window.location.hostname + ') is listed under Authorized domains in the Firebase console.'
+      'تعذر إكمال تسجيل الدخول (قد تكون الصفحة داخل إطار iframe أو معاينة تمنع النوافذ المنبثقة/التنقّل). افتح الرابط في تبويب مباشر وتأكد أن نطاق الموقع (' + window.location.hostname + ') مضاف ضمن Authorized domains في Firebase.\n' +
+      'Google sign-in did not complete (the page may be inside an iframe/preview that blocks popups or navigation). Open this link in a direct browser tab, and confirm this domain is listed under Authorized domains in the Firebase console.'
     );
-  }, 7000);
+  }, 12000);
 
   const result = await signInWithGoogle();
   settled = true;
   clearTimeout(watchdog);
 
+  if (result.cancelled) {
+    // User closed the Google picker themselves — just reset quietly.
+    buttons.forEach(b => { b.disabled = false; if (b.dataset.original) b.innerHTML = b.dataset.original; });
+    return;
+  }
+
   if (!result.success) {
     buttons.forEach(b => { b.disabled = false; if (b.dataset.original) b.innerHTML = b.dataset.original; });
     console.error('MTI Google Sign-In Error — host:', window.location.hostname, result.error);
     showLoginError('تعذر تسجيل الدخول عبر Google · Google sign-in failed: ' + result.error);
+    return;
   }
-  // On success, signInWithRedirect() navigates away from the page —
-  // nothing left to do here.
+
+  if (!result.redirecting) {
+    // Popup flow succeeded without navigating away — reset the button.
+    // (renderAuth() will hide it entirely once the auth state listener fires.)
+    buttons.forEach(b => { b.disabled = false; if (b.dataset.original) b.innerHTML = b.dataset.original; });
+  }
+  // If redirecting (redirect fallback), the page is about to navigate away.
 }
 $('loginBtn').addEventListener('click', handleLogin);
 $('landingLoginBtn').addEventListener('click', handleLogin);
