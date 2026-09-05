@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MTI — Precision Content Intelligence</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Syne:wght@700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              navy: '#0A192F',
+              navyLight: '#112240',
+              navyCard: '#1E2D4A',
+              gold: '#C5A059',
+              goldHover: '#B38F46',
+              cream: '#F5F5F0',
+              slate: '#3A4750',
+              green: '#4CAF50',
+              red: '#E53E3E'
+            }
+          },
+          fontFamily: {
+            brand: ['Syne', 'sans-serif'],
+            body: ['Inter', 'Tajawal', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background-color: #0A192F; color: #F5F5F0; font-family: 'Inter', 'Tajawal', sans-serif; }
+    .gold-glow { border: 1px solid rgba(197, 160, 89, 0.3); box-shadow: 0 0 15px rgba(197, 160, 89, 0.08); }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased">
+
+  <!-- TOP BAR -->
+  <header class="border-b border-brand-slate/40 bg-brand-navy/90 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-brand-navyLight gold-glow flex items-center justify-center font-bold text-brand-gold text-xl font-['Syne']">
+          M
+        </div>
+        <span class="font-['Syne'] font-extrabold text-xl tracking-tight text-white">MTI <span class="text-[10px] text-brand-gold bg-brand-gold/10 px-1.5 py-0.5 rounded border border-brand-gold/20">V2</span></span>
+      </div>
+      <button onclick="document.getElementById('videoInput').click()" class="px-4 py-2 rounded-lg bg-brand-gold hover:bg-brand-goldHover text-brand-navy font-bold text-xs flex items-center gap-2 transition-all">
+        <i data-lucide="upload" class="w-4 h-4"></i>
+        <span>رفع فيديو Reel</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN VIEW -->
+  <main class="flex-1 max-w-6xl w-full mx-auto px-4 py-6 flex flex-col gap-6">
+    <input type="file" id="videoInput" accept="video/*" class="hidden" />
+
+    <!-- UPLOAD STATE HERO -->
+    <div id="heroCard" class="bg-brand-navyLight border border-brand-slate/40 rounded-2xl p-8 text-center flex flex-col items-center justify-center">
+      <div class="w-14 h-14 rounded-2xl bg-brand-navy gold-glow flex items-center justify-center text-brand-gold mb-3">
+        <i data-lucide="video" class="w-7 h-7"></i>
+      </div>
+      <h2 class="text-lg font-bold text-white">فحص الفيديو بالمعمارية المعرفية الصارمة</h2>
+      <p class="text-xs text-gray-400 max-w-md mt-1 leading-relaxed">
+        استخراج الأدلة أولاً ← فهم الجوهر ← التحقق ومنع التخمين ← السيكولوجيا والاحتفاظ ← التعديل الأهم.
+      </p>
+      <button onclick="document.getElementById('videoInput').click()" class="mt-5 px-5 py-2.5 rounded-xl bg-brand-gold text-brand-navy font-bold text-xs transition-all flex items-center gap-2">
+        <i data-lucide="file-plus" class="w-4 h-4"></i>
+        <span>اختر فيديو لبدء الفحص</span>
+      </button>
+    </div>
+
+    <!-- PROGRESS BAR -->
+    <div id="progressBox" class="hidden bg-brand-navyLight border border-brand-slate/40 rounded-xl p-4">
+      <div class="flex justify-between text-xs text-gray-400 mb-2">
+        <span id="progressMsg" class="text-brand-gold font-medium">جاري فحص الفيديو...</span>
+        <span id="progressPct" class="font-mono">0%</span>
+      </div>
+      <div class="w-full h-1.5 bg-brand-navy rounded-full overflow-hidden">
+        <div id="progressBar" class="h-full bg-brand-gold w-0 transition-all duration-300"></div>
+      </div>
+    </div>
+
+    <!-- ACTIVE REPORT -->
+    <div id="reportSection" class="hidden flex flex-col gap-6">
+      
+      <!-- TOP HIGHLIGHTS -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <!-- Video Player & Verdict -->
+        <div class="bg-brand-navyLight border border-brand-slate/40 rounded-2xl p-4 flex flex-col gap-3">
+          <video id="player" controls class="w-full aspect-[9/16] max-h-[300px] bg-black rounded-xl object-contain"></video>
+          <div class="bg-brand-navy p-3 rounded-xl border border-brand-slate/30">
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-gray-400">القرار (Verdict):</span>
+              <span id="verdictPill" class="px-2 py-0.5 rounded font-bold text-[11px] bg-brand-gold/15 text-brand-gold border border-brand-gold/30">--</span>
+            </div>
+            <p id="verdictText" class="text-xs text-gray-300 mt-2 leading-relaxed">--</p>
+          </div>
+        </div>
+
+        <!-- The Core Insight & The One Change -->
+        <div class="md:col-span-2 flex flex-col gap-4">
+          <div class="bg-brand-navyLight gold-glow rounded-2xl p-5">
+            <div class="flex items-center gap-2 text-brand-gold text-xs font-bold uppercase tracking-wider mb-2">
+              <i data-lucide="eye" class="w-4 h-4"></i>
+              <span>الرؤية الجوهرية (THE CORE INSIGHT)</span>
+            </div>
+            <p id="coreInsight" class="text-sm sm:text-base font-medium text-brand-cream leading-relaxed">--</p>
+          </div>
+
+          <div class="bg-gradient-to-br from-brand-navyLight to-brand-navyCard border-2 border-brand-gold/40 rounded-2xl p-5">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-white flex items-center gap-1.5">
+                <i data-lucide="zap" class="w-4 h-4 text-brand-gold"></i>
+                التعديل الواحد صاحب أعلى تأثير (THE ONE CHANGE)
+              </span>
+              <span class="text-[9px] bg-brand-gold text-brand-navy font-bold px-2 py-0.5 rounded uppercase">Single Action</span>
+            </div>
+            <h4 id="theAction" class="text-sm font-bold text-brand-gold mt-2">--</h4>
+            <p id="theImpact" class="text-xs text-gray-300 mt-1 leading-relaxed">--</p>
+          </div>
+
+          <!-- Understanding Box -->
+          <div class="bg-brand-navyLight border border-brand-slate/40 rounded-2xl p-4">
+            <span class="text-xs font-bold text-gray-300 block mb-2">جوهر الفكرة المستخلصة (Understanding):</span>
+            <p id="coreIdea" class="text-xs text-gray-300 bg-brand-navy p-2.5 rounded-lg border border-brand-slate/30 leading-relaxed">--</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- TIMELINE & HOOK -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <!-- Hook Box -->
+        <div class="bg-brand-navyLight border border-brand-slate/40 rounded-2xl p-4">
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-xs font-bold text-gray-300">تشخيص الهوك (Hook Analysis)</span>
+            <span id="hookType" class="text-[11px] font-bold text-brand-gold">--</span>
+          </div>
+          <div class="bg-brand-navy p-3 rounded-xl text-xs mb-2">
+            <span class="text-gray-400 block text-[10px] mb-1">الافتتاحية الفعلية:</span>
+            <blockquote id="hookQuote" class="text-white italic border-r-2 border-brand-gold pr-2">"--"</blockquote>
+          </div>
+          <p id="hookExplain" class="text-xs text-gray-300 leading-relaxed">--</p>
+        </div>
+
+        <!-- Pacing & Details -->
+        <div class="bg-brand-navyLight border border-brand-slate/40 rounded-2xl p-4 flex flex-col justify-between">
+          <span class="text-xs font-bold text-gray-300 mb-2">الإيقاع ومحفز المشاركة</span>
+          <div class="flex flex-col gap-2 text-xs">
+            <div class="bg-brand-navy p-2.5 rounded-lg">
+              <span class="text-gray-400">الإيقاع (Pacing):</span>
+              <p id="pacingText" class="text-white mt-0.5">--</p>
+            </div>
+            <div class="bg-brand-navy p-2.5 rounded-lg">
+              <span class="text-gray-400">محفز المشاركة (Shareability):</span>
+              <p id="shareText" class="text-white mt-0.5">--</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCORES GRID -->
+      <div class="bg-brand-navyLight border border-brand-slate/40 rounded-2xl p-4">
+        <span class="text-xs font-bold text-gray-300 block mb-3">مصفوفة التقييم (محسوبة كخاتمة للتحليل)</span>
+        <div id="scoresGrid" class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 text-center"></div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="border-t border-brand-slate/40 bg-brand-navy py-4 text-center text-[11px] text-gray-500 font-mono">
+    MTI V2 — Precision Content Intelligence
+  </footer>
+
+  <script type="module">
+    import { ReelEngine } from './src/engine/reel-engine.js';
+    lucide.createIcons();
+
+    const videoInput = document.getElementById('videoInput');
+    const heroCard = document.getElementById('heroCard');
+    const progressBox = document.getElementById('progressBox');
+    const progressBar = document.getElementById('progressBar');
+    const progressMsg = document.getElementById('progressMsg');
+    const progressPct = document.getElementById('progressPct');
+    const reportSection = document.getElementById('reportSection');
+    const player = document.getElementById('player');
+
+    const engine = new ReelEngine();
+
+    videoInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      player.src = URL.createObjectURL(file);
+      heroCard.classList.add('hidden');
+      progressBox.classList.remove('hidden');
+
+      try {
+        const report = await engine.analyze(file, {}, (p) => {
+          progressMsg.textContent = p.message;
+          progressPct.textContent = `${Math.round(p.progress)}%`;
+          progressBar.style.width = `${p.progress}%`;
+        });
+
+        render(report);
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        progressBox.classList.add('hidden');
+      }
+    });
+
+    function render(data) {
+      reportSection.classList.remove('hidden');
+      document.getElementById('coreInsight').textContent = `"${data.coreInsight}"`;
+      document.getElementById('theAction').textContent = data.theOneChange.action;
+      document.getElementById('theImpact').textContent = data.theOneChange.impact;
+      document.getElementById('coreIdea').textContent = data.understanding.coreIdea;
+      document.getElementById('verdictPill').textContent = data.verdict.decision;
+      document.getElementById('verdictText').textContent = data.verdict.explanation;
+
+      document.getElementById('hookType').textContent = data.hook.status;
+      document.getElementById('hookQuote').textContent = data.hook.exactEvidence;
+      document.getElementById('hookExplain').textContent = data.hook.whyItWorksOrFails;
+
+      document.getElementById('pacingText').textContent = `${data.pacing.speechPacingVerdict} / ${data.pacing.visualPacingVerdict}. ${data.pacing.notes}`;
+      document.getElementById('shareText').textContent = `${data.shareability.detectedTrigger}: ${data.shareability.reasoning}`;
+
+      const grid = document.getElementById('scoresGrid');
+      grid.innerHTML = '';
+      Object.entries(data.scores).forEach(([k, v]) => {
+        const div = document.createElement('div');
+        div.className = 'bg-brand-navy p-2 rounded-xl border border-brand-slate/30';
+        div.innerHTML = `<span class="text-[10px] text-gray-400 block">${k}</span><span class="font-bold text-sm text-brand-gold">${v}</span>`;
+        grid.appendChild(div);
+      });
+
+      lucide.createIcons();
+    }
+  </script>
+</body>
+</html>
