@@ -19,6 +19,8 @@
  * - cognition
  * - emotion
  * - viewer behavior
+ * - platform signals (Reels / TikTok / Shorts differences)
+ * - niches (marketing, personal brand, motivational, educational, comedy...)
  * - content patterns
  *
  * Personal account data MUST remain inside reel-memory.js.
@@ -49,6 +51,9 @@ const knowledgeBase = {
     narrative: [],
     viewerBehavior: [],
     platformSignals: [],
+    niches: [],
+    audienceRegions: [],
+    cta: [],
     contentPatterns: []
   },
 
