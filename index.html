@@ -2,475 +2,311 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MTI — Content Intelligence</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0A192F">
+<title>MTI — Precision Content Intelligence</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --navy:#0A192F;
-    --navy-light:#112240;
-    --gold:#C5A059;
-    --cream:#FAF5F0;
-    --slate:#3A4750;
-    --green:#4CAF50;
-  }
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{
-    font-family:'Inter',sans-serif;
-    background:var(--navy);
-    color:var(--cream);
-    min-height:100vh;
-  }
-  h1,h2,h3,.brand{font-family:'Syne',sans-serif;}
+:root{
+  --navy:#0A192F; --navy-2:#0D1E35; --panel:#10243D; --panel-2:#122943;
+  --gold:#C5A059; --gold-2:#D8B873; --cream:#FAF5F0; --muted:#8F9BA8;
+  --slate:#3A4750; --green:#4CAF50; --red:#E57373;
+  --line:rgba(250,245,240,.09); --shadow:0 18px 55px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--navy)}
+body{font-family:Inter,system-ui,sans-serif;background:radial-gradient(circle at 80% -10%,rgba(197,160,89,.08),transparent 30%),var(--navy);color:var(--cream);min-height:100vh}
+h1,h2,h3,.brand,.score{font-family:Syne,Inter,sans-serif}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
 
-  .app{display:flex;min-height:100vh;}
+/* ---------- shell ---------- */
+.app{min-height:100vh;display:flex;direction:ltr}
+.sidebar{width:78px;flex:0 0 78px;background:#0B1B31;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:24px 0;gap:18px;position:sticky;top:0;height:100vh;z-index:20}
+.logo{font-family:Syne,sans-serif;font-size:23px;font-weight:800;letter-spacing:-2px;color:var(--gold);margin-bottom:18px}
+.nav-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#AAB4BF;opacity:.72;border:1px solid transparent;transition:.2s;font-size:17px}
+.nav-icon:hover{opacity:1;background:rgba(255,255,255,.04)}
+.nav-icon.active{background:var(--gold);color:var(--navy);opacity:1;box-shadow:0 8px 24px rgba(197,160,89,.2)}
+.main{direction:rtl;flex:1;min-width:0;padding:28px clamp(20px,4vw,48px) 50px;max-width:1440px;margin:auto}
+.topbar{height:52px;display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:22px}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.page-title{font-size:22px;font-weight:700;letter-spacing:-.4px}
+.eyebrow{font-size:10px;color:var(--gold);letter-spacing:1.3px;text-transform:uppercase}
+.topbar-actions{display:flex;align-items:center;gap:10px}
 
-  .sidebar{
-    width:76px;
-    background:var(--navy-light);
-    display:flex;flex-direction:column;align-items:center;
-    padding:24px 0;gap:28px;
-    border-left:1px solid rgba(255,255,255,.06);
-  }
-  .sidebar .logo{
-    font-size:22px;font-weight:800;color:var(--gold);
-    margin-bottom:20px;
-  }
-  .nav-icon{
-    width:42px;height:42px;border-radius:12px;
-    display:flex;align-items:center;justify-content:center;
-    color:var(--cream);opacity:.55;cursor:pointer;
-    font-size:18px;transition:.2s;
-  }
-  .nav-icon:hover{opacity:.85;}
-  .nav-icon.active{
-    background:var(--gold);color:var(--navy);opacity:1;
-  }
+/* ---------- buttons / auth ---------- */
+.btn{border:0;border-radius:10px;padding:11px 17px;font-weight:700;font-size:13px;display:inline-flex;align-items:center;justify-content:center;gap:9px;transition:.2s;white-space:nowrap}
+.btn-gold{background:var(--gold);color:var(--navy);box-shadow:0 8px 22px rgba(197,160,89,.14)}
+.btn-gold:hover{background:var(--gold-2);transform:translateY(-1px)}
+.btn-outline{background:transparent;border:1px solid rgba(197,160,89,.48);color:var(--cream)}
+.btn-outline:hover{border-color:var(--gold);background:rgba(197,160,89,.06)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.google-mark{width:18px;height:18px;border-radius:50%;background:white;color:#4285F4;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:12px}
+.auth-user{display:flex;align-items:center;gap:9px;padding:5px 8px 5px 5px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.025)}
+.avatar{width:30px;height:30px;border-radius:50%;object-fit:cover;background:var(--gold)}
+.user-name{font-size:12px;font-weight:700;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-  .main{flex:1;padding:32px 40px;max-width:1100px;}
+/* ---------- login state ---------- */
+.auth-banner{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:center;background:linear-gradient(135deg,rgba(197,160,89,.11),rgba(16,36,61,.95));border:1px solid rgba(197,160,89,.24);border-radius:16px;padding:18px 20px;margin-bottom:18px;box-shadow:var(--shadow)}
+.auth-banner h2{font-size:17px;margin-bottom:5px}.auth-banner p{font-size:12px;color:#AAB4BF;line-height:1.7}
+.auth-state{display:flex;align-items:center;gap:10px}
+.auth-dot{width:7px;height:7px;border-radius:50%;background:var(--red);box-shadow:0 0 0 5px rgba(229,115,115,.08)}
+.auth-dot.ok{background:var(--green);box-shadow:0 0 0 5px rgba(76,175,80,.08)}
 
-  .topbar{
-    display:flex;justify-content:space-between;align-items:center;
-    margin-bottom:28px;
-  }
-  .tabs{display:flex;gap:8px;}
-  .tab{
-    padding:8px 18px;border-radius:999px;font-size:14px;
-    cursor:pointer;color:var(--cream);opacity:.6;
-  }
-  .tab.active{background:var(--navy-light);opacity:1;color:var(--gold);}
+/* ---------- dashboard cards ---------- */
+.hero-card{background:linear-gradient(145deg,#102641,#0D2037);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow);margin-bottom:18px}
+.hero-grid{display:grid;grid-template-columns:minmax(280px,.95fr) 1.05fr;gap:20px;align-items:stretch}
+.video-placeholder{min-height:245px;border-radius:13px;background:#050D18;overflow:hidden;position:relative;border:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center}
+.video-placeholder .play{width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;color:var(--gold);background:rgba(0,0,0,.35)}
+.video-placeholder .duration{position:absolute;bottom:10px;left:12px;font-size:10px;color:#AAB4BF}
+.hero-copy{display:flex;flex-direction:column;justify-content:center;padding:4px 4px 4px 8px}
+.kicker{font-size:10px;color:var(--gold);letter-spacing:.9px;margin-bottom:8px}
+.hero-copy h2{font-size:22px;line-height:1.3;margin-bottom:7px}.hero-copy p{color:#9CA8B4;font-size:12px;line-height:1.7;max-width:520px}
+.score-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}
+.score-card{background:rgba(255,255,255,.035);border:1px solid var(--line);border-radius:13px;padding:13px 14px}
+.score-label{font-size:10px;color:#8E9AA6;margin-bottom:5px}.score{font-size:27px;color:var(--gold);font-weight:800}.score.overall{color:var(--cream)}
+.bar{height:4px;background:rgba(255,255,255,.08);border-radius:99px;margin-top:8px;overflow:hidden}.bar i{display:block;height:100%;background:var(--gold);border-radius:99px}
 
-  .btn{
-    font-family:'Inter',sans-serif;font-weight:600;font-size:14px;
-    padding:11px 22px;border-radius:999px;border:none;cursor:pointer;
-    display:inline-flex;align-items:center;gap:8px;
-  }
-  .btn-gold{background:var(--gold);color:var(--navy);}
-  .btn-outline{background:transparent;color:var(--cream);border:1px solid rgba(255,255,255,.25);}
-  .btn:disabled{opacity:.5;cursor:not-allowed;}
+.grid-2{display:grid;grid-template-columns:1.35fr .65fr;gap:18px}.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.panel{background:rgba(16,36,61,.92);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 12px 34px rgba(0,0,0,.13);margin-bottom:18px}
+.panel-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px}.panel-title h3{font-size:14px}.panel-title span{font-size:10px;color:#768390}
+.upload-zone{border:1.5px dashed rgba(197,160,89,.35);border-radius:13px;padding:25px;text-align:center;cursor:pointer;background:rgba(255,255,255,.018);transition:.2s}.upload-zone:hover{border-color:var(--gold);background:rgba(197,160,89,.035)}
+.upload-icon{font-size:24px;color:var(--gold);margin-bottom:7px}.upload-zone strong{display:block;font-size:13px;margin-bottom:4px}.upload-zone span{font-size:11px;color:#7F8B97}
+.form-row{display:grid;grid-template-columns:1fr auto;gap:10px;margin-top:13px}.field{width:100%;background:#09182B;color:var(--cream);border:1px solid var(--line);border-radius:10px;padding:11px 12px;outline:none}.field:focus{border-color:rgba(197,160,89,.55)}
+label{display:block;font-size:10px;color:#8E9AA6;margin-bottom:6px}
 
-  .panel{
-    background:var(--navy-light);
-    border-radius:18px;
-    padding:24px;
-    margin-bottom:20px;
-    border:1px solid rgba(255,255,255,.05);
-  }
-  .panel h3{font-size:16px;font-weight:700;margin-bottom:14px;color:var(--cream);}
-  .muted{color:var(--slate);opacity:.9;font-size:13px;}
+/* attention */
+.attention{display:flex;gap:8px;overflow:auto;padding-bottom:3px}.attention::-webkit-scrollbar{height:4px}.attention::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:20px}
+.frame{min-width:92px;height:72px;border-radius:9px;background:linear-gradient(145deg,#24384D,#0A1421);border:1px solid rgba(255,255,255,.07);display:flex;align-items:flex-end;padding:7px;font-size:9px;color:#D7DDE2;position:relative;overflow:hidden}.frame:before{content:"";position:absolute;width:36px;height:36px;border-radius:50%;background:rgba(197,160,89,.42);filter:blur(12px);top:10px;right:28px}.frame.high:before{background:rgba(76,175,80,.48)}.frame.risk:before{background:rgba(229,115,115,.45)}
 
-  .upload-zone{
-    border:1.5px dashed rgba(197,160,89,.4);
-    border-radius:16px;
-    padding:40px;text-align:center;
-    cursor:pointer;
-  }
-  .upload-zone:hover{border-color:var(--gold);}
+.list{list-style:none}.list li{font-size:12px;line-height:1.7;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)}.list li:last-child{border-bottom:0}.pill{display:inline-flex;padding:5px 9px;border-radius:999px;background:rgba(197,160,89,.12);color:var(--gold-2);font-size:10px;margin:3px}
+.muted{color:#85919E;font-size:11px;line-height:1.7}
+.loading{display:flex;align-items:center;gap:9px;color:var(--gold);font-size:12px;padding:13px 0}.spinner{width:15px;height:15px;border-radius:50%;border:2px solid rgba(197,160,89,.2);border-top-color:var(--gold);animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 
-  .score-row{display:flex;gap:16px;margin-bottom:20px;}
-  .score-card{
-    flex:1;background:var(--navy-light);border-radius:16px;
-    padding:20px;border:1px solid rgba(255,255,255,.05);
-  }
-  .score-card .label{font-size:12px;color:var(--slate);margin-bottom:8px;}
-  .score-card .value{font-size:34px;font-weight:800;font-family:'Syne',sans-serif;color:var(--gold);}
-  .bar-track{height:5px;background:rgba(255,255,255,.08);border-radius:99px;margin-top:10px;overflow:hidden;}
-  .bar-fill{height:100%;background:var(--gold);border-radius:99px;}
+/* ---------- ideas ---------- */
+.tabs{display:flex;gap:6px;background:rgba(255,255,255,.025);border:1px solid var(--line);padding:4px;border-radius:10px}.tab{border:0;background:transparent;color:#8E9AA6;padding:7px 11px;border-radius:7px;font-size:11px}.tab.active{background:#162E49;color:var(--gold)}
+.hook-variant{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:10px;padding:11px 12px;margin-bottom:7px;font-size:12px;line-height:1.6}
 
-  .scene-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;}
-  .scene-block{
-    min-width:90px;height:70px;border-radius:10px;
-    display:flex;align-items:center;justify-content:center;
-    font-size:11px;text-align:center;padding:6px;
-    background:rgba(255,255,255,.05);color:var(--cream);
-  }
-  .scene-block.risk{background:rgba(197,89,89,.35);color:#ffd7d7;}
-  .scene-block.high{background:rgba(76,175,80,.3);color:#c9f0cb;}
-  .scene-block.cta{background:rgba(197,160,89,.35);color:var(--gold);}
+/* ---------- landing ---------- */
+.landing{min-height:calc(100vh - 108px);display:grid;place-items:center}.landing-card{width:min(900px,100%);text-align:center;padding:70px 28px;border:1px solid var(--line);border-radius:24px;background:radial-gradient(circle at 50% 0,rgba(197,160,89,.11),transparent 38%),rgba(16,36,61,.72);box-shadow:var(--shadow)}
+.landing-logo{font-family:Syne;font-size:40px;font-weight:800;letter-spacing:-4px;color:var(--gold);margin-bottom:20px}.landing-card h1{font-size:clamp(32px,6vw,58px);line-height:1.08;margin-bottom:15px}.landing-card h1 span{color:var(--gold)}.landing-card p{max-width:620px;margin:0 auto 24px;color:#9CA8B4;line-height:1.8;font-size:13px}.bilingual{font-size:11px;color:#667482;margin-top:14px}
 
-  ul.clean{list-style:none;}
-  ul.clean li{
-    padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05);
-    font-size:14px;line-height:1.6;
-  }
-  ul.clean li:last-child{border-bottom:none;}
-
-  .pill{
-    display:inline-block;padding:3px 10px;border-radius:999px;
-    font-size:11px;background:rgba(197,160,89,.15);color:var(--gold);
-    margin-inline-end:6px;
-  }
-
-  textarea,select,input[type=text]{
-    width:100%;background:var(--navy);color:var(--cream);
-    border:1px solid rgba(255,255,255,.12);border-radius:10px;
-    padding:12px 14px;font-family:'Inter',sans-serif;font-size:14px;
-    margin-bottom:14px;
-  }
-  label{font-size:13px;color:var(--slate);display:block;margin-bottom:6px;}
-
-  .hook-variant{
-    background:rgba(255,255,255,.04);border-radius:10px;
-    padding:12px 14px;margin-bottom:8px;font-size:14px;
-  }
-
-  .hidden{display:none !important;}
-
-  .loading{
-    display:flex;align-items:center;gap:10px;color:var(--gold);
-    font-size:14px;padding:20px 0;
-  }
-  .spinner{
-    width:16px;height:16px;border-radius:50%;
-    border:2px solid rgba(197,160,89,.3);border-top-color:var(--gold);
-    animation:spin 0.8s linear infinite;
-  }
-  @keyframes spin{to{transform:rotate(360deg);}}
-
-  @media (max-width:720px){
-    .main{padding:20px;}
-    .score-row{flex-direction:column;}
-  }
+@media(max-width:900px){.grid-2,.hero-grid{grid-template-columns:1fr}.grid-3{grid-template-columns:1fr 1fr}.main{padding-inline:22px}}
+@media(max-width:640px){.app{display:block}.sidebar{display:none}.main{padding:16px 14px 35px}.topbar{height:auto;align-items:flex-start;margin-bottom:15px}.page-title{font-size:18px}.eyebrow{display:none}.topbar-actions .btn{padding:9px 11px;font-size:11px}.user-name{display:none}.auth-banner{grid-template-columns:1fr;padding:15px}.auth-state{justify-content:space-between}.hero-card{padding:13px}.video-placeholder{min-height:205px}.hero-copy{padding-top:15px}.hero-copy h2{font-size:19px}.score-grid{grid-template-columns:1fr 1fr 1fr;gap:6px}.score-card{padding:10px}.score{font-size:22px}.grid-3{grid-template-columns:1fr}.panel{padding:14px}.form-row{grid-template-columns:1fr}.landing{min-height:calc(100vh - 90px)}.landing-card{padding:52px 20px}.landing-logo{font-size:34px}.landing-card h1{font-size:35px}}
 </style>
 </head>
 <body>
-
 <div class="app">
+  <aside class="sidebar">
+    <div class="logo">MTI</div>
+    <button class="nav-icon active" data-tab="analyze" title="تحليل الفيديو / Video Analysis">▶</button>
+    <button class="nav-icon" data-tab="ideas" title="الأفكار / Ideas">✦</button>
+  </aside>
 
-  <div class="sidebar">
-    <div class="logo">M</div>
-    <div class="nav-icon active" data-tab="analyze" title="تحليل فيديو">▶</div>
-    <div class="nav-icon" data-tab="ideas" title="مولّد الأفكار">✦</div>
-  </div>
-
-  <div class="main">
-
-    <div class="topbar">
-      <h1 style="font-size:22px;">Content Intelligence</h1>
-      <div class="tabs">
-        <div class="tab active" data-tab="analyze">تحليل الفيديو</div>
-        <div class="tab" data-tab="ideas">مولّد الأفكار</div>
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">MTI · CONTENT INTELLIGENCE</div>
+        <h1 class="page-title">تحليل المحتوى <span style="color:#74818E;font-size:.62em;font-weight:500">/ Video Analysis</span></h1>
       </div>
+      <div class="topbar-actions">
+        <div id="signedUser" class="auth-user hidden"></div>
+        <button id="loginBtn" class="btn btn-gold"><span class="google-mark">G</span> تسجيل الدخول / Sign in</button>
+        <button id="logoutBtn" class="btn btn-outline hidden">خروج / Sign out</button>
+      </div>
+    </header>
+
+    <div id="authBanner" class="auth-banner">
+      <div>
+        <h2>سجّل دخولك قبل بدء التحليل · Sign in before analysis</h2>
+        <p>حساب Google يربط تحليلاتك وذاكرة MTI بحسابك بشكل مستقل. تسجيل الدخول مجاني ولا يبدأ أي تحليل تلقائياً.</p>
+      </div>
+      <div class="auth-state"><span class="auth-dot"></span><button id="bannerLoginBtn" class="btn btn-gold"><span class="google-mark">G</span> المتابعة مع Google / Continue</button></div>
     </div>
 
     <section id="view-analyze">
-
-      <div class="panel">
-        <h3>ارفع الريل</h3>
-        <div class="upload-zone" id="uploadZone">
-          <input type="file" id="fileInput" accept="video/*" class="hidden">
-          <div id="uploadLabel">اسحب الفيديو هون أو دوس للاختيار</div>
-        </div>
-
-        <div style="margin-top:16px;">
-          <label>المجال (اختياري، بيحسّن دقة التحليل)</label>
-          <select id="nicheSelect"><option value="">— بدون تحديد —</option></select>
-        </div>
-
-        <button class="btn btn-gold" id="analyzeBtn" style="margin-top:10px;" disabled>حلّل الفيديو</button>
-      </div>
-
-      <div id="loadingBox" class="loading hidden">
-        <div class="spinner"></div>
-        <span id="loadingText">عم نحلل الفيديو محلياً على جهازك...</span>
-      </div>
-
-      <div id="results" class="hidden">
-
-        <div class="score-row">
-          <div class="score-card overall">
-            <div class="label">الدرجة العامة</div>
-            <div class="value" id="scoreOverall">—</div>
-          </div>
-          <div class="score-card">
-            <div class="label">الهوك</div>
-            <div class="value" id="scoreHook">—</div>
-            <div class="bar-track"><div class="bar-fill" id="barHook"></div></div>
-          </div>
-          <div class="score-card">
-            <div class="label">الإيقاع</div>
-            <div class="value" id="scorePacing">—</div>
-            <div class="bar-track"><div class="bar-fill" id="barPacing"></div></div>
+      <div class="hero-card">
+        <div class="hero-grid">
+          <div class="video-placeholder" id="videoPreview"><div class="play">▶</div><span class="duration">00:00 / 00:00</span></div>
+          <div class="hero-copy">
+            <div class="kicker">CONTENT INTELLIGENCE · MTI</div>
+            <h2>حوّل الريل إلى قرار واضح.</h2>
+            <p>تحليل للهوك، الإيقاع، المشاهد، الانتباه، الـCTA والتوصيات — ضمن واجهة MTI الجديدة المصممة للقراءة السريعة.</p>
+            <div class="score-grid">
+              <div class="score-card"><div class="score-label">الدرجة العامة · Overall</div><div class="score overall" id="scoreOverall">—</div></div>
+              <div class="score-card"><div class="score-label">الهوك · Hook</div><div class="score" id="scoreHook">—</div><div class="bar"><i id="barHook" style="width:0"></i></div></div>
+              <div class="score-card"><div class="score-label">الإيقاع · Pacing</div><div class="score" id="scorePacing">—</div><div class="bar"><i id="barPacing" style="width:0"></i></div></div>
+            </div>
           </div>
         </div>
-
-        <div class="panel">
-          <h3>ملخص الأداة</h3>
-          <p id="humanSummary" style="line-height:1.9;font-size:14.5px;"></p>
-        </div>
-
-        <div class="panel">
-          <h3>خريطة الانتباه (Attention Map)</h3>
-          <div class="scene-row" id="attentionMapRow"></div>
-        </div>
-
-        <div class="panel">
-          <h3>أول شي تصلحه</h3>
-          <ul class="clean" id="fixFirstList"></ul>
-        </div>
-
-        <div class="panel">
-          <h3>يستاهل تجربته</h3>
-          <ul class="clean" id="worthTestingList"></ul>
-        </div>
-
-        <div class="panel">
-          <h3>لا تغيّره (نقاط قوة)</h3>
-          <div id="keepList"></div>
-        </div>
-
-        <div class="panel">
-          <h3>جوهر الفكرة + نوع المحتوى + CTA</h3>
-          <p class="muted" style="margin-bottom:10px;" id="ideaGistLine"></p>
-          <span class="pill" id="contentTypePill"></span>
-          <span class="pill" id="ctaPill"></span>
-        </div>
-
       </div>
 
-      <div id="errorBox" class="panel hidden" style="border-color:rgba(197,89,89,.4);"></div>
+      <div class="grid-2">
+        <div>
+          <div class="panel">
+            <div class="panel-title"><h3>رفع الفيديو · Upload Video</h3><span>MP4 · MOV · WebM</span></div>
+            <div class="upload-zone" id="uploadZone">
+              <input type="file" id="fileInput" accept="video/*" class="hidden">
+              <div class="upload-icon">↥</div><strong id="uploadLabel">ارفع الريل لتحليله · Upload your Reel</strong><span>اسحب الملف أو اضغط للاختيار · Drag or tap to choose</span>
+            </div>
+            <div style="margin-top:14px"><label>المجال · Niche <span>(اختياري · Optional)</span></label><select class="field" id="nicheSelect"><option value="">— بدون تحديد · Not specified —</option></select></div>
+            <button class="btn btn-gold" id="analyzeBtn" style="margin-top:8px;width:100%" disabled>حلّل الفيديو · Analyze Video</button>
+            <div id="loadingBox" class="loading hidden"><div class="spinner"></div><span id="loadingText">جارٍ تحليل الفيديو محلياً · Analyzing locally…</span></div>
+          </div>
 
+          <div id="results" class="hidden">
+            <div class="panel"><div class="panel-title"><h3>ملخص التحليل · Analysis Summary</h3></div><p id="humanSummary" style="line-height:1.9;font-size:12px"></p></div>
+            <div class="panel"><div class="panel-title"><h3>خريطة الانتباه · Attention Map</h3><span>Scene by scene</span></div><div class="attention" id="attentionMapRow"></div></div>
+            <div class="grid-3">
+              <div class="panel"><div class="panel-title"><h3>أول شي تصلحه · Fix First</h3></div><ul class="list" id="fixFirstList"></ul></div>
+              <div class="panel"><div class="panel-title"><h3>يستاهل تجربته · Worth Testing</h3></div><ul class="list" id="worthTestingList"></ul></div>
+              <div class="panel"><div class="panel-title"><h3>لا تغيّره · Keep</h3></div><div id="keepList"></div></div>
+            </div>
+            <div class="panel"><div class="panel-title"><h3>جوهر الفكرة · Content Type · CTA</h3></div><p class="muted" id="ideaGistLine"></p><div style="margin-top:8px"><span class="pill" id="contentTypePill"></span><span class="pill" id="ctaPill"></span></div></div>
+          </div>
+          <div id="errorBox" class="panel hidden" style="border-color:rgba(229,115,115,.4);color:#F0B0B0"></div>
+        </div>
+
+        <aside>
+          <div class="panel">
+            <div class="panel-title"><h3>MTI Insights</h3><span>Intelligence</span></div>
+            <p class="muted">كل نتيجة تُعرض بلغة عملية: ماذا يحدث؟ لماذا؟ وما أول تغيير يستحق التجربة.</p>
+            <div style="margin-top:14px"><span class="pill">Hook</span><span class="pill">Psychology</span><span class="pill">Pacing</span><span class="pill">CTA</span></div>
+          </div>
+          <div class="panel">
+            <div class="panel-title"><h3>حالة الحساب · Account</h3></div>
+            <div id="accountStatus" class="muted">غير مسجل الدخول · Not signed in</div>
+          </div>
+        </aside>
+      </div>
     </section>
 
     <section id="view-ideas" class="hidden">
-
-      <div class="panel">
-        <h3>مولّد الأفكار والهوكات</h3>
-
-        <label>المجال</label>
-        <select id="ideaNicheSelect"></select>
-
-        <label>فكرتك (اختياري — سيبها فاضية للحصول على أفكار جديدة من الصفر)</label>
-        <textarea id="ideaInput" rows="3" placeholder="مثال: كيف اوفر فلوس وأنا موظف براتب محدود"></textarea>
-
-        <button class="btn btn-gold" id="generateBtn">ولّد</button>
+      <div class="panel"><div class="panel-title"><h3>مولّد الأفكار والهوكات · Idea Generator</h3></div>
+        <label>المجال · Niche</label><select class="field" id="ideaNicheSelect"></select>
+        <label style="margin-top:10px">فكرتك · Your idea <span>(اختياري · Optional)</span></label>
+        <textarea class="field" id="ideaInput" rows="3" placeholder="مثال: كيف أوفّر فلوس وأنا موظف براتب محدود؟"></textarea>
+        <button class="btn btn-gold" id="generateBtn">ولّد · Generate</button>
       </div>
-
       <div id="ideaResults" class="hidden">
-
-        <div class="panel" id="freshIdeasPanel" style="display:none;">
-          <h3>أفكار مقترحة لهالمجال</h3>
-          <ul class="clean" id="freshIdeasList"></ul>
-        </div>
-
-        <div class="panel">
-          <h3>خيارات الهوك</h3>
-          <div id="hookOptionsBox"></div>
-        </div>
-
-        <div class="panel">
-          <h3>هيكل السكربت</h3>
-          <div id="scriptBox" style="font-size:14px;line-height:1.9;"></div>
-        </div>
-
-        <div class="panel">
-          <h3>تقسيم المونتاج</h3>
-          <ul class="clean" id="montageList"></ul>
-        </div>
+        <div class="panel" id="freshIdeasPanel" style="display:none"><div class="panel-title"><h3>أفكار مقترحة · Suggested Ideas</h3></div><ul class="list" id="freshIdeasList"></ul></div>
+        <div class="panel"><div class="panel-title"><h3>خيارات الهوك · Hook Options</h3></div><div id="hookOptionsBox"></div></div>
+        <div class="panel"><div class="panel-title"><h3>هيكل السكربت · Script Structure</h3></div><div id="scriptBox" style="font-size:12px;line-height:1.9"></div></div>
+        <div class="panel"><div class="panel-title"><h3>تقسيم المونتاج · Edit Plan</h3></div><ul class="list" id="montageList"></ul></div>
       </div>
-
     </section>
-
-  </div>
+  </main>
 </div>
 
 <script type="module">
 import { analyzeReel } from "./src/engine/reel-engine.js";
 import { generateContentPlan, generateFreshIdeas } from "./src/generation/IdeaToContentEngine.js";
 import { MTIKnowledgeData } from "./src/knowledge/MTIKnowledgeData.js";
+import { signInWithGoogle, logout, observeAuth, resolveGoogleRedirect } from "./src/auth/googleAuth.js";
 
-document.querySelectorAll("[data-tab]").forEach(el => {
-  el.addEventListener("click", () => {
-    const tab = el.dataset.tab;
-    document.querySelectorAll("[data-tab]").forEach(x => x.classList.toggle("active", x.dataset.tab === tab));
-    document.getElementById("view-analyze").classList.toggle("hidden", tab !== "analyze");
-    document.getElementById("view-ideas").classList.toggle("hidden", tab !== "ideas");
-  });
-});
-
-function fillNicheSelect(select) {
-  MTIKnowledgeData.niches.forEach(n => {
-    const opt = document.createElement("option");
-    opt.value = n.id;
-    opt.textContent = n.name;
-    select.appendChild(opt);
-  });
-}
-fillNicheSelect(document.getElementById("nicheSelect"));
-fillNicheSelect(document.getElementById("ideaNicheSelect"));
-
-const uploadZone = document.getElementById("uploadZone");
-const fileInput = document.getElementById("fileInput");
-const analyzeBtn = document.getElementById("analyzeBtn");
+const $ = (id) => document.getElementById(id);
 let selectedFile = null;
+let currentUser = null;
 
-uploadZone.addEventListener("click", () => fileInput.click());
-fileInput.addEventListener("change", () => {
-  if (fileInput.files[0]) {
-    selectedFile = fileInput.files[0];
-    document.getElementById("uploadLabel").textContent = "الملف المختار: " + selectedFile.name;
-    analyzeBtn.disabled = false;
+/* ---------- auth ---------- */
+async function handleLogin() {
+  const buttons = [$('loginBtn'), $('bannerLoginBtn')].filter(Boolean);
+  buttons.forEach(b => { b.disabled = true; b.dataset.original = b.innerHTML; b.textContent = 'جاري فتح Google… · Opening Google…'; });
+  const result = await signInWithGoogle();
+  if (!result.success) {
+    buttons.forEach(b => { b.disabled = false; b.innerHTML = b.dataset.original; });
+    showError('تعذر تسجيل الدخول عبر Google · Google sign-in failed: ' + result.error);
   }
+}
+$('loginBtn').addEventListener('click', handleLogin);
+$('bannerLoginBtn').addEventListener('click', handleLogin);
+$('logoutBtn').addEventListener('click', async () => { await logout(); });
+
+function renderAuth(user) {
+  currentUser = user;
+  const logged = !!user;
+  $('authBanner').classList.toggle('hidden', logged);
+  $('loginBtn').classList.toggle('hidden', logged);
+  $('logoutBtn').classList.toggle('hidden', !logged);
+  $('signedUser').classList.toggle('hidden', !logged);
+  $('analyzeBtn').disabled = !selectedFile || !logged;
+
+  if (logged) {
+    $('signedUser').innerHTML = `${user.photoURL ? `<img class="avatar" src="${escapeHtml(user.photoURL)}" alt="">` : '<span class="avatar"></span>'}<span class="user-name">${escapeHtml(user.name || user.email)}</span>`;
+    $('accountStatus').innerHTML = `<span style="color:#4CAF50">●</span> ${escapeHtml(user.name || 'Google Account')}<br><span style="color:#74818E">${escapeHtml(user.email)}</span>`;
+  } else {
+    $('accountStatus').textContent = 'غير مسجل الدخول · Not signed in';
+  }
+}
+
+function escapeHtml(value='') { return String(value).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+function showError(message) { const box=$('errorBox'); box.textContent=message; box.classList.remove('hidden'); }
+
+await resolveGoogleRedirect();
+observeAuth(renderAuth);
+
+/* ---------- navigation ---------- */
+document.querySelectorAll('[data-tab]').forEach(el => el.addEventListener('click', () => {
+  const tab = el.dataset.tab;
+  document.querySelectorAll('.nav-icon').forEach(x => x.classList.toggle('active', x.dataset.tab === tab));
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x.dataset.tab === tab));
+  $('view-analyze').classList.toggle('hidden', tab !== 'analyze');
+  $('view-ideas').classList.toggle('hidden', tab !== 'ideas');
+}));
+
+/* ---------- data ---------- */
+function fillNicheSelect(select) {
+  MTIKnowledgeData.niches.forEach(n => { const opt=document.createElement('option'); opt.value=n.id; opt.textContent=n.name; select.appendChild(opt); });
+}
+fillNicheSelect($('nicheSelect')); fillNicheSelect($('ideaNicheSelect'));
+
+/* ---------- upload / analysis ---------- */
+$('uploadZone').addEventListener('click', () => $('fileInput').click());
+$('fileInput').addEventListener('change', () => {
+  const file = $('fileInput').files[0];
+  if (!file) return;
+  selectedFile = file;
+  $('uploadLabel').textContent = file.name;
+  $('analyzeBtn').disabled = !currentUser;
+  $('videoPreview').innerHTML = '<div class="play">▶</div><span class="duration">READY · جاهز</span>';
 });
 
-analyzeBtn.addEventListener("click", async () => {
+$('analyzeBtn').addEventListener('click', async () => {
+  if (!currentUser) { showError('سجّل دخولك عبر Google أولاً · Please sign in with Google first.'); return; }
   if (!selectedFile) return;
-
-  document.getElementById("results").classList.add("hidden");
-  document.getElementById("errorBox").classList.add("hidden");
-  document.getElementById("loadingBox").classList.remove("hidden");
-  analyzeBtn.disabled = true;
-
-  try {
-    const nicheId = document.getElementById("nicheSelect").value || undefined;
-    const result = await analyzeReel(selectedFile, { nicheId });
-    renderAnalysis(result);
-  } catch (err) {
-    const box = document.getElementById("errorBox");
-    box.textContent = "صار خطأ أثناء التحليل: " + err.message;
-    box.classList.remove("hidden");
-  } finally {
-    document.getElementById("loadingBox").classList.add("hidden");
-    analyzeBtn.disabled = false;
-  }
+  $('results').classList.add('hidden'); $('errorBox').classList.add('hidden'); $('loadingBox').classList.remove('hidden'); $('analyzeBtn').disabled=true;
+  try { renderAnalysis(await analyzeReel(selectedFile, { nicheId: $('nicheSelect').value || undefined })); }
+  catch(err) { showError('صار خطأ أثناء التحليل · Analysis error: ' + err.message); }
+  finally { $('loadingBox').classList.add('hidden'); $('analyzeBtn').disabled=false; }
 });
 
 function renderAnalysis(r) {
-  document.getElementById("results").classList.remove("hidden");
-
-  document.getElementById("scoreOverall").textContent = r.overall;
-  document.getElementById("scoreHook").textContent = r.scores.hook;
-  document.getElementById("scorePacing").textContent = r.scores.pacing;
-  document.getElementById("barHook").style.width = r.scores.hook + "%";
-  document.getElementById("barPacing").style.width = r.scores.pacing + "%";
-
-  document.getElementById("humanSummary").textContent = r.summary;
-
-  const mapRow = document.getElementById("attentionMapRow");
-  mapRow.innerHTML = "";
-  (r.attentionMap || []).forEach(scene => {
-    const div = document.createElement("div");
-    let cls = "scene-block";
-    if (scene.label.includes("خطر")) cls += " risk";
-    else if (scene.label.includes("عالي")) cls += " high";
-    else if (scene.label.includes("CTA")) cls += " cta";
-    div.className = cls;
-    div.title = scene.reason;
-    div.textContent = scene.timeRange;
-    mapRow.appendChild(div);
-  });
-
-  const fixFirst = document.getElementById("fixFirstList");
-  fixFirst.innerHTML = "";
-  (r.recommendationPriority?.fixFirst || []).forEach(txt => {
-    const li = document.createElement("li");
-    li.textContent = txt;
-    fixFirst.appendChild(li);
-  });
-
-  const worthTesting = document.getElementById("worthTestingList");
-  worthTesting.innerHTML = "";
-  (r.recommendationPriority?.worthTesting || []).forEach(txt => {
-    const li = document.createElement("li");
-    li.textContent = txt;
-    worthTesting.appendChild(li);
-  });
-
-  const keep = document.getElementById("keepList");
-  keep.innerHTML = "";
-  (r.recommendationPriority?.keep || []).forEach(txt => {
-    const span = document.createElement("span");
-    span.className = "pill";
-    span.textContent = txt;
-    keep.appendChild(span);
-  });
-
-  document.getElementById("ideaGistLine").textContent =
-    r.ideaGist?.available ? `"${r.ideaGist.coreMessage}"` : "ما قدرنا نحدد جوهر واضح (كلام قليل أو غير متوفر).";
-
-  document.getElementById("contentTypePill").textContent = "النوع: " + r.contentType.primaryType;
-  document.getElementById("ctaPill").textContent = r.cta.hasCTA ? "CTA: موجودة (" + r.cta.type + ")" : "CTA: غير موجودة";
+  $('results').classList.remove('hidden');
+  $('scoreOverall').textContent=r.overall; $('scoreHook').textContent=r.scores.hook; $('scorePacing').textContent=r.scores.pacing;
+  $('barHook').style.width=r.scores.hook+'%'; $('barPacing').style.width=r.scores.pacing+'%'; $('humanSummary').textContent=r.summary;
+  const row=$('attentionMapRow'); row.innerHTML='';
+  (r.attentionMap||[]).forEach(scene=>{ const d=document.createElement('div'); let c='frame'; if(scene.label?.includes('خطر')) c+=' risk'; else if(scene.label?.includes('عالي')) c+=' high'; d.className=c; d.title=scene.reason||''; d.textContent=scene.timeRange; row.appendChild(d); });
+  const fillList=(id,items)=>{ const el=$(id); el.innerHTML=''; (items||[]).forEach(x=>{const li=document.createElement('li');li.textContent=x;el.appendChild(li)}); };
+  fillList('fixFirstList',r.recommendationPriority?.fixFirst); fillList('worthTestingList',r.recommendationPriority?.worthTesting);
+  $('keepList').innerHTML=(r.recommendationPriority?.keep||[]).map(x=>`<span class="pill">${escapeHtml(x)}</span>`).join('');
+  $('ideaGistLine').textContent=r.ideaGist?.available ? `“${r.ideaGist.coreMessage}”` : 'ما قدرنا نحدد جوهر واضح · No clear core message detected.';
+  $('contentTypePill').textContent='النوع · Type: '+r.contentType.primaryType;
+  $('ctaPill').textContent=r.cta.hasCTA?'CTA: موجودة · Present ('+r.cta.type+')':'CTA: غير موجودة · Missing';
 }
 
-document.getElementById("generateBtn").addEventListener("click", () => {
-  const nicheId = document.getElementById("ideaNicheSelect").value || undefined;
-  const idea = document.getElementById("ideaInput").value.trim();
-
-  document.getElementById("ideaResults").classList.remove("hidden");
-  document.getElementById("freshIdeasPanel").style.display = "none";
-
+/* ---------- ideas ---------- */
+$('generateBtn').addEventListener('click', () => {
+  const nicheId=$('ideaNicheSelect').value||undefined, idea=$('ideaInput').value.trim(); $('ideaResults').classList.remove('hidden'); $('freshIdeasPanel').style.display='none';
   let plan;
-
-  if (!idea) {
-    const fresh = generateFreshIdeas({ nicheId, count: 5 });
-    if (!fresh.success) { alert(fresh.error); return; }
-
-    document.getElementById("freshIdeasPanel").style.display = "block";
-    const list = document.getElementById("freshIdeasList");
-    list.innerHTML = "";
-    fresh.ideas.forEach(i => {
-      const li = document.createElement("li");
-      li.textContent = i.idea;
-      list.appendChild(li);
-    });
-
-    plan = generateContentPlan({ idea: fresh.ideas[0]?.idea || "فكرة عامة", nicheId });
-  } else {
-    plan = generateContentPlan({ idea, nicheId });
-  }
-
-  if (!plan.success) { alert(plan.error); return; }
-
-  const hookBox = document.getElementById("hookOptionsBox");
-  hookBox.innerHTML = "";
-  plan.hookOptions.forEach(opt => {
-    opt.variants.forEach(v => {
-      const div = document.createElement("div");
-      div.className = "hook-variant";
-      div.textContent = v;
-      hookBox.appendChild(div);
-    });
-  });
-
-  const script = plan.script;
-  document.getElementById("scriptBox").innerHTML = `
-    <p><b>الهوك:</b> ${script.hook.text}</p>
-    <p><b>السياق:</b> ${script.setup.guidance}</p>
-    <p><b>التصعيد:</b> ${script.escalation.guidance}</p>
-    <p><b>الجواب:</b> ${script.payoff.guidance}</p>
-    <p><b>CTA:</b> ${script.cta ? script.cta.text : "—"}</p>
-  `;
-
-  const montage = document.getElementById("montageList");
-  montage.innerHTML = "";
-  plan.montage.forEach(m => {
-    const li = document.createElement("li");
-    li.textContent = `${m.timeRange} — ${m.purpose} (${m.editingNote})`;
-    montage.appendChild(li);
-  });
+  if(!idea){const fresh=generateFreshIdeas({nicheId,count:5});if(!fresh.success){alert(fresh.error);return} $('freshIdeasPanel').style.display='block';$('freshIdeasList').innerHTML=fresh.ideas.map(i=>`<li>${escapeHtml(i.idea)}</li>`).join('');plan=generateContentPlan({idea:fresh.ideas[0]?.idea||'فكرة عامة',nicheId});}
+  else plan=generateContentPlan({idea,nicheId});
+  if(!plan.success){alert(plan.error);return}
+  $('hookOptionsBox').innerHTML=plan.hookOptions.flatMap(o=>o.variants).map(v=>`<div class="hook-variant">${escapeHtml(v)}</div>`).join('');
+  const s=plan.script; $('scriptBox').innerHTML=`<p><b>الهوك · Hook:</b> ${escapeHtml(s.hook.text)}</p><p><b>السياق · Setup:</b> ${escapeHtml(s.setup.guidance)}</p><p><b>التصعيد · Escalation:</b> ${escapeHtml(s.escalation.guidance)}</p><p><b>الجواب · Payoff:</b> ${escapeHtml(s.payoff.guidance)}</p><p><b>CTA:</b> ${escapeHtml(s.cta?.text||'—')}</p>`;
+  $('montageList').innerHTML=plan.montage.map(m=>`<li>${escapeHtml(m.timeRange)} — ${escapeHtml(m.purpose)} (${escapeHtml(m.editingNote)})</li>`).join('');
 });
 </script>
-
 </body>
 </html>
