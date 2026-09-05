@@ -10,7 +10,7 @@
 <style>
 :root{
   --navy:#0A192F; --navy-2:#0D1E35; --panel:#10243D; --panel-2:#122943;
-  --gold:#C5A059; --gold-2:#D8B873; --cream:#FAF5F0; --muted:#8F9BA8;
+  --gold:#C5A059; --gold-2:#D8B873; --cream:#F5F5F0; --muted:#8F9BA8;
   --slate:#3A4750; --green:#4CAF50; --red:#E57373;
   --line:rgba(250,245,240,.09); --shadow:0 18px 55px rgba(0,0,0,.28);
 }
@@ -32,6 +32,7 @@ button{cursor:pointer}
 .main{direction:rtl;flex:1;min-width:0;padding:28px clamp(20px,4vw,48px) 50px;max-width:1440px;margin:auto}
 .topbar{height:52px;display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:22px}
 .topbar-left{display:flex;align-items:center;gap:12px}
+.brand-mark{font-family:Syne,sans-serif;font-size:21px;font-weight:800;letter-spacing:-1.5px;color:var(--gold);line-height:1;flex:0 0 auto;padding-inline-end:12px;border-inline-end:1px solid var(--line)}
 .page-title{font-size:22px;font-weight:700;letter-spacing:-.4px}
 .eyebrow{font-size:10px;color:var(--gold);letter-spacing:1.3px;text-transform:uppercase}
 .topbar-actions{display:flex;align-items:center;gap:10px}
@@ -48,12 +49,8 @@ button{cursor:pointer}
 .avatar{width:30px;height:30px;border-radius:50%;object-fit:cover;background:var(--gold)}
 .user-name{font-size:12px;font-weight:700;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-/* ---------- login state ---------- */
-.auth-banner{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:center;background:linear-gradient(135deg,rgba(197,160,89,.11),rgba(16,36,61,.95));border:1px solid rgba(197,160,89,.24);border-radius:16px;padding:18px 20px;margin-bottom:18px;box-shadow:var(--shadow)}
-.auth-banner h2{font-size:17px;margin-bottom:5px}.auth-banner p{font-size:12px;color:#AAB4BF;line-height:1.7}
-.auth-state{display:flex;align-items:center;gap:10px}
-.auth-dot{width:7px;height:7px;border-radius:50%;background:var(--red);box-shadow:0 0 0 5px rgba(229,115,115,.08)}
-.auth-dot.ok{background:var(--green);box-shadow:0 0 0 5px rgba(76,175,80,.08)}
+/* ---------- mobile bottom nav ---------- */
+.bottom-nav{display:none}
 
 /* ---------- dashboard cards ---------- */
 .hero-card{background:linear-gradient(145deg,#102641,#0D2037);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow);margin-bottom:18px}
@@ -94,11 +91,28 @@ label{display:block;font-size:10px;color:#8E9AA6;margin-bottom:6px}
 .landing-logo{font-family:Syne;font-size:40px;font-weight:800;letter-spacing:-4px;color:var(--gold);margin-bottom:20px}.landing-card h1{font-size:clamp(32px,6vw,58px);line-height:1.08;margin-bottom:15px}.landing-card h1 span{color:var(--gold)}.landing-card p{max-width:620px;margin:0 auto 24px;color:#9CA8B4;line-height:1.8;font-size:13px}.bilingual{font-size:11px;color:#667482;margin-top:14px}
 
 @media(max-width:900px){.grid-2,.hero-grid{grid-template-columns:1fr}.grid-3{grid-template-columns:1fr 1fr}.main{padding-inline:22px}}
-@media(max-width:640px){.app{display:block}.sidebar{display:none}.main{padding:16px 14px 35px}.topbar{height:auto;align-items:flex-start;margin-bottom:15px}.page-title{font-size:18px}.eyebrow{display:none}.topbar-actions .btn{padding:9px 11px;font-size:11px}.user-name{display:none}.auth-banner{grid-template-columns:1fr;padding:15px}.auth-state{justify-content:space-between}.hero-card{padding:13px}.video-placeholder{min-height:205px}.hero-copy{padding-top:15px}.hero-copy h2{font-size:19px}.score-grid{grid-template-columns:1fr 1fr 1fr;gap:6px}.score-card{padding:10px}.score{font-size:22px}.grid-3{grid-template-columns:1fr}.panel{padding:14px}.form-row{grid-template-columns:1fr}.landing{min-height:calc(100vh - 90px)}.landing-card{padding:52px 20px}.landing-logo{font-size:34px}.landing-card h1{font-size:35px}}
+@media(max-width:640px){.app{display:block}.sidebar{display:none}.main{padding:16px 14px calc(88px + env(safe-area-inset-bottom))}.topbar{height:auto;align-items:flex-start;margin-bottom:15px}.page-title{font-size:18px}.eyebrow{display:none}.brand-mark{font-size:17px;padding-inline-end:9px}.topbar-actions .btn{padding:9px 11px;font-size:11px}.user-name{display:none}.hero-card{padding:13px}.video-placeholder{min-height:205px}.hero-copy{padding-top:15px}.hero-copy h2{font-size:19px}.score-grid{grid-template-columns:1fr 1fr 1fr;gap:6px}.score-card{padding:10px}.score{font-size:22px}.grid-3{grid-template-columns:1fr}.panel{padding:14px}.form-row{grid-template-columns:1fr}.landing{min-height:100vh;padding:0 6px}.landing-card{padding:52px 20px}.landing-logo{font-size:34px}.landing-card h1{font-size:29px}
+  .bottom-nav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:30;background:#0B1B31;border-top:1px solid var(--line);padding:8px 10px calc(8px + env(safe-area-inset-bottom));gap:6px}
+  .bn-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:transparent;border:0;border-radius:11px;padding:6px 4px;color:#8E9AA6;font-size:9px;font-weight:600}
+  .bn-icon{font-size:16px;line-height:1}
+  .bn-item.active{color:var(--gold);background:rgba(197,160,89,.09)}
+}
 </style>
 </head>
 <body>
-<div class="app">
+
+<section id="landingView" class="landing">
+  <div class="landing-card">
+    <div class="landing-logo">MTI</div>
+    <h1>دقّة تحليل المحتوى.<br><span>Precision Content Intelligence.</span></h1>
+    <p>تحليل مدعوم بالذكاء الاصطناعي يفهم لماذا ينجح المحتوى — ولماذا لا ينجح — بالكامل على جهازك.<br>AI-powered content analysis built to understand why your content works, running fully on-device.</p>
+    <button id="landingLoginBtn" class="btn btn-gold" style="padding:14px 28px;font-size:14px"><span class="google-mark">G</span> سجّل الدخول باستخدام Google · Continue with Google</button>
+    <div class="bilingual">سجّل الدخول لبدء التحليل وربط ذاكرة MTI بحسابك · Sign in to unlock analysis and connect your MTI memory</div>
+    <div id="landingError" class="hidden" style="margin-top:16px;font-size:11px;color:#F0B0B0;line-height:1.7"></div>
+  </div>
+</section>
+
+<div class="app hidden" id="dashboardApp">
   <aside class="sidebar">
     <div class="logo">MTI</div>
     <button class="nav-icon active" data-tab="analyze" title="تحليل الفيديو / Video Analysis">▶</button>
@@ -107,9 +121,12 @@ label{display:block;font-size:10px;color:#8E9AA6;margin-bottom:6px}
 
   <main class="main">
     <header class="topbar">
-      <div>
-        <div class="eyebrow">MTI · CONTENT INTELLIGENCE</div>
-        <h1 class="page-title">تحليل المحتوى <span style="color:#74818E;font-size:.62em;font-weight:500">/ Video Analysis</span></h1>
+      <div class="topbar-left">
+        <div class="brand-mark">MTI</div>
+        <div>
+          <div class="eyebrow">MTI · CONTENT INTELLIGENCE</div>
+          <h1 class="page-title">تحليل المحتوى <span style="color:#74818E;font-size:.62em;font-weight:500">/ Video Analysis</span></h1>
+        </div>
       </div>
       <div class="topbar-actions">
         <div id="signedUser" class="auth-user hidden"></div>
@@ -117,14 +134,6 @@ label{display:block;font-size:10px;color:#8E9AA6;margin-bottom:6px}
         <button id="logoutBtn" class="btn btn-outline hidden">خروج / Sign out</button>
       </div>
     </header>
-
-    <div id="authBanner" class="auth-banner">
-      <div>
-        <h2>سجّل دخولك قبل بدء التحليل · Sign in before analysis</h2>
-        <p>حساب Google يربط تحليلاتك وذاكرة MTI بحسابك بشكل مستقل. تسجيل الدخول مجاني ولا يبدأ أي تحليل تلقائياً.</p>
-      </div>
-      <div class="auth-state"><span class="auth-dot"></span><button id="bannerLoginBtn" class="btn btn-gold"><span class="google-mark">G</span> المتابعة مع Google / Continue</button></div>
-    </div>
 
     <section id="view-analyze">
       <div class="hero-card">
@@ -198,6 +207,11 @@ label{display:block;font-size:10px;color:#8E9AA6;margin-bottom:6px}
       </div>
     </section>
   </main>
+
+  <nav class="bottom-nav" aria-label="Mobile navigation">
+    <button class="bn-item active" data-tab="analyze"><span class="bn-icon">▶</span><span class="bn-label">تحليل · Analyze</span></button>
+    <button class="bn-item" data-tab="ideas"><span class="bn-icon">✦</span><span class="bn-label">أفكار · Ideas</span></button>
+  </nav>
 </div>
 
 <script type="module">
@@ -211,23 +225,51 @@ let selectedFile = null;
 let currentUser = null;
 
 /* ---------- auth ---------- */
+function showLoginError(message) {
+  showError(message);
+  const box = $('landingError');
+  if (box) { box.textContent = message; box.classList.remove('hidden'); }
+}
+
 async function handleLogin() {
-  const buttons = [$('loginBtn'), $('bannerLoginBtn')].filter(Boolean);
+  const buttons = [$('loginBtn'), $('landingLoginBtn')].filter(Boolean);
   buttons.forEach(b => { b.disabled = true; b.dataset.original = b.innerHTML; b.textContent = 'جاري فتح Google… · Opening Google…'; });
+
+  // Watchdog: signInWithRedirect() should navigate the whole page away.
+  // If the page is embedded in an iframe/webview that blocks top-level
+  // navigation, the promise can hang forever with no error — this
+  // safety timer un-sticks the button and tells the user what to check.
+  let settled = false;
+  const watchdog = setTimeout(() => {
+    if (settled) return;
+    buttons.forEach(b => { b.disabled = false; if (b.dataset.original) b.innerHTML = b.dataset.original; });
+    showLoginError(
+      'تعذر فتح نافذة تسجيل الدخول (قد تكون الصفحة داخل إطار iframe أو معاينة تمنع التنقّل). افتح الرابط في تبويب مباشر وتأكد أن نطاق الموقع مضاف ضمن Authorized domains في Firebase.\n' +
+      'Google sign-in did not open (the page may be inside an iframe/preview that blocks navigation). Open this link in a direct browser tab, and confirm this domain (' + window.location.hostname + ') is listed under Authorized domains in the Firebase console.'
+    );
+  }, 7000);
+
   const result = await signInWithGoogle();
+  settled = true;
+  clearTimeout(watchdog);
+
   if (!result.success) {
-    buttons.forEach(b => { b.disabled = false; b.innerHTML = b.dataset.original; });
-    showError('تعذر تسجيل الدخول عبر Google · Google sign-in failed: ' + result.error);
+    buttons.forEach(b => { b.disabled = false; if (b.dataset.original) b.innerHTML = b.dataset.original; });
+    console.error('MTI Google Sign-In Error — host:', window.location.hostname, result.error);
+    showLoginError('تعذر تسجيل الدخول عبر Google · Google sign-in failed: ' + result.error);
   }
+  // On success, signInWithRedirect() navigates away from the page —
+  // nothing left to do here.
 }
 $('loginBtn').addEventListener('click', handleLogin);
-$('bannerLoginBtn').addEventListener('click', handleLogin);
+$('landingLoginBtn').addEventListener('click', handleLogin);
 $('logoutBtn').addEventListener('click', async () => { await logout(); });
 
 function renderAuth(user) {
   currentUser = user;
   const logged = !!user;
-  $('authBanner').classList.toggle('hidden', logged);
+  $('landingView').classList.toggle('hidden', logged);
+  $('dashboardApp').classList.toggle('hidden', !logged);
   $('loginBtn').classList.toggle('hidden', logged);
   $('logoutBtn').classList.toggle('hidden', !logged);
   $('signedUser').classList.toggle('hidden', !logged);
@@ -244,7 +286,11 @@ function renderAuth(user) {
 function escapeHtml(value='') { return String(value).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
 function showError(message) { const box=$('errorBox'); box.textContent=message; box.classList.remove('hidden'); }
 
-await resolveGoogleRedirect();
+const redirectResult = await resolveGoogleRedirect();
+if (redirectResult?.error) {
+  console.error('MTI Google Redirect Error — host:', window.location.hostname, redirectResult.error);
+  showLoginError('تعذر إكمال تسجيل الدخول عبر Google · Google sign-in could not complete: ' + redirectResult.error);
+}
 observeAuth(renderAuth);
 
 /* ---------- navigation ---------- */
@@ -252,6 +298,7 @@ document.querySelectorAll('[data-tab]').forEach(el => el.addEventListener('click
   const tab = el.dataset.tab;
   document.querySelectorAll('.nav-icon').forEach(x => x.classList.toggle('active', x.dataset.tab === tab));
   document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x.dataset.tab === tab));
+  document.querySelectorAll('.bn-item').forEach(x => x.classList.toggle('active', x.dataset.tab === tab));
   $('view-analyze').classList.toggle('hidden', tab !== 'analyze');
   $('view-ideas').classList.toggle('hidden', tab !== 'ideas');
 }));
