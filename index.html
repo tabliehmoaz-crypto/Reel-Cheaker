@@ -605,13 +605,13 @@
         // إذا كان Reel محدداً = نسخة جديدة لنفس Reel.
         // -----------------------------------------------------
         const reel = activeReelId
-          ? createReelVersion(activeReelId, {
+          ? await createReelVersion(activeReelId, {
               name: file.name,
               title: getReel(activeReelId)?.title || file.name,
               platform: 'instagram',
               status: 'DRAFT'
             })
-          : createReel({
+          : await createReel({
               name: file.name,
               title: file.name,
               platform: 'instagram',
