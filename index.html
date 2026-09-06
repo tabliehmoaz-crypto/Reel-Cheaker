@@ -618,6 +618,11 @@
               status: 'DRAFT'
             });
 
+        if (!reel || !reel.id || !reel.reelId || !reel.versionId) {
+          console.error('MTI Reel creation returned invalid identity:', reel);
+          throw new Error('تعذّر إنشاء هوية الـReel. أعد تحميل الصفحة وحاول مرة ثانية.');
+        }
+
         activeReelId = reel.reelId;
 
         const asset = await saveReelVideo(file, {
