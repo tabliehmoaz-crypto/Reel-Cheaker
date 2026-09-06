@@ -25,6 +25,9 @@ import { transcribeVideo, extractAudio } from "../ai/whisper.js";
 
 const MAX_FRAME_SAMPLES = 48;
 const MOBILE_MAX_FRAME_SAMPLES = 18;
+
+// DIAGNOSTIC: local Whisper is disabled globally for this crash-isolation test.
+const USE_LOCAL_WHISPER = false;
 const FRAME_SAMPLE_SIZE = { width: 64, height: 114 }; // نسبة عمودية تقريبية
 const HOOK_WINDOW_SECONDS = 3;
 const AUDIO_WINDOW_MS = 100;
@@ -364,6 +367,18 @@ function stdDev(arr) {
 ========================================================= */
 
 async function safeTranscribe(videoFile, preDecodedAudioBuffer) {
+  // Hard stop: do not invoke the local Whisper module in this diagnostic build.
+  if (!USE_LOCAL_WHISPER) {
+    return {
+      text: "",
+      wordCount: 0,
+      hasSpeech: false,
+      segments: [],
+      unavailable: true,
+      reason: "local-whisper-disabled-diagnostic"
+    };
+  }
+
   try {
     // على الهواتف Whisper المحلي ممنوع عمداً لحماية التبويب من ضغط الذاكرة.
     // باقي التحليل البصري والصوتي يستمر بشكل طبيعي.
