@@ -353,3 +353,73 @@ export function getCurrentUser() {
     auth.currentUser
   );
 }
+
+
+/* ---------------------------------------
+   HIGH-LEVEL INIT
+   (used directly by index.html)
+--------------------------------------- */
+
+/*
+  initGoogleAuth(options)
+
+  - يربط زر تسجيل الدخول (id="googleLoginBtn") بـ signInWithGoogle
+  - يراقب حالة الدخول عبر observeAuth ويستدعي onLogin/onLogout
+  - يحل نتيجة أي تحويل (redirect) سابق تلقائياً
+
+  options:
+    onLogin(user)   -> يُستدعى عند دخول ناجح أو استعادة جلسة سابقة
+    onLogout()      -> يُستدعى عند الخروج أو عدم وجود جلسة
+    loginButtonId   -> افتراضياً "googleLoginBtn"
+*/
+export function initGoogleAuth(options = {}) {
+
+  const {
+    onLogin = () => {},
+    onLogout = () => {},
+    loginButtonId = "googleLoginBtn"
+  } = options;
+
+  const button = document.getElementById(loginButtonId);
+
+  if (button && !button.dataset.mtiAuthBound) {
+
+    button.dataset.mtiAuthBound = "true";
+
+    button.addEventListener("click", async () => {
+
+      button.disabled = true;
+
+      const result = await signInWithGoogle();
+
+      button.disabled = false;
+
+      if (result?.success && result.user) {
+        onLogin(result.user);
+      } else if (result?.error) {
+        console.error("MTI Google Sign-In Error:", result.error);
+        alert("تعذّر تسجيل الدخول: " + result.error);
+      }
+      // result.cancelled أو result.redirecting: لا حاجة لأي إجراء إضافي
+    });
+
+  }
+
+  // استعادة نتيجة تحويل (redirect) إن وُجدت
+  resolveGoogleRedirect().then((account) => {
+    if (account && !account.error) {
+      onLogin(account);
+    }
+  });
+
+  // مراقبة مستمرة لحالة تسجيل الدخول (تشمل الجلسات المحفوظة سابقاً)
+  const unsubscribe = observeAuth((user) => {
+    if (user) {
+      onLogin(user);
+    } else {
+      onLogout();
+    }
+  });
+
+  return { unsubscribe };
+}
