@@ -36,6 +36,10 @@ env.useBrowserCache = true;
 const DESKTOP_MODEL = "Xenova/whisper-base";
 const TARGET_SAMPLE_RATE = 16000;
 
+// DIAGNOSTIC: disable local Whisper completely.
+// This flag is intentionally false for the crash-isolation test.
+const USE_LOCAL_WHISPER = false;
+
 function isMobileDevice() {
   if (typeof navigator === "undefined") return false;
   return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
@@ -57,6 +61,10 @@ let loadingPromise = null;
 // -----------------------------------------------------
 
 async function loadWhisper() {
+
+  if (!USE_LOCAL_WHISPER) {
+    throw new Error("LOCAL_WHISPER_DISABLED_FOR_DIAGNOSTIC");
+  }
 
   if (isMobileDevice()) {
     throw new Error("LOCAL_WHISPER_UNAVAILABLE_ON_MOBILE");
@@ -201,6 +209,10 @@ export async function extractAudio(
   videoFile
 ) {
 
+  if (!USE_LOCAL_WHISPER) {
+    throw new Error("LOCAL_WHISPER_DISABLED_FOR_DIAGNOSTIC");
+  }
+
   /*
     المتصفح لا يحتاج رفع الفيديو.
     نستخدم Web Audio API.
@@ -295,6 +307,18 @@ export async function transcribeVideo(
   videoFile,
   options = {}
 ) {
+
+  // Hard stop: this diagnostic build must never initialize or run Whisper.
+  if (!USE_LOCAL_WHISPER) {
+    return {
+      text: "",
+      wordCount: 0,
+      hasSpeech: false,
+      segments: [],
+      unavailable: true,
+      reason: "local-whisper-disabled-diagnostic"
+    };
+  }
 
   if (!videoFile && !options.preDecodedAudioBuffer) {
 
