@@ -24,6 +24,7 @@ import { transcribeVideo, extractAudio } from "../ai/whisper.js";
 ========================================================= */
 
 const MAX_FRAME_SAMPLES = 48;
+const MOBILE_MAX_FRAME_SAMPLES = 18;
 const FRAME_SAMPLE_SIZE = { width: 64, height: 114 }; // نسبة عمودية تقريبية
 const HOOK_WINDOW_SECONDS = 3;
 const AUDIO_WINDOW_MS = 100;
@@ -45,7 +46,11 @@ export async function extractLocalSignals(videoFile, progressCallback = () => {}
   progressCallback({ stage: "AUDIO", progress: 55, message: "تحليل مستوى الصوت والصمت..." });
   // نفك ترميز الصوت مرة واحدة فقط، ونشاركه بين تحليل الصوت وWhisper
   // (فك الترميز مرتين كان يضاعف استهلاك الذاكرة ويسبب انهيار التبويب أحياناً)
-  const decodedAudio = await decodeAudioOnce(videoFile);
+  // iOS/Safari can terminate the tab when decodeAudioData() receives a
+  // full video ArrayBuffer. On mobile we skip full-file audio decoding;
+  // Whisper is already disabled there, and visual analysis can continue.
+  const mobile = isMobileDevice();
+  const decodedAudio = mobile ? null : await decodeAudioOnce(videoFile);
   const audioSignals = decodedAudio
     ? computeAudioSignals(decodedAudio, metadata)
     : null;
@@ -82,6 +87,12 @@ export async function extractLocalSignals(videoFile, progressCallback = () => {}
 }
 
 
+function isMobileDevice() {
+  if (typeof navigator === "undefined") return false;
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+}
+
+
 /* =========================================================
    METADATA
 ========================================================= */
@@ -94,13 +105,17 @@ function getVideoMetadata(videoFile) {
     video.src = URL.createObjectURL(videoFile);
 
     video.onloadedmetadata = () => {
-      resolve({
+      const result = {
         duration: parseFloat((video.duration || 0).toFixed(2)),
         width: video.videoWidth,
         height: video.videoHeight,
         fileSize: videoFile.size,
         fileName: videoFile.name
-      });
+      };
+      URL.revokeObjectURL(video.src);
+      video.removeAttribute("src");
+      video.load();
+      resolve(result);
     };
 
     video.onerror = () => reject(new Error("تعذّرت قراءة بيانات الفيديو."));
@@ -116,7 +131,7 @@ async function extractVisualSignals(videoFile, metadata) {
 
   const duration = Math.max(metadata.duration || 0, 0.5);
   const sampleCount = Math.min(
-    MAX_FRAME_SAMPLES,
+    isMobileDevice() ? MOBILE_MAX_FRAME_SAMPLES : MAX_FRAME_SAMPLES,
     Math.max(8, Math.round(duration * 4))
   );
 
