@@ -73,6 +73,11 @@ export async function extractLocalSignals(videoFile, progressCallback = () => {}
     };
   }
 
+  // Desktop path still needs real video metadata before any signal extractor runs.
+  // The previous diagnostic build referenced `metadata` before defining it,
+  // which caused Safari/JS to throw: "Can't find variable: metadata".
+  const metadata = await getVideoMetadata(videoFile);
+
   progressCallback({ stage: "FRAMES", progress: 20, message: "أخذ عينات من الإطارات وتحليلها..." });
   const visualSignals = await extractVisualSignals(videoFile, metadata);
 
