@@ -33,7 +33,7 @@ function ensureAccount() {
   return memoryService.getActiveAccountId();
 }
 
-export function createReel(data = {}) {
+export async function createReel(data = {}) {
   ensureAccount();
 
   const reel = createExperiment({
@@ -48,7 +48,7 @@ export function createReel(data = {}) {
   return saveExperiment(reel);
 }
 
-export function createReelVersion(reelId, data = {}) {
+export async function createReelVersion(reelId, data = {}) {
   ensureAccount();
 
   const versions = getReelVersions(reelId);
