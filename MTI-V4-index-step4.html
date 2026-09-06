@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MTI — Precision Content Intelligence</title>
+  
+  <!-- Typography from Brand Identity: Syne (Brand/Headers), Inter (Analytics), Tajawal (Arabic UI) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Syne:wght@700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              navy: '#0A192F',        // Primary Dark Canvas
+              navyElevated: '#0D1E38',// Panels & Sidebars
+              navySurface: '#112240', // Cards Surface
+              navyBorder: '#1E2D4A',  // Borders
+              gold: '#C5A059',        // Official Rich Gold
+              goldHover: '#B38E46',   // Active Gold
+              cream: '#F5F5F0',       // Soft Cream Card
+              slate: '#3A4750',       // Slate Elements
+              green: '#4CAF50',       // Accent Green
+              red: '#E53E3E'          // Drop-off Red
+            }
+          },
+          fontFamily: {
+            syne: ['Syne', 'sans-serif'],
+            inter: ['Inter', 'sans-serif'],
+            tajawal: ['Tajawal', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #0A192F;
+      color: #F5F5F0;
+      font-family: 'Inter', 'Tajawal', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* Soft Cream Hero Card from the Board */
+    .cream-hero-card {
+      background-color: #F5F5F0;
+      color: #0A192F;
+      border-radius: 20px;
+    }
+
+    /* Gold Metric Card Gradient */
+    .gold-score-box {
+      background: linear-gradient(135deg, #F5E6C8 0%, #C5A059 100%);
+      color: #0A192F;
+    }
+
+    /* Attention Map Frame Thumbnail */
+    .frame-thumbnail {
+      position: relative;
+      background: #0D1E38;
+      border: 1px solid #1E2D4A;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .frame-heat-glow {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, rgba(197, 160, 89, 0.45) 0%, rgba(197, 160, 89, 0) 70%);
+      mix-blend-mode: screen;
+      pointer-events: none;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0A192F; }
+    ::-webkit-scrollbar-thumb { background: #1E2D4A; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #C5A059; }
+  </style>
+</head>
+<body class="min-h-screen flex antialiased selection:bg-brand-gold selection:text-brand-navy">
+
+  <!-- ================= LEFT VERTICAL SLATE NAVIGATION BAR ================= -->
+  <aside class="w-16 sm:w-20 bg-brand-navyElevated border-l border-brand-navyBorder/60 flex flex-col items-center py-6 justify-between shrink-0 z-40 select-none">
+    
+    <!-- Brand Logo Mark (From Brand Identity) -->
+    <div class="flex flex-col items-center gap-1 cursor-pointer">
+      <div class="w-12 h-12 flex items-center justify-center text-brand-gold font-syne font-extrabold text-2xl tracking-tighter hover:scale-105 transition-transform">
+        MTI
+      </div>
+    </div>
+
+    <!-- Navigation Icons Cluster -->
+    <nav class="flex flex-col items-center gap-5 my-auto">
+      <button title="Dashboard" class="relative group p-3 rounded-xl bg-brand-navy text-brand-gold shadow-md">
+        <span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-brand-gold rounded-r-full"></span>
+        <i data-lucide="home" class="w-5 h-5"></i>
+      </button>
+
+      <button title="Analysis History" class="p-3 rounded-xl text-brand-slate hover:text-brand-cream hover:bg-brand-navy/60 transition-all">
+        <i data-lucide="line-chart" class="w-5 h-5"></i>
+      </button>
+
+      <button title="Knowledge Base" class="p-3 rounded-xl text-brand-slate hover:text-brand-cream hover:bg-brand-navy/60 transition-all">
+        <i data-lucide="layers" class="w-5 h-5"></i>
+      </button>
+
+      <button title="Settings" class="p-3 rounded-xl text-brand-slate hover:text-brand-cream hover:bg-brand-navy/60 transition-all">
+        <i data-lucide="sliders" class="w-5 h-5"></i>
+      </button>
+    </nav>
+
+    <!-- Bottom User Status -->
+    <div class="flex flex-col items-center gap-3">
+      <div id="userAvatarContainer" class="w-9 h-9 rounded-full bg-brand-navy border border-brand-slate/40 flex items-center justify-center text-brand-slate text-xs overflow-hidden">
+        <i data-lucide="user" class="w-4 h-4"></i>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ================= MAIN DASHBOARD WRAPPER ================= -->
+  <div class="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
+
+    <!-- TOP HEADER -->
+    <header class="h-20 border-b border-brand-navyBorder/60 px-6 sm:px-10 flex items-center justify-between shrink-0 bg-brand-navy/90 backdrop-blur-md sticky top-0 z-30">
+      
+      <!-- Section Title & Filter Breadcrumb -->
+      <div class="flex items-center gap-4">
+        <h1 class="font-syne font-bold text-xl sm:text-2xl tracking-tight text-white flex items-center gap-3">
+          <span>Video Analysis</span>
+        </h1>
+
+        <div class="hidden sm:flex items-center gap-2 text-xs font-inter text-gray-400 bg-brand-navyElevated px-3 py-1.5 rounded-lg border border-brand-navyBorder">
+          <span class="flex items-center gap-1.5 text-brand-cream">
+            <i data-lucide="layout" class="w-3.5 h-3.5 text-brand-gold"></i>
+            <span>Overview</span>
+          </span>
+          <span class="text-brand-navyBorder">|</span>
+          <span class="flex items-center gap-1">
+            <i data-lucide="filter" class="w-3.5 h-3.5"></i>
+            <span>Filters</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Header Actions: Google Auth & Upload Video Button -->
+      <div class="flex items-center gap-3.5">
+        <!-- Google Sign-in -->
+        <div id="authWrapper">
+          <button type="button" id="googleLoginBtn" class="relative z-50 pointer-events-auto px-3.5 py-2 rounded-xl bg-brand-navyElevated hover:bg-brand-navySurface border border-brand-navyBorder text-brand-cream text-xs font-medium flex items-center gap-2 transition-all">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.3 9 5 12 5z"/><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/><path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3 0-.8.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15.2c0 2.8.7 5.4 1.9 7.8l3.7-2.9z"/><path fill="#34A853" d="M12 23.5c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.3-6.4-5.2L1.9 16.5C3.7 20.2 7.5 23.5 12 23.5z"/></svg>
+            <span class="hidden sm:inline">تسجيل الدخول</span>
+          </button>
+          <div id="userProfile" class="hidden flex items-center gap-2 bg-brand-navyElevated border border-brand-navyBorder px-2.5 py-1.5 rounded-xl">
+            <img id="userAvatar" class="w-5 h-5 rounded-full border border-brand-gold object-cover" />
+            <span id="userName" class="text-xs text-brand-cream max-w-[90px] truncate"></span>
+            <button id="logoutBtn" title="تسجيل الخروج" class="text-gray-400 hover:text-red-400 transition-colors">
+              <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Hidden Video Input -->
+        <input type="file" id="videoFileInput" accept="video/mp4,video/quicktime,video/webm" class="hidden" />
+
+        <!-- Primary Gold Upload Button from Brand Board (يُفعَّل فقط بعد تسجيل الدخول) -->
+        <button id="uploadVideoBtn" disabled class="px-4 sm:px-5 py-2.5 rounded-xl bg-brand-gold text-brand-navy font-syne font-bold text-xs flex items-center gap-2 shadow-lg shadow-brand-gold/10 transition-all opacity-40 cursor-not-allowed" title="سجّل الدخول أولاً لرفع فيديو">
+          <i data-lucide="lock" class="w-4 h-4 text-brand-navy stroke-[2.5]"></i>
+          <span>Upload Video</span>
+        </button>
+      </div>
+
+    </header>
+
+    <!-- CONTENT BODY -->
+    <main class="flex-1 p-5 sm:p-8 max-w-7xl w-full mx-auto flex flex-col gap-6">
+
+      <!-- REAL ANALYSIS PROGRESS BAR -->
+      <div id="scanProgressBar" class="hidden bg-brand-navyElevated border border-brand-navyBorder rounded-2xl p-4 transition-all">
+        <div class="flex justify-between items-center text-xs mb-2">
+          <span id="scanStageLabel" class="text-brand-gold font-medium flex items-center gap-2">
+            <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-brand-gold"></i>
+            <span>جاري استخراج الأدلة الصوتية والبصرية وفحص المحتوى...</span>
+          </span>
+          <span id="scanPercentLabel" class="font-mono text-gray-400">0%</span>
+        </div>
+        <div class="w-full h-1.5 bg-brand-navy rounded-full overflow-hidden">
+          <div id="scanProgressFill" class="h-full bg-gradient-to-r from-brand-gold to-amber-200 w-0 transition-all duration-300"></div>
+        </div>
+      </div>
+
+      <!-- ================= MY REELS / VERSION HISTORY ================= -->
+      <section id="myReelsSection" class="hidden bg-brand-navyElevated/50 border border-brand-navyBorder rounded-3xl p-5 sm:p-6">
+        <div class="flex items-center justify-between gap-3 mb-4">
+          <div>
+            <div class="text-[10px] font-bold text-brand-gold uppercase tracking-wider">CONTENT LIBRARY</div>
+            <h3 class="font-syne font-bold text-lg text-white">My Reels / ريلاتي</h3>
+          </div>
+          <button id="newReelFromLibraryBtn" type="button" class="px-3 py-2 rounded-xl border border-brand-navyBorder text-xs text-gray-300 hover:text-white hover:border-brand-gold/40 transition-all">+ New Reel</button>
+        </div>
+        <div id="myReelsList" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3"></div>
+      </section>
+
+      <!-- INITIAL HERO EMPTY STATE -->
+      <div id="emptyHeroState" class="border border-brand-navyBorder bg-brand-navyElevated/40 rounded-3xl p-10 sm:p-14 text-center flex flex-col items-center justify-center">
+        <div class="w-16 h-16 rounded-2xl bg-brand-navyElevated border border-brand-gold/30 flex items-center justify-center text-brand-gold mb-4 shadow-xl">
+          <i data-lucide="film" class="w-8 h-8"></i>
+        </div>
+        <h2 class="font-syne font-extrabold text-2xl text-white tracking-tight">MTI. Precision Content Intelligence.</h2>
+        <p class="text-xs sm:text-sm text-gray-400 max-w-md mt-2 leading-relaxed">
+          نظام التحليل الإدراكي المتخصص في مقاطع Reel و TikTok بدون تخمين أو تقييمات عشوائية.
+        </p>
+        <button id="heroSelectVideoBtn" disabled class="mt-6 px-6 py-3 rounded-xl bg-brand-gold text-brand-navy font-syne font-bold text-xs shadow-xl transition-all opacity-40 cursor-not-allowed">
+          Select Video to Start
+        </button>
+        <p id="loginHintText" class="text-[11px] text-brand-gold/80 mt-3">
+          سجّل الدخول أولاً من الأعلى قبل رفع أي فيديو للتحليل.
+        </p>
+      </div>
+
+      <!-- ================= ACTUAL BRAND DASHBOARD ACTIVE REPORT ================= -->
+      <div id="dashboardReportContainer" class="hidden flex flex-col gap-6">
+
+        <!-- ================= SECTION 1: THE SOFT CREAM HERO CARD ================= -->
+        <div class="cream-hero-card p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+          
+          <!-- Card Header & Verdict Pill -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-black/10">
+            <div>
+              <span class="text-[11px] font-syne font-bold tracking-wider text-brand-slate uppercase block mb-0.5">Content Intelligence: Reel Analysis</span>
+              <h2 id="videoTitleParsed" class="font-syne font-extrabold text-xl sm:text-2xl text-brand-navy tracking-tight">
+                --
+              </h2>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <span id="cardVerdictPill" class="px-3.5 py-1 rounded-full text-xs font-syne font-bold bg-brand-navy text-brand-gold">
+                PUBLISH
+              </span>
+            </div>
+          </div>
+
+          <!-- Video & Primary Insight Layout -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+            
+            <!-- Video Player Preview (Left - 4 Cols) -->
+            <div class="lg:col-span-4 aspect-[9/16] max-h-[360px] w-full bg-black rounded-2xl overflow-hidden border border-black/10 shadow-inner flex items-center justify-center">
+              <video id="heroVideoPlayer" controls class="w-full h-full object-contain"></video>
+            </div>
+
+            <!-- Insight Description & Key Metric Scores (Right - 8 Cols) -->
+            <div class="lg:col-span-8 flex flex-col justify-between h-full gap-5">
+              
+              <!-- Core Discovery -->
+              <div class="flex flex-col gap-2">
+                <span class="text-xs font-semibold text-brand-slate tracking-wide uppercase">Core Discovery & Understanding</span>
+                <p id="creamCardCoreIdea" class="text-sm sm:text-base font-medium text-brand-navy leading-relaxed">
+                  --
+                </p>
+              </div>
+
+              <!-- Triple Score Grid from the Brand Board -->
+              <div class="grid grid-cols-3 gap-3 sm:gap-4 mt-2">
+                
+                <!-- Metric 1: Hook Score -->
+                <div class="bg-white/85 border border-black/5 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
+                  <span class="text-[11px] font-inter font-medium text-brand-slate block">Hook Score:</span>
+                  <div class="font-syne font-extrabold text-2xl sm:text-3xl text-brand-navy mt-1" id="valHookScore">--</div>
+                </div>
+
+                <!-- Metric 2: Retention Score -->
+                <div class="bg-white/85 border border-black/5 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
+                  <span class="text-[11px] font-inter font-medium text-brand-slate block">Retention Score:</span>
+                  <div class="font-syne font-extrabold text-2xl sm:text-3xl text-brand-navy mt-1" id="valRetentionScore">--</div>
+                </div>
+
+                <!-- Metric 3: Overall Score (Gold Box from Board) -->
+                <div class="gold-score-box rounded-2xl p-4 flex flex-col justify-between shadow-md">
+                  <span class="text-[11px] font-syne font-bold text-brand-navy block uppercase tracking-wider">Overall Score:</span>
+                  <div class="font-syne font-extrabold text-3xl sm:text-4xl text-brand-navy mt-1" id="valOverallScore">--</div>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- ================= SECTION 2: ATTENTION MAP & AI INSIGHTS ================= -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          <!-- ATTENTION MAP / FRAME HEATMAP GRID (7 COLS) -->
+          <div class="lg:col-span-7 bg-brand-navyElevated border border-brand-navyBorder rounded-2xl p-6 flex flex-col justify-between shadow-lg">
+            
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="font-syne font-bold text-base text-white tracking-tight">Attention Map</h3>
+                <p class="text-xs text-gray-400 mt-0.5">Visualizes viewer attention density across key timeline frames.</p>
+              </div>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-brand-navy text-brand-gold border border-brand-navyBorder">5 Keyframes</span>
+            </div>
+
+            <!-- 5 Frame Grid (Exact Match to Brand Board Layout) -->
+            <div class="grid grid-cols-5 gap-2.5 my-3" id="attentionMapGrid">
+              
+              <!-- Frame 1 -->
+              <div class="flex flex-col items-center gap-1.5">
+                <div class="frame-thumbnail aspect-[9/16] w-full">
+                  <img id="thumbFrame1" class="w-full h-full object-cover" />
+                  <div class="frame-heat-glow"></div>
+                </div>
+                <span class="text-[10px] font-mono text-gray-400">Frame 1</span>
+              </div>
+
+              <!-- Frame 2 -->
+              <div class="flex flex-col items-center gap-1.5">
+                <div class="frame-thumbnail aspect-[9/16] w-full">
+                  <img id="thumbFrame2" class="w-full h-full object-cover" />
+                  <div class="frame-heat-glow"></div>
+                </div>
+                <span class="text-[10px] font-mono text-gray-400">Frame 2</span>
+              </div>
+
+              <!-- Frame 3 -->
+              <div class="flex flex-col items-center gap-1.5">
+                <div class="frame-thumbnail aspect-[9/16] w-full">
+                  <img id="thumbFrame3" class="w-full h-full object-cover" />
+                  <div class="frame-heat-glow"></div>
+                </div>
+                <span class="text-[10px] font-mono text-gray-400">Frame 3</span>
+              </div>
+
+              <!-- Frame 4 -->
+              <div class="flex flex-col items-center gap-1.5">
+                <div class="frame-thumbnail aspect-[9/16] w-full">
+                  <img id="thumbFrame4" class="w-full h-full object-cover" />
+                  <div class="frame-heat-glow"></div>
+                </div>
+                <span class="text-[10px] font-mono text-gray-400">Frame 4</span>
+              </div>
+
+              <!-- Frame 5 -->
+              <div class="flex flex-col items-center gap-1.5">
+                <div class="frame-thumbnail aspect-[9/16] w-full">
+                  <img id="thumbFrame5" class="w-full h-full object-cover" />
+                  <div class="frame-heat-glow"></div>
+                </div>
+                <span class="text-[10px] font-mono text-gray-400">Frame 5</span>
+              </div>
+
+            </div>
+
+            <!-- Heatmap Duration Timeline -->
+            <div class="flex items-center justify-between text-[10px] font-mono text-gray-500 pt-3 border-t border-brand-navyBorder/60">
+              <span>0.0s (Opening)</span>
+              <span id="attentionDurationEnd">--s (Payoff)</span>
+            </div>
+
+          </div>
+
+          <!-- AI INSIGHTS & THE ONE CHANGE (5 COLS) -->
+          <div class="lg:col-span-5 flex flex-col gap-4">
+            
+            <!-- AI Insights Card -->
+            <div class="bg-brand-navyElevated border border-brand-navyBorder rounded-2xl p-5 shadow-lg">
+              <div class="flex items-center gap-2 text-brand-gold font-syne font-bold text-xs uppercase tracking-wider mb-2">
+                <i data-lucide="sparkles" class="w-4 h-4"></i>
+                <span>AI Insights</span>
+              </div>
+              <p id="aiInsightCore" class="text-xs sm:text-sm text-gray-300 leading-relaxed">
+                --
+              </p>
+            </div>
+
+            <!-- Recommendations / The One Change (Highest Leverage) -->
+            <div class="bg-brand-navyElevated border border-brand-gold/40 rounded-2xl p-5 shadow-lg relative overflow-hidden">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2 text-brand-gold font-syne font-bold text-xs uppercase tracking-wide">
+                  <i data-lucide="zap" class="w-4 h-4 text-brand-gold"></i>
+                  <span>The One Change</span>
+                </div>
+                <span class="text-[9px] bg-brand-gold text-brand-navy font-bold px-2 py-0.5 rounded uppercase">Highest Leverage</span>
+              </div>
+              <h4 id="theOneActionTitle" class="text-sm font-bold text-white mt-1">--</h4>
+              <p id="theOneActionImpact" class="text-xs text-gray-400 mt-1 leading-relaxed">--</p>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- ================= SECTION 3: EVIDENCE DETAILS ================= -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          
+          <!-- Actual Hook Box -->
+          <div class="bg-brand-navyElevated border border-brand-navyBorder rounded-2xl p-5">
+            <span class="text-xs font-syne font-bold text-gray-300 block mb-2">Hook Verification</span>
+            <div class="bg-brand-navy p-3 rounded-xl border border-brand-navyBorder mb-2">
+              <span class="text-[10px] text-gray-400 block mb-1">الافتتاحية الفعلية:</span>
+              <blockquote id="hookQuoteDisplay" class="text-xs text-brand-gold italic">"--"</blockquote>
+            </div>
+            <p id="hookReasonDisplay" class="text-xs text-gray-300 leading-relaxed mt-2">--</p>
+          </div>
+
+          <!-- Pacing & Delivery -->
+          <div class="bg-brand-navyElevated border border-brand-navyBorder rounded-2xl p-5">
+            <span class="text-xs font-syne font-bold text-gray-300 block mb-2">الإيقاع وسرعة الإلقاء</span>
+            <div class="flex flex-col gap-2 text-xs">
+              <div class="bg-brand-navy p-3 rounded-xl border border-brand-navyBorder">
+                <span class="text-[10px] text-gray-400 block mb-1">سرعة الكلام (Speech Pacing):</span>
+                <span id="pacingSpeedVal" class="text-white font-medium">--</span>
+              </div>
+              <p id="pacingNotesVal" class="text-gray-300 leading-relaxed">--</p>
+            </div>
+          </div>
+
+          <!-- Shareability Trigger -->
+          <div class="bg-brand-navyElevated border border-brand-navyBorder rounded-2xl p-5">
+            <span class="text-xs font-syne font-bold text-gray-300 block mb-2">محفز المشاركة (Shareability)</span>
+            <div class="bg-brand-navy p-3 rounded-xl border border-brand-navyBorder mb-2">
+              <span class="text-[10px] text-brand-gold font-mono block mb-1" id="shareTriggerTag">--</span>
+              <p id="shareReasonVal" class="text-xs text-gray-300 leading-relaxed">--</p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ================= SECTION 4: RECOMMENDATIONS, RISK POINTS & LIMITATIONS ================= -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+
+          <div class="md:col-span-2 bg-brand-navyElevated border border-brand-navyBorder rounded-2xl p-5">
+            <span class="text-xs font-syne font-bold text-gray-300 block mb-3">توصيات مبنية على القياس الفعلي</span>
+            <div id="recommendationsList" class="flex flex-col gap-2.5 text-xs"></div>
+          </div>
+
+          <div class="bg-brand-navyElevated border border-brand-navyBorder rounded-2xl p-5">
+            <span class="text-xs font-syne font-bold text-gray-300 block mb-3">نقاط خطر محتملة (Drop-off)</span>
+            <div id="dropOffList" class="flex flex-col gap-2 text-xs text-gray-300"></div>
+          </div>
+
+        </div>
+
+        <!-- ================= VERSION COMPARISON ================= -->
+        <div id="versionCompareContainer" class="hidden bg-brand-navyElevated border border-brand-navyBorder rounded-2xl p-5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div>
+              <span class="text-[10px] font-bold text-brand-gold uppercase tracking-wider">VERSION INTELLIGENCE</span>
+              <h3 class="font-syne font-bold text-base text-white">V1 vs Current / مقارنة النسخ</h3>
+            </div>
+            <div class="flex gap-2">
+              <button id="uploadNewVersionBtn" type="button" class="px-3 py-2 rounded-xl bg-brand-gold text-brand-navy text-xs font-bold">Upload New Version</button>
+              <button id="startNewReelBtn" type="button" class="px-3 py-2 rounded-xl border border-brand-navyBorder text-xs text-gray-300">New Reel</button>
+            </div>
+          </div>
+          <div id="versionCompareGrid" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
+          <div id="versionTimeline" class="mt-4 flex flex-wrap gap-2"></div>
+        </div>
+
+        <!-- Honesty / Limitations note — يعرض حدود المحرك المحلي بصراحة -->
+        <div class="bg-brand-navy border border-brand-navyBorder/70 rounded-2xl p-4">
+          <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1.5">حدود هذا التحليل</span>
+          <ul id="limitationsList" class="text-[11px] text-gray-500 leading-relaxed list-disc pr-4 space-y-1"></ul>
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- ================= CLIENT LOGIC ================= -->
+  <script type="module">
+    import { ReelEngine } from './src/engine/reel-engine.js';
+    import { initGoogleAuth, logout } from './src/auth/googleAuth.js';
+    import { updateExperiment, saveExperiment, getAllExperiments } from './src/engine/ExperimentEngine.js';
+    import { saveReelVideo, getReelVideo } from './src/memory/ReelAssetStore.js';
+    import { createReel, createReelVersion, getReel, getReelVersions, getReelHistory } from './src/core/MTIContentService.js';
+
+    // Lucide is visual enhancement only. Never let a blocked CDN stop the app/auth.
+    try {
+      if (window.lucide?.createIcons) window.lucide.createIcons();
+    } catch (iconError) {
+      console.warn('MTI icons unavailable:', iconError);
+    }
+
+    // ---------------------------------------------------------
+    // DOM Elements
+    // ---------------------------------------------------------
+    const videoFileInput = document.getElementById('videoFileInput');
+    const emptyHeroState = document.getElementById('emptyHeroState');
+    const scanProgressBar = document.getElementById('scanProgressBar');
+    const scanProgressFill = document.getElementById('scanProgressFill');
+    const scanStageLabel = document.getElementById('scanStageLabel');
+    const scanPercentLabel = document.getElementById('scanPercentLabel');
+    const dashboardReportContainer = document.getElementById('dashboardReportContainer');
+    const heroVideoPlayer = document.getElementById('heroVideoPlayer');
+    const uploadVideoBtn = document.getElementById('uploadVideoBtn');
+    const heroSelectVideoBtn = document.getElementById('heroSelectVideoBtn');
+    const loginHintText = document.getElementById('loginHintText');
+
+    const engine = new ReelEngine();
+    let isAuthenticated = false;
+    let activeReelId = null;
+    let activeObjectURL = null;
+
+    // ---------------------------------------------------------
+    // AUTH GATING
+    // لا يُسمح باختيار/رفع فيديو قبل تسجيل الدخول فعلياً.
+    // ---------------------------------------------------------
+    function setAuthenticatedState(authenticated, user) {
+
+      isAuthenticated = authenticated;
+
+      document.getElementById('googleLoginBtn').classList.toggle('hidden', authenticated);
+      document.getElementById('userProfile').classList.toggle('hidden', !authenticated);
+
+      if (authenticated && user) {
+        document.getElementById('userAvatar').src = user.photoURL || '';
+        document.getElementById('userName').textContent = user.name || user.displayName || 'Creator';
+      }
+
+      [uploadVideoBtn, heroSelectVideoBtn].forEach((btn) => {
+        if (!btn) return;
+        btn.disabled = !authenticated;
+        btn.classList.toggle('opacity-40', !authenticated);
+        btn.classList.toggle('cursor-not-allowed', !authenticated);
+      });
+
+      if (loginHintText) {
+        loginHintText.classList.toggle('hidden', authenticated);
+      }
+    }
+
+    // الحالة الابتدائية: غير مسجّل دخول
+    setAuthenticatedState(false);
+
+    try {
+      initGoogleAuth({
+        onLogin: async (user) => { setAuthenticatedState(true, user); await refreshReelLibrary(); },
+        onLogout: () => { activeReelId = null; setAuthenticatedState(false); document.getElementById('myReelsSection')?.classList.add('hidden'); }
+      });
+    } catch (err) {
+      console.warn('Google Auth waiting for credentials:', err);
+    }
+
+    document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+      try {
+        await logout();
+        setAuthenticatedState(false);
+      } catch (err) {
+        console.error('MTI Logout Error:', err);
+        alert('تعذّر تسجيل الخروج، حاول مرة ثانية.');
+      }
+    });
+
+    function chooseVideo(mode = 'new') {
+      if (!isAuthenticated) {
+        alert('سجّل الدخول أولاً قبل رفع أي فيديو للتحليل.');
+        return;
+      }
+      if (mode === 'new') activeReelId = null;
+      videoFileInput.value = '';
+      videoFileInput.click();
+    }
+
+    uploadVideoBtn?.addEventListener('click', () => chooseVideo('new'));
+    heroSelectVideoBtn?.addEventListener('click', () => chooseVideo('new'));
+    document.getElementById('newReelFromLibraryBtn')?.addEventListener('click', () => chooseVideo('new'));
+    document.getElementById('startNewReelBtn')?.addEventListener('click', () => chooseVideo('new'));
+    document.getElementById('uploadNewVersionBtn')?.addEventListener('click', () => chooseVideo('version'));
+
+    // ---------------------------------------------------------
+    // VIDEO UPLOAD + REAL LOCAL ANALYSIS
+    // ---------------------------------------------------------
+    videoFileInput.addEventListener('change', async (e) => {
+
+      if (!isAuthenticated) {
+        alert('سجّل الدخول أولاً قبل رفع أي فيديو للتحليل.');
+        videoFileInput.value = '';
+        return;
+      }
+
+      const file = e.target.files[0];
+      if (!file) return;
+
+      heroVideoPlayer.src = URL.createObjectURL(file);
+      emptyHeroState.classList.add('hidden');
+      dashboardReportContainer.classList.add('hidden');
+      scanProgressBar.classList.remove('hidden');
+
+      try {
+        // -----------------------------------------------------
+        // REEL IDENTITY — أول رفع = Reel + V1.
+        // إذا كان Reel محدداً = نسخة جديدة لنفس Reel.
+        // -----------------------------------------------------
+        const reel = activeReelId
+          ? await createReelVersion(activeReelId, {
+              name: file.name,
+              title: getReel(activeReelId)?.title || file.name,
+              platform: 'instagram',
+              status: 'DRAFT'
+            })
+          : await createReel({
+              name: file.name,
+              title: file.name,
+              platform: 'instagram',
+              status: 'DRAFT'
+            });
+
+        activeReelId = reel.reelId;
+
+        const asset = await saveReelVideo(file, {
+          name: file.name,
+          mimeType: file.type,
+          reelId: reel.reelId,
+          versionId: reel.versionId,
+          accountId: reel.accountId,
+          createdAt: reel.createdAt
+        });
+
+        reel.assetId = asset.assetId;
+        await saveExperiment(reel);
+
+        // معاينة بصرية فقط لخمس إطارات (Attention Map).
+        // مهم: ننتظرها حتى لا تنافس التحليل على مورد الفيديو.
+        await extractFiveKeyframes(file);
+
+        // التحليل الفعلي: استخراج إشارات حقيقية من الفيديو + استدلال محلي
+        const report = await engine.analyze(file, {}, (progress) => {
+          scanStageLabel.innerHTML = `<span>${progress.message}</span>`;
+          scanPercentLabel.textContent = `${Math.round(progress.progress)}%`;
+          scanProgressFill.style.width = `${progress.progress}%`;
+        });
+
+        // حفظ التحليل داخل نفس Version حتى يبقى قابلاً للمقارنة لاحقاً.
+        await updateExperiment(reel.id, {
+          status: 'ANALYZED',
+          analysis: { ...report, frames: [] },
+          prediction: report.intelligence?.prediction || null,
+          metadata: {
+            ...(reel.metadata || {}),
+            filename: file.name,
+            mimeType: file.type,
+            size: file.size,
+            duration: report.metadata?.duration ?? null,
+            width: report.metadata?.width ?? null,
+            height: report.metadata?.height ?? null,
+            assetId: asset.assetId
+          }
+        });
+
+        renderBrandReport(report, file.name);
+        await refreshReelLibrary();
+        await renderVersionIntelligence(activeReelId);
+      } catch (err) {
+        console.error(err);
+        alert(err.message || 'حدث خطأ أثناء فحص الفيديو');
+      } finally {
+        scanProgressBar.classList.add('hidden');
+      }
+    });
+
+    // ---------------------------------------------------------
+    // RENDER — مبني بالكامل على مخرجات LocalIntelligenceEngine
+    // الحقيقية (بدون أي أرقام افتراضية ثابتة)
+    // ---------------------------------------------------------
+    // ---------------------------------------------------------
+    // REEL LIBRARY + VERSION INTELLIGENCE
+    // ---------------------------------------------------------
+    function escapeHTML(value) {
+      return String(value ?? '').replace(/[&<>'"]/g, (char) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+      }[char]));
+    }
+
+    function getScoreSet(version) {
+      const intel = version?.analysis?.intelligence || {};
+      const journey = Array.isArray(intel.viewerJourney) ? intel.viewerJourney : [];
+      const continuation = journey.find((j) => j.decision === 'continue')?.probability ?? 0;
+      return {
+        hook: Math.round(intel.attention?.score ?? 0),
+        retention: Math.round(continuation * 100),
+        overall: Math.round(intel.prediction?.retentionEstimate ?? 0)
+      };
+    }
+
+    async function refreshReelLibrary() {
+      if (!isAuthenticated) return;
+      const section = document.getElementById('myReelsSection');
+      const list = document.getElementById('myReelsList');
+      if (!section || !list) return;
+
+      const reels = getAllExperiments()
+        .filter((item) => item.type === 'reel' && item.reelId)
+        .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
+
+      const latestByReel = new Map();
+      for (const item of reels) {
+        if (!latestByReel.has(item.reelId)) latestByReel.set(item.reelId, item);
+      }
+      const latest = [...latestByReel.values()];
+
+      section.classList.toggle('hidden', latest.length === 0);
+      list.innerHTML = latest.map((item) => `
+        <button type="button" data-reel-id="${escapeHTML(item.reelId)}" class="text-left p-4 rounded-2xl bg-brand-navy border border-brand-navyBorder hover:border-brand-gold/40 transition-all">
+          <div class="flex items-center justify-between gap-3">
+            <span class="text-white text-xs font-bold truncate">${escapeHTML(item.title || item.name || 'Untitled Reel')}</span>
+            <span class="text-[10px] text-brand-gold shrink-0">V${Number(item.versionNumber || 1)}</span>
+          </div>
+          <div class="mt-2 text-[10px] text-gray-500">${escapeHTML(item.status || 'DRAFT')} · ${new Date(item.updatedAt || item.createdAt).toLocaleDateString()}</div>
+        </button>
+      `).join('');
+
+      list.querySelectorAll('[data-reel-id]').forEach((button) => {
+        button.addEventListener('click', () => openReel(button.dataset.reelId));
+      });
+    }
+
+    async function openReel(reelId) {
+      try {
+        const latest = getReel(reelId);
+        if (!latest) throw new Error('Reel غير موجود.');
+        activeReelId = reelId;
+
+        const accountId = latest.accountId || 'local';
+        const asset = latest.assetId ? await getReelVideo(latest.assetId, accountId) : null;
+        if (asset?.blob) {
+          if (activeObjectURL) URL.revokeObjectURL(activeObjectURL);
+          activeObjectURL = URL.createObjectURL(asset.blob);
+          heroVideoPlayer.src = activeObjectURL;
+          emptyHeroState.classList.add('hidden');
+        }
+
+        const analysis = latest.analysis;
+        if (analysis) {
+          dashboardReportContainer.classList.remove('hidden');
+          renderBrandReport(analysis, latest.title || latest.name || 'Reel');
+          await renderVersionIntelligence(reelId);
+        } else {
+          dashboardReportContainer.classList.add('hidden');
+          alert('هذا الـReel محفوظ، لكن ما عنده تحليل محفوظ بعد. ارفع نسخة جديدة لتحليله.');
+        }
+      } catch (err) {
+        console.error(err);
+        alert(err.message || 'تعذّر فتح الـReel.');
+      }
+    }
+
+    async function renderVersionIntelligence(reelId) {
+      const container = document.getElementById('versionCompareContainer');
+      const grid = document.getElementById('versionCompareGrid');
+      const timeline = document.getElementById('versionTimeline');
+      if (!container || !grid || !timeline) return;
+
+      const versions = getReelHistory(reelId);
+      if (versions.length < 2) {
+        container.classList.add('hidden');
+        return;
+      }
+
+      const current = versions[0];
+      const first = versions[versions.length - 1];
+      const a = getScoreSet(first);
+      const b = getScoreSet(current);
+      const delta = (x, y) => `${y - x >= 0 ? '+' : ''}${y - x}`;
+
+      grid.innerHTML = [
+        ['Hook', a.hook, b.hook],
+        ['Retention', a.retention, b.retention],
+        ['Overall', a.overall, b.overall]
+      ].map(([label, x, y]) => `
+        <div class="p-4 rounded-xl bg-brand-navy border border-brand-navyBorder">
+          <div class="text-[10px] text-gray-500 uppercase tracking-wider">${label}</div>
+          <div class="flex items-end justify-between mt-2">
+            <span class="text-sm text-gray-400">V${first.versionNumber}: ${x}</span>
+            <strong class="text-xl text-white">${y}</strong>
+          </div>
+          <div class="text-[10px] mt-1 ${y >= x ? 'text-emerald-400' : 'text-red-400'}">${delta(x, y)} vs V${first.versionNumber}</div>
+        </div>
+      `).join('');
+
+      timeline.innerHTML = versions.slice().reverse().map((v) => `
+        <button type="button" data-version-id="${escapeHTML(v.versionId)}" class="px-3 py-1.5 rounded-lg border ${v.versionId === current.versionId ? 'border-brand-gold text-brand-gold' : 'border-brand-navyBorder text-gray-400'} text-[10px]">V${v.versionNumber}</button>
+      `).join('');
+      timeline.querySelectorAll('[data-version-id]').forEach((button) => {
+        button.addEventListener('click', () => loadVersion(reelId, button.dataset.versionId));
+      });
+      container.classList.remove('hidden');
+    }
+
+    async function loadVersion(reelId, versionId) {
+      const version = getReelVersions(reelId).find((item) => item.versionId === versionId);
+      if (!version) return;
+      activeReelId = reelId;
+      const asset = version.assetId ? await getReelVideo(version.assetId, version.accountId || 'local') : null;
+      if (asset?.blob) {
+        if (activeObjectURL) URL.revokeObjectURL(activeObjectURL);
+        activeObjectURL = URL.createObjectURL(asset.blob);
+        heroVideoPlayer.src = activeObjectURL;
+        emptyHeroState.classList.add('hidden');
+      }
+      if (version.analysis) {
+        dashboardReportContainer.classList.remove('hidden');
+        renderBrandReport(version.analysis, version.title || version.name || `V${version.versionNumber}`);
+      }
+      await renderVersionIntelligence(reelId);
+    }
+
+    function renderBrandReport(report, fileName) {
+
+      dashboardReportContainer.classList.remove('hidden');
+
+      const intel = report.intelligence;
+      const local = report.localSignals;
+
+      const findJourney = (decision) =>
+        intel.viewerJourney.find((j) => j.decision === decision);
+
+      // العنوان + القرار
+      document.getElementById('videoTitleParsed').textContent = fileName.replace(/\.[^/.]+$/, "");
+      document.getElementById('cardVerdictPill').textContent = intel.prediction?.decision || '--';
+      document.getElementById('creamCardCoreIdea').textContent = intel.summary || '--';
+
+      // الأرقام الثلاثة — كل رقم من مخرجات حقيقية، لا قيم افتراضية مزيّفة
+      document.getElementById('valHookScore').textContent = Math.round(intel.attention?.score ?? 0);
+      document.getElementById('valRetentionScore').textContent = Math.round((findJourney('continue')?.probability ?? 0) * 100);
+      document.getElementById('valOverallScore').textContent = Math.round(intel.prediction?.retentionEstimate ?? 0);
+
+      document.getElementById('attentionDurationEnd').textContent = `${report.metadata?.duration ?? 0}s (Payoff)`;
+
+      // Insights + أهم توصية كـ "The One Change"
+      document.getElementById('aiInsightCore').textContent = intel.summary || '--';
+      const topRec = intel.recommendations?.[0];
+      document.getElementById('theOneActionTitle').textContent = topRec?.action || 'لا توجد توصية بأولوية عالية حالياً';
+      document.getElementById('theOneActionImpact').textContent = topRec?.expectedEffect || '';
+
+      // الهوك: نص فعلي مستخرج (وليس مخترع) + تفسير محلي
+      const speechText = local.speech?.text?.trim();
+      document.getElementById('hookQuoteDisplay').textContent =
+        speechText ? `"${speechText.slice(0, 90)}${speechText.length > 90 ? '…' : ''}"` : 'لا يوجد كلام مكتشف بالفيديو';
+      document.getElementById('hookReasonDisplay').textContent = intel.attention?.interpretation || '';
+
+      // الإيقاع
+      document.getElementById('pacingSpeedVal').textContent =
+        `${intel.pacing?.strength || '--'} (${local.pacing?.cutsPerSecond ?? 0} قطع/ثانية)`;
+      document.getElementById('pacingNotesVal').textContent = intel.pacing?.interpretation || '';
+
+      // المشاركة
+      const shareDriver = intel.continuationDrivers?.[0]?.driver;
+      document.getElementById('shareTriggerTag').textContent = `Trigger: ${shareDriver || 'غير محدد بوضوح'}`;
+      document.getElementById('shareReasonVal').textContent = findJourney('share')?.reasons?.[0] || intel.emotion?.interpretation || '';
+
+      // التوصيات الكاملة
+      const recList = document.getElementById('recommendationsList');
+      recList.innerHTML = (intel.recommendations || []).map((r) => `
+        <div class="bg-brand-navy p-3 rounded-xl border border-brand-navyBorder">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-brand-gold font-bold">${r.category}</span>
+            <span class="text-[10px] text-gray-500 uppercase">${r.priority}</span>
+          </div>
+          <p class="text-gray-300">${r.action}</p>
+          <p class="text-gray-500 mt-1">${r.reason}</p>
+        </div>
+      `).join('') || '<p class="text-gray-500">لا توجد توصيات.</p>';
+
+      // نقاط الخطر (Drop-off)
+      const dropList = document.getElementById('dropOffList');
+      dropList.innerHTML = (intel.dropOffRisks || []).map((risk) => `
+        <div class="bg-brand-navy p-2.5 rounded-lg border border-brand-navyBorder">
+          <span class="text-red-400 font-bold">${Math.round(risk.risk)}%</span>
+          <span class="text-gray-400"> — ${risk.reason}</span>
+        </div>
+      `).join('') || '<p class="text-gray-500">لا توجد نقاط خطر واضحة.</p>';
+
+      // حدود التحليل (شفافية بدل تخمين)
+      const limList = document.getElementById('limitationsList');
+      limList.innerHTML = (intel.limitations || []).map((l) => `<li>${l}</li>`).join('');
+
+      // Lucide is visual enhancement only. Never let a blocked CDN stop the app/auth.
+    try {
+      if (window.lucide?.createIcons) window.lucide.createIcons();
+    } catch (iconError) {
+      console.warn('MTI icons unavailable:', iconError);
+    }
+    }
+
+    // Helper: Extract 5 live canvas frames for Attention Map
+    async function extractFiveKeyframes(file) {
+      const v = document.createElement('video');
+      v.src = URL.createObjectURL(file);
+      v.muted = true;
+      await new Promise(r => { v.onloadeddata = r; });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 160;
+      canvas.height = 284;
+      const ctx = canvas.getContext('2d');
+      const duration = v.duration || 10;
+      const timestamps = [0.2, duration * 0.25, duration * 0.5, duration * 0.75, Math.max(0.5, duration - 0.5)];
+
+      for (let i = 0; i < 5; i++) {
+        v.currentTime = timestamps[i];
+        await new Promise(r => { v.onseeked = r; });
+        ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+        const img = document.getElementById(`thumbFrame${i + 1}`);
+        if (img) img.src = canvas.toDataURL('image/jpeg', 0.7);
+      }
+      URL.revokeObjectURL(v.src);
+    }
+  </script>
+</body>
+</html>
