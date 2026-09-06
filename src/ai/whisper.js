@@ -33,8 +33,19 @@ env.useBrowserCache = true;
   خفيفاً بما يكفي للعمل داخل المتصفح.
 */
 
-const MODEL =
-  "Xenova/whisper-base";
+const DESKTOP_MODEL = "Xenova/whisper-base";
+const TARGET_SAMPLE_RATE = 16000;
+
+function isMobileDevice() {
+  if (typeof navigator === "undefined") return false;
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+}
+
+function getModel() {
+  // لا نشغّل Whisper المحلي على الهواتف: هذا المسار هو الأكثر عرضة
+  // لاستهلاك RAM/CPU والتسبب بانهيار التبويب.
+  return DESKTOP_MODEL;
+}
 
 
 let transcriber = null;
@@ -46,6 +57,10 @@ let loadingPromise = null;
 // -----------------------------------------------------
 
 async function loadWhisper() {
+
+  if (isMobileDevice()) {
+    throw new Error("LOCAL_WHISPER_UNAVAILABLE_ON_MOBILE");
+  }
 
   if (transcriber)
     return transcriber;
@@ -89,7 +104,7 @@ async function createTranscriberWithFallback() {
 
     return await pipeline(
       "automatic-speech-recognition",
-      MODEL,
+      getModel(),
       {
         device:
           preferredDevice,
@@ -116,7 +131,7 @@ async function createTranscriberWithFallback() {
 
     return await pipeline(
       "automatic-speech-recognition",
-      MODEL,
+      getModel(),
       {
         device:
           "wasm",
@@ -240,58 +255,37 @@ export async function extractAudio(
 // تحويل AudioBuffer إلى Float32
 // -----------------------------------------------------
 
-function audioBufferToMono(
-  audioBuffer
-) {
+function audioBufferToMono(audioBuffer) {
+  const channels = audioBuffer.numberOfChannels;
+  const inputLength = audioBuffer.length;
+  const inputRate = audioBuffer.sampleRate;
 
-  const channels =
-    audioBuffer.numberOfChannels;
+  // Whisper يعمل على 16 kHz. عدم downsample هنا كان يرسل 44.1/48 kHz
+  // arrays ضخمة إلى النموذج ويزيد ضغط الذاكرة بدون فائدة.
+  const outputLength = Math.max(1, Math.round(inputLength * TARGET_SAMPLE_RATE / inputRate));
+  const mono = new Float32Array(outputLength);
 
+  for (let i = 0; i < outputLength; i++) {
+    const sourcePosition = i * inputRate / TARGET_SAMPLE_RATE;
+    const left = Math.floor(sourcePosition);
+    const right = Math.min(left + 1, inputLength - 1);
+    const fraction = sourcePosition - left;
 
-  const length =
-    audioBuffer.length;
-
-
-  const mono =
-    new Float32Array(
-      length
-    );
-
-
-  for (
-    let channel = 0;
-    channel < channels;
-    channel++
-  ) {
-
-    const data =
-      audioBuffer.getChannelData(
-        channel
-      );
-
-
-    for (
-      let i = 0;
-      i < length;
-      i++
-    ) {
-
-      mono[i] +=
-        data[i] / channels;
-
+    let sample = 0;
+    for (let channel = 0; channel < channels; channel++) {
+      const data = audioBuffer.getChannelData(channel);
+      const a = data[left] || 0;
+      const b = data[right] || 0;
+      sample += a + (b - a) * fraction;
     }
-
+    mono[i] = sample / channels;
   }
-
 
   return {
     data: mono,
-    sampling_rate:
-      audioBuffer.sampleRate
+    sampling_rate: TARGET_SAMPLE_RATE
   };
-
 }
-
 
 // -----------------------------------------------------
 // تحليل الكلام
@@ -310,6 +304,17 @@ export async function transcribeVideo(
 
   }
 
+
+  if (isMobileDevice()) {
+    return {
+      text: "",
+      segments: [],
+      wordCount: 0,
+      hasSpeech: false,
+      unavailable: true,
+      reason: "mobile-safe-mode"
+    };
+  }
 
   const whisper =
     await loadWhisper();
@@ -461,7 +466,7 @@ export function getWhisperStatus() {
       ),
 
     model:
-      MODEL,
+      getModel(),
 
     local:
       true,
