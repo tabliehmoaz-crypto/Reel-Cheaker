@@ -590,6 +590,28 @@ export function createExperiment(
       data.name ||
       "Untitled Experiment",
 
+    /* Permanent Reel identity + version history */
+    reelId:
+      data.reelId ||
+      generateId("reel"),
+
+    versionId:
+      data.versionId ||
+      id,
+
+    versionNumber:
+      Number.isFinite(Number(data.versionNumber))
+        ? Number(data.versionNumber)
+        : 1,
+
+    parentVersionId:
+      data.parentVersionId ||
+      null,
+
+    assetId:
+      data.assetId ||
+      null,
+
     niche:
       data.niche ||
       null,
