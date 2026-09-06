@@ -637,9 +637,11 @@
         reel.assetId = asset.assetId;
         await saveExperiment(reel);
 
-        // معاينة بصرية فقط لخمس إطارات (Attention Map).
-        // مهم: ننتظرها حتى لا تنافس التحليل على مورد الفيديو.
-        await extractFiveKeyframes(file);
+        // على الموبايل لا ننشئ decoder ثانٍ للفيديو. هذا يمنع تكرار buffers داخل Safari.
+        const isMobileMTI = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+        if (!isMobileMTI) {
+          await extractFiveKeyframes(file);
+        }
 
         // التحليل الفعلي: استخراج إشارات حقيقية من الفيديو + استدلال محلي
         const report = await engine.analyze(file, {}, (progress) => {
