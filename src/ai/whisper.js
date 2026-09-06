@@ -182,7 +182,7 @@ function getBestDtype() {
 // استخراج الصوت من الفيديو
 // -----------------------------------------------------
 
-async function extractAudio(
+export async function extractAudio(
   videoFile
 ) {
 
@@ -302,7 +302,7 @@ export async function transcribeVideo(
   options = {}
 ) {
 
-  if (!videoFile) {
+  if (!videoFile && !options.preDecodedAudioBuffer) {
 
     throw new Error(
       "لم يتم اختيار فيديو."
@@ -315,7 +315,10 @@ export async function transcribeVideo(
     await loadWhisper();
 
 
+  // إذا كان الصوت مفكوك الترميز مسبقاً (لتفادي فك الترميز مرتين
+  // وتخفيف الضغط على الذاكرة)، استخدمه مباشرة بدل إعادة القراءة.
   const audioBuffer =
+    options.preDecodedAudioBuffer ||
     await extractAudio(
       videoFile
     );
