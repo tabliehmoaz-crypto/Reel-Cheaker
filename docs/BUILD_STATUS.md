@@ -65,6 +65,9 @@
 | Google Auth موصول بالتطبيق الرئيسي | 🔨 Firebase Google Redirect + account memory — يحتاج اختبار OAuth على الدومين النهائي |
 | Account Profile (niche, جمهور, أهداف...) | ⏳ |
 | Private Memory مفعّلة | ⏳ (بنية جاهزة: `MTIResultMemoryBridge`) |
+| Permanent Reel Identity + Versioning API | 🔨 `src/core/MTIContentService.js` — يحتاج اختبار متصفح |
+| Reel Asset Store (IndexedDB) | 🔨 `src/memory/ReelAssetStore.js` — يحتاج اختبار متصفح |
+| Reel History / Reel Room context API | 🔨 `MTIContentService.js` — يحتاج اختبار متصفح |
 | محادثة ما بعد النشر (إدخال Views/Shares...) | ⏳ |
 | أفضل أيام/ساعات نشر | ⏳ |
 | Learning Engine مفعّل | ⏳ (بنية جاهزة: `GrowthLearningEngine`) |
