@@ -16,7 +16,7 @@
   إرجاع قيمة محافظة مع الإفصاح عن ذلك بدل اختلاق رقم.
 */
 
-import { transcribeVideo } from "../ai/whisper.js";
+import { transcribeVideo, extractAudio } from "../ai/whisper.js";
 
 
 /* =========================================================
@@ -43,13 +43,15 @@ export async function extractLocalSignals(videoFile, progressCallback = () => {}
   const visualSignals = await extractVisualSignals(videoFile, metadata);
 
   progressCallback({ stage: "AUDIO", progress: 55, message: "تحليل مستوى الصوت والصمت..." });
-  const audioSignals = await extractAudioSignals(videoFile, metadata).catch((error) => {
-    console.warn("MTI Audio Signal Error:", error);
-    return null;
-  });
+  // نفك ترميز الصوت مرة واحدة فقط، ونشاركه بين تحليل الصوت وWhisper
+  // (فك الترميز مرتين كان يضاعف استهلاك الذاكرة ويسبب انهيار التبويب أحياناً)
+  const decodedAudio = await decodeAudioOnce(videoFile);
+  const audioSignals = decodedAudio
+    ? computeAudioSignals(decodedAudio, metadata)
+    : null;
 
   progressCallback({ stage: "SPEECH", progress: 70, message: "تفريغ الكلام محلياً (Whisper)..." });
-  const speechResult = await safeTranscribe(videoFile);
+  const speechResult = await safeTranscribe(videoFile, decodedAudio);
 
   progressCallback({ stage: "SCORING", progress: 90, message: "بناء الإشارات النهائية..." });
 
@@ -178,15 +180,39 @@ async function extractVisualSignals(videoFile, metadata) {
 
 function seekTo(video, timestamp) {
   return new Promise((resolve) => {
-    const onSeeked = () => {
+
+    const target = Math.min(timestamp, Math.max(video.duration - 0.05, 0));
+
+    // إذا الفيديو أصلاً قريب جداً من الزمن المطلوب (بيصير غالباً بأول
+    // إطار عند t=0)، حدث 'seeked' ممكن ما ينطلق إطلاقاً — تابع مباشرة
+    // بدل انتظار حدث لن يحصل.
+    if (Math.abs(video.currentTime - target) < 0.01) {
+      resolve();
+      return;
+    }
+
+    let settled = false;
+
+    const finish = () => {
+      if (settled) return;
+      settled = true;
       video.removeEventListener("seeked", onSeeked);
+      clearTimeout(timeoutId);
       resolve();
     };
+
+    const onSeeked = () => finish();
+
+    // شبكة أمان: لا تنتظر أكثر من ثانية واحدة لأي إطار مهما حصل،
+    // حتى لا يتجمد التحليل بالكامل بسبب متصفح/كودك لا يطلق الحدث.
+    const timeoutId = setTimeout(finish, 1000);
+
     video.addEventListener("seeked", onSeeked);
+
     try {
-      video.currentTime = Math.min(timestamp, Math.max(video.duration - 0.05, 0));
+      video.currentTime = target;
     } catch {
-      resolve();
+      finish();
     }
   });
 }
@@ -228,22 +254,16 @@ function analyzePixels(data) {
    AUDIO SIGNALS (Web Audio API)
 ========================================================= */
 
-async function extractAudioSignals(videoFile, metadata) {
-
-  const arrayBuffer = await videoFile.arrayBuffer();
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContextClass) {
-    throw new Error("المتصفح لا يدعم Web Audio API.");
-  }
-
-  const audioContext = new AudioContextClass();
-
-  let audioBuffer;
+async function decodeAudioOnce(videoFile) {
   try {
-    audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
-  } finally {
-    await audioContext.close();
+    return await extractAudio(videoFile);
+  } catch (error) {
+    console.warn("MTI Audio Decode Error (متابعة بدون تحليل صوتي):", error);
+    return null;
   }
+}
+
+function computeAudioSignals(audioBuffer, metadata) {
 
   const channelData = audioBuffer.getChannelData(0);
   const sampleRate = audioBuffer.sampleRate;
@@ -298,14 +318,31 @@ function stdDev(arr) {
    SPEECH (local Whisper — runs fully in-browser)
 ========================================================= */
 
-async function safeTranscribe(videoFile) {
+async function safeTranscribe(videoFile, preDecodedAudioBuffer) {
   try {
-    const result = await transcribeVideo(videoFile, { language: "ar" });
+    const result = await withTimeout(
+      transcribeVideo(videoFile, {
+        language: "ar",
+        preDecodedAudioBuffer
+      }),
+      45000,
+      "انتهت مهلة تحميل/تشغيل محرك الكلام المحلي (Whisper)."
+    );
     return result;
   } catch (error) {
     console.warn("MTI Whisper Error (متابعة بدون نص):", error);
     return { text: "", wordCount: 0, hasSpeech: false, segments: [] };
   }
+}
+
+function withTimeout(promise, ms, message) {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (value) => { clearTimeout(timeoutId); resolve(value); },
+      (error) => { clearTimeout(timeoutId); reject(error); }
+    );
+  });
 }
 
 
