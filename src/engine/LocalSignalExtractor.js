@@ -37,8 +37,38 @@ const SILENCE_RMS_THRESHOLD = 0.02;
 
 export async function extractLocalSignals(videoFile, progressCallback = () => {}) {
 
-  progressCallback({ stage: "METADATA", progress: 5, message: "قراءة بيانات الفيديو..." });
-  const metadata = await getVideoMetadata(videoFile);
+  // IMPORTANT: On mobile/Safari do not create a <video> decoder at all.
+  // Even preload="metadata" can force WebKit to allocate decoder/buffer resources.
+  // For the mobile-safe path we use file-level metadata only and skip all local media decoding.
+  if (isMobileDevice()) {
+    const metadata = {
+      duration: 0,
+      width: 0,
+      height: 0,
+      fileSize: Number(videoFile?.size || 0),
+      fileName: videoFile?.name || "video"
+    };
+    progressCallback({ stage: "METADATA", progress: 5, message: "قراءة بيانات الفيديو بشكل آمن للموبايل..." });
+
+    progressCallback({ stage: "MOBILE_SAFE", progress: 90, message: "تحليل آمن للموبايل — بدون فك ترميز الفيديو محلياً..." });
+    const speechResult = { text: "", wordCount: 0, hasSpeech: false, segments: [], unavailable: true, reason: "mobile-local-decoding-disabled" };
+    const visualSignals = { frames: [], duration: metadata.duration };
+    const audioSignals = null;
+    const hook = buildHookSignal(visualSignals, audioSignals);
+    const pacing = buildPacingSignal(visualSignals, metadata);
+    const visual = buildVisualQualitySignal(visualSignals);
+    const dropOff = buildDropOffSignal(visualSignals, metadata);
+    const idea = buildIdeaSignal(speechResult, metadata);
+    const speech = buildSpeechSignal(speechResult, metadata);
+    const technical = buildTechnicalSignal(metadata);
+    progressCallback({ stage: "COMPLETE", progress: 100, message: "اكتمل التحليل الآمن للموبايل." });
+    return {
+      video: { dimensions: metadata },
+      hook, pacing, visual, technical, speech, idea, dropOff,
+      scores: {},
+      frames: []
+    };
+  }
 
   progressCallback({ stage: "FRAMES", progress: 20, message: "أخذ عينات من الإطارات وتحليلها..." });
   const visualSignals = await extractVisualSignals(videoFile, metadata);
