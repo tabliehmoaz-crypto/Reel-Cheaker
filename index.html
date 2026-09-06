@@ -163,6 +163,9 @@
           <div id="userProfile" class="hidden flex items-center gap-2 bg-brand-navyElevated border border-brand-navyBorder px-2.5 py-1.5 rounded-xl">
             <img id="userAvatar" class="w-5 h-5 rounded-full border border-brand-gold object-cover" />
             <span id="userName" class="text-xs text-brand-cream max-w-[90px] truncate"></span>
+            <button id="logoutBtn" title="تسجيل الخروج" class="text-gray-400 hover:text-red-400 transition-colors">
+              <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+            </button>
           </div>
         </div>
 
@@ -451,7 +454,7 @@
   <!-- ================= CLIENT LOGIC ================= -->
   <script type="module">
     import { ReelEngine } from './src/engine/reel-engine.js';
-    import { initGoogleAuth } from './src/auth/googleAuth.js';
+    import { initGoogleAuth, logout } from './src/auth/googleAuth.js';
 
     lucide.createIcons();
 
@@ -512,6 +515,16 @@
     } catch (err) {
       console.warn('Google Auth waiting for credentials:', err);
     }
+
+    document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+      try {
+        await logout();
+        setAuthenticatedState(false);
+      } catch (err) {
+        console.error('MTI Logout Error:', err);
+        alert('تعذّر تسجيل الخروج، حاول مرة ثانية.');
+      }
+    });
 
     [uploadVideoBtn, heroSelectVideoBtn].forEach((btn) => {
       if (!btn) return;
