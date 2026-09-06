@@ -169,9 +169,9 @@
         <!-- Hidden Video Input -->
         <input type="file" id="videoFileInput" accept="video/mp4,video/quicktime,video/webm" class="hidden" />
 
-        <!-- Primary Gold Upload Button from Brand Board -->
-        <button onclick="document.getElementById('videoFileInput').click()" class="px-4 sm:px-5 py-2.5 rounded-xl bg-brand-gold hover:bg-brand-goldHover text-brand-navy font-syne font-bold text-xs flex items-center gap-2 shadow-lg shadow-brand-gold/10 transition-all hover:scale-[1.02] active:scale-[0.98]">
-          <i data-lucide="upload" class="w-4 h-4 text-brand-navy stroke-[2.5]"></i>
+        <!-- Primary Gold Upload Button from Brand Board (يُفعَّل فقط بعد تسجيل الدخول) -->
+        <button id="uploadVideoBtn" disabled class="px-4 sm:px-5 py-2.5 rounded-xl bg-brand-gold text-brand-navy font-syne font-bold text-xs flex items-center gap-2 shadow-lg shadow-brand-gold/10 transition-all opacity-40 cursor-not-allowed" title="سجّل الدخول أولاً لرفع فيديو">
+          <i data-lucide="lock" class="w-4 h-4 text-brand-navy stroke-[2.5]"></i>
           <span>Upload Video</span>
         </button>
       </div>
@@ -204,9 +204,12 @@
         <p class="text-xs sm:text-sm text-gray-400 max-w-md mt-2 leading-relaxed">
           نظام التحليل الإدراكي المتخصص في مقاطع Reel و TikTok بدون تخمين أو تقييمات عشوائية.
         </p>
-        <button onclick="document.getElementById('videoFileInput').click()" class="mt-6 px-6 py-3 rounded-xl bg-brand-gold hover:bg-brand-goldHover text-brand-navy font-syne font-bold text-xs shadow-xl transition-all">
+        <button id="heroSelectVideoBtn" disabled class="mt-6 px-6 py-3 rounded-xl bg-brand-gold text-brand-navy font-syne font-bold text-xs shadow-xl transition-all opacity-40 cursor-not-allowed">
           Select Video to Start
         </button>
+        <p id="loginHintText" class="text-[11px] text-brand-gold/80 mt-3">
+          سجّل الدخول أولاً من الأعلى قبل رفع أي فيديو للتحليل.
+        </p>
       </div>
 
       <!-- ================= ACTUAL BRAND DASHBOARD ACTIVE REPORT ================= -->
@@ -418,6 +421,27 @@
 
         </div>
 
+        <!-- ================= SECTION 4: RECOMMENDATIONS, RISK POINTS & LIMITATIONS ================= -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+
+          <div class="md:col-span-2 bg-brand-navyElevated border border-brand-navyBorder rounded-2xl p-5">
+            <span class="text-xs font-syne font-bold text-gray-300 block mb-3">توصيات مبنية على القياس الفعلي</span>
+            <div id="recommendationsList" class="flex flex-col gap-2.5 text-xs"></div>
+          </div>
+
+          <div class="bg-brand-navyElevated border border-brand-navyBorder rounded-2xl p-5">
+            <span class="text-xs font-syne font-bold text-gray-300 block mb-3">نقاط خطر محتملة (Drop-off)</span>
+            <div id="dropOffList" class="flex flex-col gap-2 text-xs text-gray-300"></div>
+          </div>
+
+        </div>
+
+        <!-- Honesty / Limitations note — يعرض حدود المحرك المحلي بصراحة -->
+        <div class="bg-brand-navy border border-brand-navyBorder/70 rounded-2xl p-4">
+          <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1.5">حدود هذا التحليل</span>
+          <ul id="limitationsList" class="text-[11px] text-gray-500 leading-relaxed list-disc pr-4 space-y-1"></ul>
+        </div>
+
       </div>
 
     </main>
@@ -431,22 +455,9 @@
 
     lucide.createIcons();
 
-    // Google Sign-in initialization
-    try {
-      initGoogleAuth({
-        onLogin: (user) => {
-          document.getElementById('googleLoginBtn').classList.add('hidden');
-          const profile = document.getElementById('userProfile');
-          profile.classList.remove('hidden');
-          document.getElementById('userAvatar').src = user.photoURL || '';
-          document.getElementById('userName').textContent = user.displayName || 'Creator';
-        }
-      });
-    } catch (err) {
-      console.warn('Google Auth waiting for credentials:', err);
-    }
-
+    // ---------------------------------------------------------
     // DOM Elements
+    // ---------------------------------------------------------
     const videoFileInput = document.getElementById('videoFileInput');
     const emptyHeroState = document.getElementById('emptyHeroState');
     const scanProgressBar = document.getElementById('scanProgressBar');
@@ -455,23 +466,88 @@
     const scanPercentLabel = document.getElementById('scanPercentLabel');
     const dashboardReportContainer = document.getElementById('dashboardReportContainer');
     const heroVideoPlayer = document.getElementById('heroVideoPlayer');
+    const uploadVideoBtn = document.getElementById('uploadVideoBtn');
+    const heroSelectVideoBtn = document.getElementById('heroSelectVideoBtn');
+    const loginHintText = document.getElementById('loginHintText');
 
     const engine = new ReelEngine();
+    let isAuthenticated = false;
 
-    // Video Upload Listener
+    // ---------------------------------------------------------
+    // AUTH GATING
+    // لا يُسمح باختيار/رفع فيديو قبل تسجيل الدخول فعلياً.
+    // ---------------------------------------------------------
+    function setAuthenticatedState(authenticated, user) {
+
+      isAuthenticated = authenticated;
+
+      document.getElementById('googleLoginBtn').classList.toggle('hidden', authenticated);
+      document.getElementById('userProfile').classList.toggle('hidden', !authenticated);
+
+      if (authenticated && user) {
+        document.getElementById('userAvatar').src = user.photoURL || '';
+        document.getElementById('userName').textContent = user.name || user.displayName || 'Creator';
+      }
+
+      [uploadVideoBtn, heroSelectVideoBtn].forEach((btn) => {
+        if (!btn) return;
+        btn.disabled = !authenticated;
+        btn.classList.toggle('opacity-40', !authenticated);
+        btn.classList.toggle('cursor-not-allowed', !authenticated);
+      });
+
+      if (loginHintText) {
+        loginHintText.classList.toggle('hidden', authenticated);
+      }
+    }
+
+    // الحالة الابتدائية: غير مسجّل دخول
+    setAuthenticatedState(false);
+
+    try {
+      initGoogleAuth({
+        onLogin: (user) => setAuthenticatedState(true, user),
+        onLogout: () => setAuthenticatedState(false)
+      });
+    } catch (err) {
+      console.warn('Google Auth waiting for credentials:', err);
+    }
+
+    [uploadVideoBtn, heroSelectVideoBtn].forEach((btn) => {
+      if (!btn) return;
+      btn.addEventListener('click', () => {
+        if (!isAuthenticated) {
+          alert('سجّل الدخول أولاً قبل رفع أي فيديو للتحليل.');
+          return;
+        }
+        videoFileInput.click();
+      });
+    });
+
+    // ---------------------------------------------------------
+    // VIDEO UPLOAD + REAL LOCAL ANALYSIS
+    // ---------------------------------------------------------
     videoFileInput.addEventListener('change', async (e) => {
+
+      if (!isAuthenticated) {
+        alert('سجّل الدخول أولاً قبل رفع أي فيديو للتحليل.');
+        videoFileInput.value = '';
+        return;
+      }
+
       const file = e.target.files[0];
       if (!file) return;
 
       heroVideoPlayer.src = URL.createObjectURL(file);
       emptyHeroState.classList.add('hidden');
+      dashboardReportContainer.classList.add('hidden');
       scanProgressBar.classList.remove('hidden');
 
       try {
-        // Extract 5 sample keyframes for the Attention Map visualization
+        // معاينة بصرية فقط لخمس إطارات (Attention Map) — لا علاقة له بالتحليل نفسه
         extractFiveKeyframes(file);
 
-        // Run MTI Real Evidence Analysis
+        // التحليل الفعلي: استخراج إشارات حقيقية من الفيديو + استدلال محلي
         const report = await engine.analyze(file, {}, (progress) => {
           scanStageLabel.innerHTML = `<span>${progress.message}</span>`;
           scanPercentLabel.textContent = `${Math.round(progress.progress)}%`;
@@ -480,43 +556,86 @@
 
         renderBrandReport(report, file.name);
       } catch (err) {
+        console.error(err);
         alert(err.message || 'حدث خطأ أثناء فحص الفيديو');
       } finally {
         scanProgressBar.classList.add('hidden');
       }
     });
 
-    // Populate Report Matching the Brand Board
-    function renderBrandReport(data, fileName) {
+    // ---------------------------------------------------------
+    // RENDER — مبني بالكامل على مخرجات LocalIntelligenceEngine
+    // الحقيقية (بدون أي أرقام افتراضية ثابتة)
+    // ---------------------------------------------------------
+    function renderBrandReport(report, fileName) {
+
       dashboardReportContainer.classList.remove('hidden');
 
-      // Title & Verdict
+      const intel = report.intelligence;
+      const local = report.localSignals;
+
+      const findJourney = (decision) =>
+        intel.viewerJourney.find((j) => j.decision === decision);
+
+      // العنوان + القرار
       document.getElementById('videoTitleParsed').textContent = fileName.replace(/\.[^/.]+$/, "");
-      document.getElementById('cardVerdictPill').textContent = data.verdict?.decision || 'PUBLISH';
-      document.getElementById('creamCardCoreIdea').textContent = data.understanding?.coreIdea || data.coreInsight;
+      document.getElementById('cardVerdictPill').textContent = intel.prediction?.decision || '--';
+      document.getElementById('creamCardCoreIdea').textContent = intel.summary || '--';
 
-      // Triple Scores
-      document.getElementById('valHookScore').textContent = data.scores?.hook || 88;
-      document.getElementById('valRetentionScore').textContent = data.scores?.retention || 76;
-      document.getElementById('valOverallScore').textContent = data.scores?.overall || 82;
+      // الأرقام الثلاثة — كل رقم من مخرجات حقيقية، لا قيم افتراضية مزيّفة
+      document.getElementById('valHookScore').textContent = Math.round(intel.attention?.score ?? 0);
+      document.getElementById('valRetentionScore').textContent = Math.round((findJourney('continue')?.probability ?? 0) * 100);
+      document.getElementById('valOverallScore').textContent = Math.round(intel.prediction?.retentionEstimate ?? 0);
 
-      // Attention Map duration
-      document.getElementById('attentionDurationEnd').textContent = `${data.metadata?.duration || 15}s (Payoff)`;
+      document.getElementById('attentionDurationEnd').textContent = `${report.metadata?.duration ?? 0}s (Payoff)`;
 
-      // Insights & The One Change
-      document.getElementById('aiInsightCore').textContent = data.coreInsight;
-      document.getElementById('theOneActionTitle').textContent = data.theOneChange?.action || '--';
-      document.getElementById('theOneActionImpact').textContent = data.theOneChange?.impact || '--';
+      // Insights + أهم توصية كـ "The One Change"
+      document.getElementById('aiInsightCore').textContent = intel.summary || '--';
+      const topRec = intel.recommendations?.[0];
+      document.getElementById('theOneActionTitle').textContent = topRec?.action || 'لا توجد توصية بأولوية عالية حالياً';
+      document.getElementById('theOneActionImpact').textContent = topRec?.expectedEffect || '';
 
-      // Evidence Details
-      document.getElementById('hookQuoteDisplay').textContent = `"${data.hook?.exactEvidence || 'لا يوجد هوك كلامي واضح'}"`;
-      document.getElementById('hookReasonDisplay').textContent = `${data.hook?.status}: ${data.hook?.whyItWorksOrFails || ''}`;
+      // الهوك: نص فعلي مستخرج (وليس مخترع) + تفسير محلي
+      const speechText = local.speech?.text?.trim();
+      document.getElementById('hookQuoteDisplay').textContent =
+        speechText ? `"${speechText.slice(0, 90)}${speechText.length > 90 ? '…' : ''}"` : 'لا يوجد كلام مكتشف بالفيديو';
+      document.getElementById('hookReasonDisplay').textContent = intel.attention?.interpretation || '';
 
-      document.getElementById('pacingSpeedVal').textContent = data.pacing?.speech || 'متزن';
-      document.getElementById('pacingNotesVal').textContent = data.pacing?.notes || '';
+      // الإيقاع
+      document.getElementById('pacingSpeedVal').textContent =
+        `${intel.pacing?.strength || '--'} (${local.pacing?.cutsPerSecond ?? 0} قطع/ثانية)`;
+      document.getElementById('pacingNotesVal').textContent = intel.pacing?.interpretation || '';
 
-      document.getElementById('shareTriggerTag').textContent = `Trigger: ${data.shareability?.trigger || 'Identity'}`;
-      document.getElementById('shareReasonVal').textContent = data.shareability?.reason || '';
+      // المشاركة
+      const shareDriver = intel.continuationDrivers?.[0]?.driver;
+      document.getElementById('shareTriggerTag').textContent = `Trigger: ${shareDriver || 'غير محدد بوضوح'}`;
+      document.getElementById('shareReasonVal').textContent = findJourney('share')?.reasons?.[0] || intel.emotion?.interpretation || '';
+
+      // التوصيات الكاملة
+      const recList = document.getElementById('recommendationsList');
+      recList.innerHTML = (intel.recommendations || []).map((r) => `
+        <div class="bg-brand-navy p-3 rounded-xl border border-brand-navyBorder">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-brand-gold font-bold">${r.category}</span>
+            <span class="text-[10px] text-gray-500 uppercase">${r.priority}</span>
+          </div>
+          <p class="text-gray-300">${r.action}</p>
+          <p class="text-gray-500 mt-1">${r.reason}</p>
+        </div>
+      `).join('') || '<p class="text-gray-500">لا توجد توصيات.</p>';
+
+      // نقاط الخطر (Drop-off)
+      const dropList = document.getElementById('dropOffList');
+      dropList.innerHTML = (intel.dropOffRisks || []).map((risk) => `
+        <div class="bg-brand-navy p-2.5 rounded-lg border border-brand-navyBorder">
+          <span class="text-red-400 font-bold">${Math.round(risk.risk)}%</span>
+          <span class="text-gray-400"> — ${risk.reason}</span>
+        </div>
+      `).join('') || '<p class="text-gray-500">لا توجد نقاط خطر واضحة.</p>';
+
+      // حدود التحليل (شفافية بدل تخمين)
+      const limList = document.getElementById('limitationsList');
+      limList.innerHTML = (intel.limitations || []).map((l) => `<li>${l}</li>`).join('');
 
       lucide.createIcons();
     }
