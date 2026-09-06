@@ -1787,6 +1787,34 @@ function normalizeExperiment(
       experiment.title ??
       null,
 
+    /* -----------------------------------------------------
+       REEL IDENTITY / VERSIONING
+       A Reel is permanent; each upload is a Version.
+    ----------------------------------------------------- */
+
+    reelId:
+      experiment.reelId ||
+      experiment.id ||
+      createId("reel"),
+
+    versionId:
+      experiment.versionId ||
+      experiment.id ||
+      createId("version"),
+
+    versionNumber:
+      Number.isFinite(Number(experiment.versionNumber))
+        ? Number(experiment.versionNumber)
+        : 1,
+
+    parentVersionId:
+      experiment.parentVersionId ||
+      null,
+
+    assetId:
+      experiment.assetId ||
+      null,
+
     niche:
       experiment.niche ??
       null,
