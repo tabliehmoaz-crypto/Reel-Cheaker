@@ -50,7 +50,7 @@ export async function extractLocalSignals(videoFile, progressCallback = () => {}
     ? computeAudioSignals(decodedAudio, metadata)
     : null;
 
-  progressCallback({ stage: "SPEECH", progress: 70, message: "تفريغ الكلام محلياً (Whisper)..." });
+  progressCallback({ stage: "SPEECH", progress: 70, message: "تحليل الكلام..." });
   const speechResult = await safeTranscribe(videoFile, decodedAudio);
 
   progressCallback({ stage: "SCORING", progress: 90, message: "بناء الإشارات النهائية..." });
@@ -320,7 +320,20 @@ function stdDev(arr) {
 
 async function safeTranscribe(videoFile, preDecodedAudioBuffer) {
   try {
-    const result = await withTimeout(
+    // على الهواتف Whisper المحلي ممنوع عمداً لحماية التبويب من ضغط الذاكرة.
+    // باقي التحليل البصري والصوتي يستمر بشكل طبيعي.
+    if (typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "")) {
+      return {
+        text: "",
+        wordCount: 0,
+        hasSpeech: false,
+        segments: [],
+        unavailable: true,
+        reason: "mobile-safe-mode"
+      };
+    }
+
+    return await withTimeout(
       transcribeVideo(videoFile, {
         language: "ar",
         preDecodedAudioBuffer
@@ -328,10 +341,9 @@ async function safeTranscribe(videoFile, preDecodedAudioBuffer) {
       45000,
       "انتهت مهلة تحميل/تشغيل محرك الكلام المحلي (Whisper)."
     );
-    return result;
   } catch (error) {
     console.warn("MTI Whisper Error (متابعة بدون نص):", error);
-    return { text: "", wordCount: 0, hasSpeech: false, segments: [] };
+    return { text: "", wordCount: 0, hasSpeech: false, segments: [], unavailable: true };
   }
 }
 
