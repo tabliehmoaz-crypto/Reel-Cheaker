@@ -73,6 +73,11 @@ export async function extractLocalSignals(videoFile, progressCallback = () => {}
     };
   }
 
+  // Desktop path: metadata must be resolved before any downstream signal extractor uses it.
+  // The previous diagnostic build referenced `metadata` before declaring it.
+  const metadata = await getVideoMetadata(videoFile);
+  progressCallback({ stage: "METADATA", progress: 10, message: "قراءة بيانات الفيديو..." });
+
   progressCallback({ stage: "FRAMES", progress: 20, message: "أخذ عينات من الإطارات وتحليلها..." });
   const visualSignals = await extractVisualSignals(videoFile, metadata);
 
