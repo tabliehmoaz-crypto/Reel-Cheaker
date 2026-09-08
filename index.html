@@ -306,9 +306,9 @@
             <div class="flex items-center justify-between mb-4">
               <div>
                 <h3 class="font-syne font-bold text-base text-white tracking-tight">Attention Map</h3>
-                <p class="text-xs text-gray-400 mt-0.5">Visualizes viewer attention density across key timeline frames.</p>
+                <p class="text-xs text-gray-400 mt-0.5">Visualizes measured visual/audio attention proxies across sampled timeline frames — not platform retention.</p>
               </div>
-              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-brand-navy text-brand-gold border border-brand-navyBorder">5 Keyframes</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-brand-navy text-brand-gold border border-brand-navyBorder">LOCAL PROXY</span>
             </div>
 
             <!-- 5 Frame Grid (Exact Match to Brand Board Layout) -->
@@ -405,7 +405,7 @@
           
           <!-- Actual Hook Box -->
           <div class="bg-brand-navyElevated border border-brand-navyBorder rounded-2xl p-5">
-            <span class="text-xs font-syne font-bold text-gray-300 block mb-2">Hook Verification</span>
+            <span class="text-xs font-syne font-bold text-gray-300 block mb-2">Hook Evidence</span>
             <div class="bg-brand-navy p-3 rounded-xl border border-brand-navyBorder mb-2">
               <span class="text-[10px] text-gray-400 block mb-1">الافتتاحية الفعلية:</span>
               <blockquote id="hookQuoteDisplay" class="text-xs text-brand-gold italic">"--"</blockquote>
@@ -481,7 +481,7 @@
 
   <!-- ================= CLIENT LOGIC ================= -->
   <script type="module">
-    import { ReelEngine } from './src/engine/reel-engine.js';
+    import { mtiCore } from './src/core/MTICore.js';
     import { initGoogleAuth, logout } from './src/auth/googleAuth.js';
     import { updateExperiment, saveExperiment, getAllExperiments } from './src/engine/ExperimentEngine.js';
     import { saveReelVideo, getReelVideo } from './src/memory/ReelAssetStore.js';
@@ -509,7 +509,7 @@
     const heroSelectVideoBtn = document.getElementById('heroSelectVideoBtn');
     const loginHintText = document.getElementById('loginHintText');
 
-    const engine = new ReelEngine();
+    const engine = mtiCore;
     let isAuthenticated = false;
     let activeReelId = null;
     let activeObjectURL = null;
@@ -643,26 +643,36 @@
           await extractFiveKeyframes(file);
         }
 
-        // التحليل الفعلي: استخراج إشارات حقيقية من الفيديو + استدلال محلي
-        const report = await engine.analyze(file, {}, (progress) => {
-          scanStageLabel.innerHTML = `<span>${progress.message}</span>`;
-          scanPercentLabel.textContent = `${Math.round(progress.progress)}%`;
-          scanProgressFill.style.width = `${progress.progress}%`;
+        // التحليل الفعلي يمر الآن عبر MTI Core فقط.
+        // لا يوجد مسار UI يتجاوز Orchestrator/Contract/Memory.
+        const run = await engine.analyze(file, {
+          experimentId: reel.id,
+          accountId: reel.accountId,
+          reelId: reel.reelId,
+          versionId: reel.versionId,
+          versionNumber: reel.versionNumber,
+          platform: 'instagram',
+          progressCallback: (progress) => {
+            scanStageLabel.innerHTML = `<span>${progress.message}</span>`;
+            scanPercentLabel.textContent = `${Math.round(progress.progress)}%`;
+            scanProgressFill.style.width = `${progress.progress}%`;
+          }
         });
 
-        // حفظ التحليل داخل نفس Version حتى يبقى قابلاً للمقارنة لاحقاً.
+        const report = run?.analysis || null;
+        if (!report) throw new Error('MTI Core لم يُرجع نتيجة تحليل موحّدة.');
+
+        // الـCore حفظ النتيجة داخل نفس Version عبر Memory Bridge.
         await updateExperiment(reel.id, {
-          status: 'ANALYZED',
-          analysis: { ...report, frames: [] },
-          prediction: report.intelligence?.prediction || null,
+          assetId: asset.assetId,
           metadata: {
             ...(reel.metadata || {}),
             filename: file.name,
             mimeType: file.type,
             size: file.size,
-            duration: report.metadata?.duration ?? null,
-            width: report.metadata?.width ?? null,
-            height: report.metadata?.height ?? null,
+            duration: report.video?.dimensions?.duration ?? null,
+            width: report.video?.dimensions?.width ?? null,
+            height: report.video?.dimensions?.height ?? null,
             assetId: asset.assetId
           }
         });
