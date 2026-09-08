@@ -31,7 +31,7 @@ async function getWhisperModule() {
 ========================================================= */
 
 const MAX_FRAME_SAMPLES = 48;
-const MOBILE_MAX_FRAME_SAMPLES = 18;
+const MOBILE_MAX_FRAME_SAMPLES = 10;
 
 // DIAGNOSTIC: local Whisper is disabled globally for this crash-isolation test.
 const USE_LOCAL_WHISPER = true;
@@ -57,7 +57,7 @@ export async function extractLocalSignals(videoFile, progressCallback = () => {}
   progressCallback({ stage: "METADATA", progress: 10, message: "قراءة بيانات الفيديو الحقيقية..." });
 
   progressCallback({ stage: "FRAMES", progress: 22, message: "تحليل الإطارات الفعلية..." });
-  const visualSignals = await extractVisualSignals(videoFile, metadata);
+  const visualSignals = await extractVisualSignals(videoFile, metadata, progressCallback);
 
   progressCallback({ stage: "AUDIO", progress: 55, message: "تحليل الإشارة الصوتية..." });
   const decodedAudio = isMobileDevice() ? null : await decodeAudioOnce(videoFile);
@@ -182,7 +182,7 @@ function getVideoMetadata(videoFile) {
    VISUAL SIGNALS (Canvas frame sampling)
 ========================================================= */
 
-async function extractVisualSignals(videoFile, metadata) {
+async function extractVisualSignals(videoFile, metadata, progressCallback = () => {}) {
 
   const duration = Math.max(metadata.duration || 0, 0.5);
   const sampleCount = Math.min(
@@ -244,6 +244,12 @@ async function extractVisualSignals(videoFile, metadata) {
         timestamp <= duration * 0.75 && frames.length % 6 === 0
           ? canvas.toDataURL("image/jpeg", 0.5)
           : null
+    });
+
+    progressCallback({
+      stage: "FRAMES",
+      progress: Math.min(54, 22 + Math.round(((frames.length) / sampleCount) * 32)),
+      message: `تحليل الإطار ${frames.length}/${sampleCount}...`
     });
   }
 
@@ -307,36 +313,31 @@ function waitForVideoFrameReady(video) {
 
 function seekTo(video, timestamp) {
   return new Promise((resolve) => {
-
-    const target = Math.min(timestamp, Math.max(video.duration - 0.05, 0));
-
-    // إذا الفيديو أصلاً قريب جداً من الزمن المطلوب (بيصير غالباً بأول
-    // إطار عند t=0)، حدث 'seeked' ممكن ما ينطلق إطلاقاً — تابع مباشرة
-    // بدل انتظار حدث لن يحصل.
-    if (Math.abs(video.currentTime - target) < 0.01) {
-      resolve();
-      return;
-    }
-
+    const target = Math.min(timestamp, Math.max((video.duration || timestamp) - 0.05, 0));
     let settled = false;
 
     const finish = () => {
       if (settled) return;
       settled = true;
       video.removeEventListener("seeked", onSeeked);
+      video.removeEventListener("timeupdate", onSeeked);
       clearTimeout(timeoutId);
       resolve();
     };
 
     const onSeeked = () => finish();
+    const timeoutId = setTimeout(finish, 1500);
 
-    // شبكة أمان: لا تنتظر أكثر من ثانية واحدة لأي إطار مهما حصل،
-    // حتى لا يتجمد التحليل بالكامل بسبب متصفح/كودك لا يطلق الحدث.
-    const timeoutId = setTimeout(finish, 1000);
-
-    video.addEventListener("seeked", onSeeked);
+    // Safari/iOS can occasionally skip the seeked event for local object URLs.
+    // timeupdate gives us a second signal without making the analysis hang.
+    video.addEventListener("seeked", onSeeked, { once: false });
+    video.addEventListener("timeupdate", onSeeked, { once: false });
 
     try {
+      if (Math.abs((video.currentTime || 0) - target) < 0.015) {
+        finish();
+        return;
+      }
       video.currentTime = target;
     } catch {
       finish();
