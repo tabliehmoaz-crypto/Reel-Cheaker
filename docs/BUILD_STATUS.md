@@ -4,7 +4,7 @@
 بدك تعرف "وين وصلنا بالضبط"، افتح هاد الملف بس — ما تحتاج تراجع
 المحادثات القديمة ولا تسأل من جديد.
 
-آخر تحديث: (يتحدث تلقائياً مع كل تعديل)
+آخر تحديث: 2026-09-08 — Core consolidation pass
 
 ---
 
@@ -29,7 +29,7 @@
 | كشف مقطع ثابت بصرياً طويل | ✅ | `reel-engine.js` |
 | كشف إرهاق منتصف الفيديو | ✅ | `reel-engine.js` |
 | تحليل CTA | ✅ | `reel-engine.js` |
-| ربط داخلي كامل (Orchestrator→Pipeline→Adapter) | ✅ | `src/core/*` |
+| ربط داخلي كامل (Orchestrator→Pipeline→Adapter) | 🔨 تم إصلاح Adapter ليمر عبر `ReelEngine` الحقيقي | `src/core/*` |
 
 ## PHASE 1 — قاعدة المعرفة (Content Intelligence - جزء)
 
@@ -106,3 +106,17 @@
 1. **ما نبني أي ميزة بدون ما نحدثلها سطر بهالجدول فوراً**
 2. **ما ننتقل لمرحلة جديدة قبل ما نخلص يلي قبلها** (إلا لو كان في سبب واضح نحكيه)
 3. **أي شك "شو صار معنا؟" → هاد الملف هو الجواب، مش الذاكرة**
+
+## CORE CONSOLIDATION — 2026-09-08
+
+| العنصر | الحالة |
+|---|---|
+| ReelEngineAdapter → ReelEngine الفعلي | 🔨 تم إصلاح مسار الاستدعاء |
+| Mobile/Safari visual extraction | 🔨 لم يعد يرجع صفراً؛ يستخدم فك ترميز حقيقي منخفض التكلفة |
+| Unified MTI stages | 🔨 `MTIStages.js` |
+| Reel-scoped conversation API | 🔨 `MTIReelConversationService.js` |
+| MTI Brain idea layer | 🔨 `MTIBrain.js` |
+| Public MTI Core entry point | 🔨 `MTICore.js` |
+| Evidence propagation: dropOff/prediction/recommendations | 🔨 موصول في ReelEngine result |
+
+**قاعدة:** لا تعتبر النواة 100% جاهزة قبل اختبار متصفح حقيقي على iPhone Safari + Chrome وفيديوهات حقيقية.

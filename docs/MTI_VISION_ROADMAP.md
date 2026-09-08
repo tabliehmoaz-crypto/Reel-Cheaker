@@ -105,3 +105,16 @@ MTI مو أداة بتقولك «الريل حلو أو مو حلو». هي نظ
 الكاملة، Prediction Intelligence، Personal Memory الفعلية، Learning
 Intelligence) تحتاج بناء حقيقي جديد، وأغلبها يحتاج Backend حقيقي
 (مو ملفات جافاسكريبت بالمتصفح بس).
+
+
+## MTI PRODUCT STAGES — CORE NAMING
+
+- MTI Analyze — تحليل المحتوى
+- MTI Understand — فهم لماذا يعمل/لا يعمل
+- MTI Diagnose — تحديد المشكلة وأدلتها
+- MTI Improve — تحويل التشخيص إلى تعديلات قابلة للتنفيذ
+- MTI Predict — تقدير احتمالي قبل النشر
+- MTI Learn — مقارنة التوقع بالنتيجة والتعلم منها
+- MTI Brain — توليد وتطوير أفكار ومفاهيم جديدة
+
+كل Reel يملك Room مستقل للمحادثة والسياق والنسخ، وMTI Brain مستقل عن تحليل Reel محدد مع إمكانية استخدام إشارات التحليل كمصدر إلهام.
