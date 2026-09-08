@@ -233,7 +233,8 @@ export class MTIAnalysisService {
           ) =>
             this.engine.analyze(
               file,
-              options
+              options,
+              options.progressCallback || (() => {})
             ),
 
         analyzer:

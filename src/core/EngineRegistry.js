@@ -10,7 +10,7 @@
   Core communicates with engines
   through their adapters only.
 
-  MTI V3 — Local First
+  MTI V4 — Local First
 */
 
 import EngineAdapter
@@ -175,7 +175,7 @@ export class EngineRegistry {
         name,
 
       version:
-        "3.0.0"
+        "4.0.0"
 
     });
 

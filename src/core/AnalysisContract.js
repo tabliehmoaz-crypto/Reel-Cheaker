@@ -8,11 +8,11 @@
   - Keep Engine, Intelligence, Memory and UI speaking
     the same language.
   - Provide safe defaults and normalization.
-  - Support MTI V3 Local-First architecture.
+  - Support MTI V4 Local-First architecture.
   - Preserve account isolation.
 */
 
-export const ANALYSIS_VERSION = "3.0.0";
+export const ANALYSIS_VERSION = "4.0.0";
 
 
 export const ANALYSIS_FEATURES = Object.freeze([

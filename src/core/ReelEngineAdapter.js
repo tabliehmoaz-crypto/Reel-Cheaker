@@ -16,9 +16,7 @@
   - Manage experiment lifecycle
 */
 
-import {
-  analyzeReel
-} from "../engine/reel-engine.js";
+import { ReelEngine } from "../engine/reel-engine.js";
 
 
 export class ReelEngineAdapter {
@@ -34,12 +32,15 @@ export class ReelEngineAdapter {
 
     this.version =
       options.version ||
-      "3.0-local-first";
+      "4.0-local-first";
 
 
     this.lastError =
       null;
 
+    this.engine =
+      options.engine ||
+      new ReelEngine({ ai: options.ai });
 
     this.ready =
       true;
@@ -93,7 +94,17 @@ export class ReelEngineAdapter {
 
         "diagnosis",
 
-        "recommendations"
+        "recommendations",
+
+        "attention-map",
+
+        "scene-analysis",
+
+        "viewer-journey",
+
+        "prediction",
+
+        "evidence-trace"
 
       ]
 
@@ -140,9 +151,10 @@ export class ReelEngineAdapter {
 
 
       const result =
-        await analyzeReel(
+        await this.engine.analyze(
           file,
-          options
+          options,
+          options.progressCallback || (() => {})
         );
 
 

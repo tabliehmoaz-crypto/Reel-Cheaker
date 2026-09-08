@@ -10,7 +10,7 @@
   هذا الملف لا يحتوي منطق تحليل.
   فقط يجهّز المحركات ويسجلها داخل EngineRegistry.
 
-  MTI V3 — Local First
+  MTI V4 — Local First
   Account-Isolated Memory
 */
 

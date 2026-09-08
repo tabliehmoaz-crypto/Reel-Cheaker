@@ -25,7 +25,8 @@
 import {
   createExperiment,
   saveExperiment,
-  setExperimentStatus
+  setExperimentStatus,
+  getExperiment
 } from "../engine/ExperimentEngine.js";
 
 
@@ -134,46 +135,29 @@ export class MTIAnalysisOrchestrator {
         Create Experiment
       */
 
-      experiment =
-        createExperiment({
-
-          name:
-            file.name,
-
-          title:
-            options.title ||
-            file.name,
-
-          platform:
-            options.platform ||
-            "instagram",
-
-          niche:
-            options.niche ||
-            null,
-
-          source:
-            "local-analysis",
-
+      // If the UI already created the canonical Reel/Version, reuse it.
+      // This prevents the Core from silently creating a duplicate Experiment.
+      if (options.experimentId) {
+        experimentId = options.experimentId;
+        experiment = await getExperiment(experimentId);
+        if (!experiment) {
+          throw new Error("الـReel Version المحددة غير موجودة.");
+        }
+      } else {
+        experiment = createExperiment({
+          name: file.name,
+          title: options.title || file.name,
+          platform: options.platform || "instagram",
+          niche: options.niche || null,
+          source: "local-analysis",
           metadata: {
-
-            fileName:
-              file.name,
-
-            fileSize:
-              file.size,
-
-            fileType:
-              file.type
-
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type
           }
-
         });
-
-
-      experimentId =
-        experiment?.id ||
-        null;
+        experimentId = experiment?.id || null;
+      }
 
 
       if (!experimentId) {
@@ -193,18 +177,12 @@ export class MTIAnalysisOrchestrator {
         ExperimentEngine is now async.
       */
 
-      savedExperiment =
-        await saveExperiment(
-          experiment
-        );
-
+      savedExperiment = options.experimentId
+        ? experiment
+        : await saveExperiment(experiment);
 
       if (!savedExperiment) {
-
-        throw new Error(
-          "تعذر حفظ Experiment."
-        );
-
+        throw new Error("تعذر حفظ Experiment.");
       }
 
 
@@ -214,10 +192,9 @@ export class MTIAnalysisOrchestrator {
         Set initial status
       */
 
-      await setExperimentStatus(
-        experimentId,
-        "DRAFT"
-      );
+      if (!options.experimentId) {
+        await setExperimentStatus(experimentId, "DRAFT");
+      }
 
 
 
@@ -231,9 +208,12 @@ export class MTIAnalysisOrchestrator {
           file,
           {
             ...options,
-
-            experimentId
-
+            experimentId,
+            accountId: options.accountId || experiment?.accountId || null,
+            reelId: options.reelId || experiment?.reelId || null,
+            versionId: options.versionId || experiment?.versionId || null,
+            versionNumber: options.versionNumber || experiment?.versionNumber || null,
+            progressCallback: options.progressCallback || (() => {})
           }
         );
 
@@ -260,6 +240,10 @@ export class MTIAnalysisOrchestrator {
           ...rawResult,
 
           experimentId,
+          accountId: options.accountId || experiment?.accountId || null,
+          reelId: options.reelId || experiment?.reelId || null,
+          versionId: options.versionId || experiment?.versionId || null,
+          versionNumber: options.versionNumber || experiment?.versionNumber || null,
 
           localAnalysis:
             rawResult,
@@ -516,7 +500,7 @@ export class MTIAnalysisOrchestrator {
         "MTIAnalysisOrchestrator",
 
       version:
-        "2.1.0",
+        "4.0.0",
 
       localFirst:
         true,

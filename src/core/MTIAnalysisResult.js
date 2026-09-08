@@ -15,7 +15,7 @@
 
 
 export const RESULT_VERSION =
-  "3.0.0";
+  "4.0.0";
 
 
 export const RESULT_STATUS = {
@@ -92,6 +92,25 @@ export function createAnalysisResult(
       data.experimentId ||
       null,
 
+    accountId:
+      data.accountId ||
+      localAnalysis.accountId ||
+      null,
+
+    reelId:
+      data.reelId ||
+      localAnalysis.reelId ||
+      null,
+
+    versionId:
+      data.versionId ||
+      localAnalysis.versionId ||
+      null,
+
+    versionNumber:
+      data.versionNumber ??
+      localAnalysis.versionNumber ??
+      null,
 
     engine:
       data.engine ||
