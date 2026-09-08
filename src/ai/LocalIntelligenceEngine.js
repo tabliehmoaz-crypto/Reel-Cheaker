@@ -2050,6 +2050,18 @@ export class LocalIntelligenceEngine {
 
       retentionEstimate: score,
 
+      estimateType: "local_heuristic_proxy",
+
+      basis: [
+        "local_hook_signal",
+        "local_pacing_signal",
+        "local_visual_signal",
+        "local_text_or_speech_signal",
+        "local_emotion_narrative_rules"
+      ],
+
+      platformRetentionAvailable: false,
+
       decision,
 
       confidence:
