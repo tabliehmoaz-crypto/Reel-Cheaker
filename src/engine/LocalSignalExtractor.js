@@ -16,7 +16,14 @@
   إرجاع قيمة محافظة مع الإفصاح عن ذلك بدل اختلاق رقم.
 */
 
-import { transcribeVideo, extractAudio } from "../ai/whisper.js";
+let whisperModulePromise = null;
+
+async function getWhisperModule() {
+  if (!whisperModulePromise) {
+    whisperModulePromise = import("../ai/whisper.js");
+  }
+  return whisperModulePromise;
+}
 
 
 /* =========================================================
@@ -27,7 +34,7 @@ const MAX_FRAME_SAMPLES = 48;
 const MOBILE_MAX_FRAME_SAMPLES = 18;
 
 // DIAGNOSTIC: local Whisper is disabled globally for this crash-isolation test.
-const USE_LOCAL_WHISPER = false;
+const USE_LOCAL_WHISPER = true;
 const FRAME_SAMPLE_SIZE = { width: 64, height: 114 }; // نسبة عمودية تقريبية
 const HOOK_WINDOW_SECONDS = 3;
 const AUDIO_WINDOW_MS = 100;
@@ -39,64 +46,25 @@ const SILENCE_RMS_THRESHOLD = 0.02;
 ========================================================= */
 
 export async function extractLocalSignals(videoFile, progressCallback = () => {}) {
+  if (!videoFile) throw new Error("لم يتم اختيار فيديو.");
+  if (!videoFile.type?.startsWith("video/")) throw new Error("الملف المختار ليس فيديو.");
 
-  // IMPORTANT: On mobile/Safari do not create a <video> decoder at all.
-  // Even preload="metadata" can force WebKit to allocate decoder/buffer resources.
-  // For the mobile-safe path we use file-level metadata only and skip all local media decoding.
-  if (isMobileDevice()) {
-    const metadata = {
-      duration: 0,
-      width: 0,
-      height: 0,
-      fileSize: Number(videoFile?.size || 0),
-      fileName: videoFile?.name || "video"
-    };
-    progressCallback({ stage: "METADATA", progress: 5, message: "قراءة بيانات الفيديو بشكل آمن للموبايل..." });
-
-    progressCallback({ stage: "MOBILE_SAFE", progress: 90, message: "تحليل آمن للموبايل — بدون فك ترميز الفيديو محلياً..." });
-    const speechResult = { text: "", wordCount: 0, hasSpeech: false, segments: [], unavailable: true, reason: "mobile-local-decoding-disabled" };
-    const visualSignals = { frames: [], duration: metadata.duration };
-    const audioSignals = null;
-    const hook = buildHookSignal(visualSignals, audioSignals);
-    const pacing = buildPacingSignal(visualSignals, metadata);
-    const visual = buildVisualQualitySignal(visualSignals);
-    const dropOff = buildDropOffSignal(visualSignals, metadata);
-    const idea = buildIdeaSignal(speechResult, metadata);
-    const speech = buildSpeechSignal(speechResult, metadata);
-    const technical = buildTechnicalSignal(metadata);
-    progressCallback({ stage: "COMPLETE", progress: 100, message: "اكتمل التحليل الآمن للموبايل." });
-    return {
-      video: { dimensions: metadata },
-      hook, pacing, visual, technical, speech, idea, dropOff,
-      scores: {},
-      frames: []
-    };
-  }
-
-  // Desktop path: metadata must be resolved before any downstream signal extractor uses it.
-  // The previous diagnostic build referenced `metadata` before declaring it.
+  // Mobile/Safari gets a lower-cost real decoding path — not a fake zero-signal fallback.
+  // We still decode actual frames. Only expensive full-file audio/Whisper work is optional.
   const metadata = await getVideoMetadata(videoFile);
-  progressCallback({ stage: "METADATA", progress: 10, message: "قراءة بيانات الفيديو..." });
+  progressCallback({ stage: "METADATA", progress: 10, message: "قراءة بيانات الفيديو الحقيقية..." });
 
-  progressCallback({ stage: "FRAMES", progress: 20, message: "أخذ عينات من الإطارات وتحليلها..." });
+  progressCallback({ stage: "FRAMES", progress: 22, message: "تحليل الإطارات الفعلية..." });
   const visualSignals = await extractVisualSignals(videoFile, metadata);
 
-  progressCallback({ stage: "AUDIO", progress: 55, message: "تحليل مستوى الصوت والصمت..." });
-  // نفك ترميز الصوت مرة واحدة فقط، ونشاركه بين تحليل الصوت وWhisper
-  // (فك الترميز مرتين كان يضاعف استهلاك الذاكرة ويسبب انهيار التبويب أحياناً)
-  // iOS/Safari can terminate the tab when decodeAudioData() receives a
-  // full video ArrayBuffer. On mobile we skip full-file audio decoding;
-  // Whisper is already disabled there, and visual analysis can continue.
-  const mobile = isMobileDevice();
-  const decodedAudio = mobile ? null : await decodeAudioOnce(videoFile);
-  const audioSignals = decodedAudio
-    ? computeAudioSignals(decodedAudio, metadata)
-    : null;
+  progressCallback({ stage: "AUDIO", progress: 55, message: "تحليل الإشارة الصوتية..." });
+  const decodedAudio = isMobileDevice() ? null : await decodeAudioOnce(videoFile);
+  const audioSignals = decodedAudio ? computeAudioSignals(decodedAudio, metadata) : null;
 
   progressCallback({ stage: "SPEECH", progress: 70, message: "تحليل الكلام..." });
   const speechResult = await safeTranscribe(videoFile, decodedAudio);
 
-  progressCallback({ stage: "SCORING", progress: 90, message: "بناء الإشارات النهائية..." });
+  progressCallback({ stage: "SCORING", progress: 90, message: "ربط الأدلة وبناء الإشارات..." });
 
   const hook = buildHookSignal(visualSignals, audioSignals);
   const pacing = buildPacingSignal(visualSignals, metadata);
@@ -105,25 +73,33 @@ export async function extractLocalSignals(videoFile, progressCallback = () => {}
   const idea = buildIdeaSignal(speechResult, metadata);
   const speech = buildSpeechSignal(speechResult, metadata);
   const technical = buildTechnicalSignal(metadata);
+  const scenes = buildSceneAnalysis(visualSignals.frames, metadata);
+  const attentionMap = buildAttentionMap(visualSignals.frames, audioSignals, speechResult, metadata, { hook, pacing, dropOff });
 
-  progressCallback({ stage: "COMPLETE", progress: 100, message: "اكتمل الاستخراج المحلي." });
+  progressCallback({ stage: "COMPLETE", progress: 100, message: "اكتمل الاستخراج المحلي الحقيقي." });
 
   return {
     video: { dimensions: metadata },
-    hook,
-    pacing,
-    visual,
-    technical,
-    speech,
-    idea,
-    dropOff,
-    // كائن أولي عام يُبقى فارغاً عمداً؛ الإشارات الفعلية
-    // موزعة على الحقول أعلاه ليستخدمها LocalIntelligenceEngine.
+    hook, pacing, visual, technical, speech, idea, dropOff,
+    audio: audioSignals,
     scores: {},
-    frames: visualSignals.frames.map((f) => f.thumbnailDataUrl).filter(Boolean)
+    frames: visualSignals.frames.map((f) => f.thumbnailDataUrl).filter(Boolean),
+    frameSignals: visualSignals.frames,
+    scenes,
+    attentionMap,
+    extraction: {
+      local: true,
+      visualMeasured: visualSignals.frames.length > 0,
+      audioMeasured: Boolean(audioSignals),
+      speechMeasured: Boolean(speechResult?.hasSpeech),
+      mobile: isMobileDevice(),
+      limitations: [
+        ...(audioSignals ? [] : ["full-audio-analysis-unavailable-on-mobile-or-decode-failed"]),
+        ...(speechResult?.unavailable ? [speechResult.reason || "speech-analysis-unavailable"] : [])
+      ]
+    }
   };
 }
-
 
 function isMobileDevice() {
   if (typeof navigator === "undefined") return false;
@@ -140,6 +116,7 @@ function getVideoMetadata(videoFile) {
     const video = document.createElement("video");
     video.preload = "metadata";
     video.muted = true;
+    video.playsInline = true;
     video.src = URL.createObjectURL(videoFile);
 
     video.onloadedmetadata = () => {
@@ -179,8 +156,9 @@ async function extractVisualSignals(videoFile, metadata) {
   }
 
   const video = document.createElement("video");
-  video.preload = "auto";
+  video.preload = "metadata";
   video.muted = true;
+  video.playsInline = true;
   video.playsInline = true;
   video.src = URL.createObjectURL(videoFile);
 
@@ -542,7 +520,12 @@ function buildDropOffSignal(visualSignals, metadata) {
     merged.push(point);
   }
 
-  return { points: merged.slice(0, 4) };
+  return {
+    points: merged.slice(0, 4),
+    basis: "visual_stagnation_proxy",
+    measuredFrom: "sampled_video_frames",
+    platformRetentionAvailable: false
+  };
 }
 
 const IDEA_STRUCTURE_MARKERS = [
@@ -599,6 +582,76 @@ function buildSpeechSignal(speechResult, metadata) {
       wordsPerSecond: Number(wordsPerSecond.toFixed(2))
     }
   };
+}
+
+
+/* =========================================================
+   TEMPORAL CONTENT MAP
+   These are measurements/interpolations from sampled frames.
+   They are not claims about actual platform retention.
+========================================================= */
+
+function buildSceneAnalysis(frames, metadata) {
+  if (!Array.isArray(frames) || frames.length < 2) return [];
+
+  const changes = frames.map(f => Number(f.changeMagnitude || 0));
+  const mean = average(changes);
+  const deviation = stdDev(changes);
+  const cutThreshold = Math.max(8, mean + deviation * 1.25);
+  const boundaries = [0];
+
+  for (let i = 1; i < frames.length; i++) {
+    if (changes[i] >= cutThreshold) boundaries.push(i);
+  }
+  boundaries.push(frames.length - 1);
+
+  const unique = [...new Set(boundaries)].sort((a, b) => a - b);
+  const scenes = [];
+  for (let i = 0; i < unique.length - 1; i++) {
+    const startFrame = frames[unique[i]];
+    const endFrame = frames[unique[i + 1]];
+    if (!startFrame || !endFrame || endFrame.timestamp - startFrame.timestamp < 0.35) continue;
+
+    const slice = frames.slice(unique[i], unique[i + 1] + 1);
+    scenes.push({
+      id: `scene_${i + 1}`,
+      index: i,
+      start: Number(startFrame.timestamp.toFixed(2)),
+      end: Number(endFrame.timestamp.toFixed(2)),
+      duration: Number((endFrame.timestamp - startFrame.timestamp).toFixed(2)),
+      averageBrightness: Number(average(slice.map(f => f.avgLuma)).toFixed(1)),
+      averageContrast: Number(average(slice.map(f => f.contrast)).toFixed(1)),
+      averageSaturation: Number(average(slice.map(f => f.avgSaturation)).toFixed(1)),
+      visualChange: Number(average(slice.map(f => f.changeMagnitude)).toFixed(2)),
+      evidence: "sampled_video_frames"
+    });
+  }
+  return scenes;
+}
+
+function buildAttentionMap(frames, audioSignals, speechResult, metadata, signals) {
+  if (!Array.isArray(frames) || !frames.length) return [];
+
+  const maxChange = Math.max(...frames.map(f => Number(f.changeMagnitude || 0)), 1);
+  const maxContrast = Math.max(...frames.map(f => Number(f.contrast || 0)), 1);
+  const duration = Math.max(metadata.duration || 1, 1);
+  const words = Array.isArray(speechResult?.segments) ? speechResult.segments : [];
+
+  return frames.map(frame => {
+    const visual = clamp((Number(frame.changeMagnitude || 0) / maxChange) * 100);
+    const contrast = clamp((Number(frame.contrast || 0) / maxContrast) * 100);
+    const speech = words.some(seg => Number(seg.start || 0) <= frame.timestamp && Number(seg.end || 0) >= frame.timestamp) ? 65 : 0;
+    const audio = audioSignals ? clamp((audioSignals.earlyAvgRms || audioSignals.avgRms || 0) > 0 ? 55 : 0) : 0;
+    const score = clamp(visual * 0.55 + contrast * 0.15 + speech * 0.20 + audio * 0.10);
+    return {
+      timestamp: Number(frame.timestamp.toFixed(2)),
+      score: Number(score.toFixed(1)),
+      components: { visual: Number(visual.toFixed(1)), contrast: Number(contrast.toFixed(1)), speech, audio },
+      evidence: ["frame_change", "frame_contrast", ...(speech ? ["speech_segment"] : []), ...(audioSignals ? ["audio_signal"] : [])],
+      basis: "local_attention_proxy",
+      platformRetentionAvailable: false
+    };
+  });
 }
 
 function buildTechnicalSignal(metadata) {

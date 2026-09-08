@@ -1,6 +1,6 @@
 /**
  * MTI — Experiment Engine
- * Version: 3.0.0
+ * Version: 4.0.0
  *
  * Responsibilities:
  * - Create and manage experiments
@@ -21,7 +21,7 @@ import {
 // ============================================================
 
 export const ENGINE_VERSION =
-  "3.0.0";
+  "4.0.0";
 
 
 export const EXPERIMENT_STATUS = {
