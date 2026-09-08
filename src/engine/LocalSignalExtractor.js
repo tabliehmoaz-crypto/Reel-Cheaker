@@ -39,6 +39,8 @@ const FRAME_SAMPLE_SIZE = { width: 64, height: 114 }; // نسبة عمودية �
 const HOOK_WINDOW_SECONDS = 3;
 const AUDIO_WINDOW_MS = 100;
 const SILENCE_RMS_THRESHOLD = 0.02;
+const VIDEO_METADATA_TIMEOUT_MS = 12000;
+const VIDEO_FRAME_LOAD_TIMEOUT_MS = 12000;
 
 
 /* =========================================================
@@ -114,26 +116,64 @@ function isMobileDevice() {
 function getVideoMetadata(videoFile) {
   return new Promise((resolve, reject) => {
     const video = document.createElement("video");
+    const objectURL = URL.createObjectURL(videoFile);
+    let settled = false;
+
+    const cleanup = () => {
+      clearTimeout(timeoutId);
+      video.onloadedmetadata = null;
+      video.onerror = null;
+      try {
+        video.pause();
+        video.removeAttribute("src");
+        video.load();
+      } catch {}
+      URL.revokeObjectURL(objectURL);
+    };
+
+    const finish = (fn, value) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      fn(value);
+    };
+
+    const timeoutId = setTimeout(() => {
+      finish(reject, new Error("انتهت مهلة قراءة بيانات الفيديو على هذا المتصفح."));
+    }, VIDEO_METADATA_TIMEOUT_MS);
+
     video.preload = "metadata";
     video.muted = true;
     video.playsInline = true;
-    video.src = URL.createObjectURL(videoFile);
+    video.setAttribute("playsinline", "");
+    video.setAttribute("webkit-playsinline", "");
 
     video.onloadedmetadata = () => {
-      const result = {
-        duration: parseFloat((video.duration || 0).toFixed(2)),
+      const duration = Number.isFinite(video.duration) ? video.duration : 0;
+      if (!video.videoWidth || !video.videoHeight) {
+        finish(reject, new Error("تعذّرت قراءة أبعاد الفيديو."));
+        return;
+      }
+
+      finish(resolve, {
+        duration: parseFloat(duration.toFixed(2)),
         width: video.videoWidth,
         height: video.videoHeight,
-        fileSize: videoFile.size,
-        fileName: videoFile.name
-      };
-      URL.revokeObjectURL(video.src);
-      video.removeAttribute("src");
-      video.load();
-      resolve(result);
+        fileSize: Number(videoFile.size || 0),
+        fileName: videoFile.name || "video"
+      });
     };
 
-    video.onerror = () => reject(new Error("تعذّرت قراءة بيانات الفيديو."));
+    video.onerror = () => {
+      finish(reject, new Error("تعذّرت قراءة بيانات الفيديو على هذا المتصفح."));
+    };
+
+    video.src = objectURL;
+    try {
+      video.load();
+    } catch (error) {
+      finish(reject, error);
+    }
   });
 }
 
@@ -156,16 +196,20 @@ async function extractVisualSignals(videoFile, metadata) {
   }
 
   const video = document.createElement("video");
-  video.preload = "metadata";
+  const objectURL = URL.createObjectURL(videoFile);
+  video.preload = "auto";
   video.muted = true;
   video.playsInline = true;
-  video.playsInline = true;
-  video.src = URL.createObjectURL(videoFile);
+  video.setAttribute("playsinline", "");
+  video.setAttribute("webkit-playsinline", "");
+  video.src = objectURL;
 
-  await new Promise((resolve, reject) => {
-    video.onloadeddata = resolve;
-    video.onerror = () => reject(new Error("تعذّر تحميل الفيديو لاستخراج الإطارات."));
-  });
+  try {
+    await waitForVideoFrameReady(video);
+  } catch (error) {
+    URL.revokeObjectURL(objectURL);
+    throw error;
+  }
 
   const canvas = document.createElement("canvas");
   canvas.width = FRAME_SAMPLE_SIZE.width;
@@ -203,9 +247,61 @@ async function extractVisualSignals(videoFile, metadata) {
     });
   }
 
-  URL.revokeObjectURL(video.src);
+  URL.revokeObjectURL(objectURL);
+  try {
+    video.pause();
+    video.removeAttribute("src");
+    video.load();
+  } catch {}
 
   return { frames, duration };
+}
+
+function waitForVideoFrameReady(video) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+
+    const cleanup = () => {
+      clearTimeout(timeoutId);
+      video.removeEventListener("loadeddata", onReady);
+      video.removeEventListener("canplay", onReady);
+      video.removeEventListener("error", onError);
+    };
+
+    const finish = (fn, value) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      fn(value);
+    };
+
+    const onReady = () => {
+      // loadedmetadata/canplay alone is not enough for drawing, but readyState >= 2
+      // confirms that at least the first decoded frame is available.
+      if (video.readyState >= 2) {
+        finish(resolve);
+      }
+    };
+
+    const onError = () => {
+      finish(reject, new Error("تعذّر تحميل الفيديو لاستخراج الإطارات."));
+    };
+
+    const timeoutId = setTimeout(() => {
+      finish(reject, new Error("انتهت مهلة تجهيز إطارات الفيديو على هذا المتصفح."));
+    }, VIDEO_FRAME_LOAD_TIMEOUT_MS);
+
+    video.addEventListener("loadeddata", onReady);
+    video.addEventListener("canplay", onReady);
+    video.addEventListener("error", onError);
+
+    try {
+      video.load();
+      if (video.readyState >= 2) onReady();
+    } catch (error) {
+      finish(reject, error);
+    }
+  });
 }
 
 
