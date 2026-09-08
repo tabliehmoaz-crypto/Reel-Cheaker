@@ -306,9 +306,9 @@
             <div class="flex items-center justify-between mb-4">
               <div>
                 <h3 class="font-syne font-bold text-base text-white tracking-tight">Attention Map</h3>
-                <p class="text-xs text-gray-400 mt-0.5">Visualizes viewer attention density across key timeline frames.</p>
+                <p class="text-xs text-gray-400 mt-0.5">Visualizes measured visual/audio attention proxies across sampled timeline frames — not platform retention.</p>
               </div>
-              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-brand-navy text-brand-gold border border-brand-navyBorder">5 Keyframes</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-brand-navy text-brand-gold border border-brand-navyBorder">LOCAL PROXY</span>
             </div>
 
             <!-- 5 Frame Grid (Exact Match to Brand Board Layout) -->
@@ -405,7 +405,7 @@
           
           <!-- Actual Hook Box -->
           <div class="bg-brand-navyElevated border border-brand-navyBorder rounded-2xl p-5">
-            <span class="text-xs font-syne font-bold text-gray-300 block mb-2">Hook Verification</span>
+            <span class="text-xs font-syne font-bold text-gray-300 block mb-2">Hook Evidence</span>
             <div class="bg-brand-navy p-3 rounded-xl border border-brand-navyBorder mb-2">
               <span class="text-[10px] text-gray-400 block mb-1">الافتتاحية الفعلية:</span>
               <blockquote id="hookQuoteDisplay" class="text-xs text-brand-gold italic">"--"</blockquote>
@@ -479,61 +479,10 @@
 
   </div>
 
-  <!-- ================= AUTH BOOTSTRAP ================= -->
-  <!--
-    Auth is intentionally bootstrapped in its own module so a failure in
-    ReelEngine/analysis dependencies cannot silently kill the Google button.
-  -->
-  <script type="module">
-    (async () => {
-      const loginButton = document.getElementById('googleLoginBtn');
-      const userProfile = document.getElementById('userProfile');
-      const loginHint = document.getElementById('loginHintText');
-
-      if (!loginButton) {
-        console.error('[MTI Auth] #googleLoginBtn is missing from index.html');
-        return;
-      }
-
-      try {
-        const authModule = await import('./src/auth/googleAuth.js');
-        const { initGoogleAuth, logout } = authModule;
-
-        window.MTIAuth = { initGoogleAuth, logout };
-
-        initGoogleAuth({
-          loginButtonId: 'googleLoginBtn',
-          onLogin: async (user) => {
-            document.getElementById('googleLoginBtn')?.classList.add('hidden');
-            document.getElementById('userProfile')?.classList.remove('hidden');
-            const avatar = document.getElementById('userAvatar');
-            const name = document.getElementById('userName');
-            if (avatar) avatar.src = user?.photoURL || '';
-            if (name) name.textContent = user?.name || user?.displayName || 'Creator';
-            loginHint?.classList.add('hidden');
-            window.dispatchEvent(new CustomEvent('mti:auth', { detail: { authenticated: true, user } }));
-          },
-          onLogout: () => {
-            document.getElementById('googleLoginBtn')?.classList.remove('hidden');
-            document.getElementById('userProfile')?.classList.add('hidden');
-            loginHint?.classList.remove('hidden');
-            window.dispatchEvent(new CustomEvent('mti:auth', { detail: { authenticated: false, user: null } }));
-          }
-        });
-      } catch (error) {
-        console.error('[MTI Auth] Bootstrap failed:', error);
-        loginButton.disabled = false;
-        loginButton.title = 'Google sign-in failed to initialize';
-        loginButton.addEventListener('click', () => {
-          alert('تعذّر تشغيل تسجيل الدخول. افتح Console لمعرفة الخطأ.');
-        }, { once: true });
-      }
-    })();
-  </script>
-
   <!-- ================= CLIENT LOGIC ================= -->
   <script type="module">
-    import { ReelEngine } from './src/engine/reel-engine.js';
+    import { mtiCore } from './src/core/MTICore.js?v=4.4';
+    import { initGoogleAuth, logout } from './src/auth/googleAuth.js';
     import { updateExperiment, saveExperiment, getAllExperiments } from './src/engine/ExperimentEngine.js';
     import { saveReelVideo, getReelVideo } from './src/memory/ReelAssetStore.js';
     import { createReel, createReelVersion, getReel, getReelVersions, getReelHistory } from './src/core/MTIContentService.js';
@@ -560,7 +509,7 @@
     const heroSelectVideoBtn = document.getElementById('heroSelectVideoBtn');
     const loginHintText = document.getElementById('loginHintText');
 
-    const engine = new ReelEngine();
+    const engine = mtiCore;
     let isAuthenticated = false;
     let activeReelId = null;
     let activeObjectURL = null;
@@ -596,25 +545,18 @@
     // الحالة الابتدائية: غير مسجّل دخول
     setAuthenticatedState(false);
 
-    // Auth is bootstrapped independently above. Keep the analysis UI in sync.
-    window.addEventListener('mti:auth', async (event) => {
-      const { authenticated, user } = event.detail || {};
-      activeReelId = authenticated ? activeReelId : null;
-      setAuthenticatedState(Boolean(authenticated), user);
-      if (authenticated) {
-        await refreshReelLibrary();
-      } else {
-        document.getElementById('myReelsSection')?.classList.add('hidden');
-      }
-    });
+    try {
+      initGoogleAuth({
+        onLogin: async (user) => { setAuthenticatedState(true, user); await refreshReelLibrary(); },
+        onLogout: () => { activeReelId = null; setAuthenticatedState(false); document.getElementById('myReelsSection')?.classList.add('hidden'); }
+      });
+    } catch (err) {
+      console.warn('Google Auth waiting for credentials:', err);
+    }
 
     document.getElementById('logoutBtn')?.addEventListener('click', async () => {
       try {
-        if (window.MTIAuth?.logout) {
-          await window.MTIAuth.logout();
-        } else {
-          throw new Error('MTI Auth is not initialized.');
-        }
+        await logout();
         setAuthenticatedState(false);
       } catch (err) {
         console.error('MTI Logout Error:', err);
@@ -676,6 +618,11 @@
               status: 'DRAFT'
             });
 
+        if (!reel || !reel.id || !reel.reelId || !reel.versionId) {
+          console.error('MTI Reel creation returned invalid identity:', reel);
+          throw new Error('تعذّر إنشاء هوية الـReel. أعد تحميل الصفحة وحاول مرة ثانية.');
+        }
+
         activeReelId = reel.reelId;
 
         const asset = await saveReelVideo(file, {
@@ -690,30 +637,51 @@
         reel.assetId = asset.assetId;
         await saveExperiment(reel);
 
-        // معاينة بصرية فقط لخمس إطارات (Attention Map).
-        // مهم: ننتظرها حتى لا تنافس التحليل على مورد الفيديو.
-        await extractFiveKeyframes(file);
+        // على الموبايل لا ننشئ decoder ثانٍ للفيديو. هذا يمنع تكرار buffers داخل Safari.
+        const isMobileMTI = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+        if (!isMobileMTI) {
+          await extractFiveKeyframes(file);
+        }
 
-        // التحليل الفعلي: استخراج إشارات حقيقية من الفيديو + استدلال محلي
-        const report = await engine.analyze(file, {}, (progress) => {
-          scanStageLabel.innerHTML = `<span>${progress.message}</span>`;
-          scanPercentLabel.textContent = `${Math.round(progress.progress)}%`;
-          scanProgressFill.style.width = `${progress.progress}%`;
+        // التحليل الفعلي يمر الآن عبر MTI Core فقط.
+        // لا يوجد مسار UI يتجاوز Orchestrator/Contract/Memory.
+        const run = await engine.analyze(file, {
+          experimentId: reel.id,
+          accountId: reel.accountId,
+          reelId: reel.reelId,
+          versionId: reel.versionId,
+          versionNumber: reel.versionNumber,
+          platform: 'instagram',
+          progressCallback: (progress) => {
+            scanStageLabel.innerHTML = `<span>${progress.message}</span>`;
+            scanPercentLabel.textContent = `${Math.round(progress.progress)}%`;
+            scanProgressFill.style.width = `${progress.progress}%`;
+          }
         });
 
-        // حفظ التحليل داخل نفس Version حتى يبقى قابلاً للمقارنة لاحقاً.
+        const report = run?.analysis ?? run?.result ?? run ?? null;
+        if (!report) throw new Error('MTI Core لم يُرجع نتيجة تحليل موحّدة.');
+        console.log('[MTI V4.4] analysis boundary:', {
+          wrapper: run,
+          report,
+          hasIntelligence: Boolean(report?.intelligence),
+          hasPrediction: Boolean(report?.intelligence?.prediction || report?.prediction)
+        });
+        if (!report?.intelligence) {
+          throw new Error('MTI Core أعاد التحليل المحلي بدون طبقة Intelligence. لم يتم عرض أرقام وهمية.');
+        }
+
+        // الـCore حفظ النتيجة داخل نفس Version عبر Memory Bridge.
         await updateExperiment(reel.id, {
-          status: 'ANALYZED',
-          analysis: { ...report, frames: [] },
-          prediction: report.intelligence?.prediction || null,
+          assetId: asset.assetId,
           metadata: {
             ...(reel.metadata || {}),
             filename: file.name,
             mimeType: file.type,
             size: file.size,
-            duration: report.metadata?.duration ?? null,
-            width: report.metadata?.width ?? null,
-            height: report.metadata?.height ?? null,
+            duration: report.video?.dimensions?.duration ?? null,
+            width: report.video?.dimensions?.width ?? null,
+            height: report.video?.dimensions?.height ?? null,
             assetId: asset.assetId
           }
         });
@@ -747,9 +715,9 @@
       const journey = Array.isArray(intel.viewerJourney) ? intel.viewerJourney : [];
       const continuation = journey.find((j) => j.decision === 'continue')?.probability ?? 0;
       return {
-        hook: Math.round(intel.attention?.score ?? 0),
+        hook: intel.attention?.score != null ? Math.round(intel.attention.score) : '--',
         retention: Math.round(continuation * 100),
-        overall: Math.round(intel.prediction?.retentionEstimate ?? 0)
+        overall: intel.prediction?.retentionEstimate != null ? Math.round(intel.prediction.retentionEstimate) : '--'
       };
     }
 
@@ -831,7 +799,7 @@
       const first = versions[versions.length - 1];
       const a = getScoreSet(first);
       const b = getScoreSet(current);
-      const delta = (x, y) => `${y - x >= 0 ? '+' : ''}${y - x}`;
+      const delta = (x, y) => (x == null || y == null) ? '—' : `${y - x >= 0 ? '+' : ''}${y - x}`;
 
       grid.innerHTML = [
         ['Hook', a.hook, b.hook],
@@ -844,7 +812,7 @@
             <span class="text-sm text-gray-400">V${first.versionNumber}: ${x}</span>
             <strong class="text-xl text-white">${y}</strong>
           </div>
-          <div class="text-[10px] mt-1 ${y >= x ? 'text-emerald-400' : 'text-red-400'}">${delta(x, y)} vs V${first.versionNumber}</div>
+          <div class="text-[10px] mt-1 ${x == null || y == null ? 'text-gray-500' : (y >= x ? 'text-emerald-400' : 'text-red-400')}">${delta(x, y)} vs V${first.versionNumber}</div>
         </div>
       `).join('');
 
@@ -879,11 +847,24 @@
 
       dashboardReportContainer.classList.remove('hidden');
 
-      const intel = report.intelligence;
-      const local = report.localSignals;
+      // V4.1/4.2 defensive normalization: the local engine can return a
+      // valid partial result before the intelligence layer is attached.
+      // The UI must never crash while rendering that result.
+      const intel =
+        report?.intelligence ??
+        report?.localAnalysis?.intelligence ??
+        report?.analysis?.intelligence ??
+        null;
+      const local = report?.localSignals || report?.localAnalysis || report || {};
+
+      if (!intel) {
+        console.error('[MTI V4.4] Renderer received result without intelligence:', report);
+        throw new Error('نتيجة التحليل وصلت بدون Intelligence. تم إيقاف العرض بدل إظهار أرقام صفرية.');
+      }
 
       const findJourney = (decision) =>
-        intel.viewerJourney.find((j) => j.decision === decision);
+        (Array.isArray(intel.viewerJourney) ? intel.viewerJourney : [])
+          .find((j) => j?.decision === decision) || null;
 
       // العنوان + القرار
       document.getElementById('videoTitleParsed').textContent = fileName.replace(/\.[^/.]+$/, "");
@@ -891,9 +872,9 @@
       document.getElementById('creamCardCoreIdea').textContent = intel.summary || '--';
 
       // الأرقام الثلاثة — كل رقم من مخرجات حقيقية، لا قيم افتراضية مزيّفة
-      document.getElementById('valHookScore').textContent = Math.round(intel.attention?.score ?? 0);
-      document.getElementById('valRetentionScore').textContent = Math.round((findJourney('continue')?.probability ?? 0) * 100);
-      document.getElementById('valOverallScore').textContent = Math.round(intel.prediction?.retentionEstimate ?? 0);
+      document.getElementById('valHookScore').textContent = intel.attention?.score != null ? Math.round(intel.attention.score) : '--';
+      document.getElementById('valRetentionScore').textContent = findJourney('continue')?.probability != null ? Math.round(findJourney('continue').probability * 100) : '--';
+      document.getElementById('valOverallScore').textContent = intel.prediction?.retentionEstimate != null ? Math.round(intel.prediction.retentionEstimate) : '--';
 
       document.getElementById('attentionDurationEnd').textContent = `${report.metadata?.duration ?? 0}s (Payoff)`;
 
