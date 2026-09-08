@@ -227,6 +227,14 @@ export class MTIAnalysisOrchestrator {
 
       }
 
+      // Contract guard: a completed MTI analysis must contain the Intelligence layer.
+      // Never persist a local-only result and let the UI silently render zeros.
+      if (!rawResult?.intelligence || !rawResult?.intelligence?.prediction) {
+        throw new Error(
+          "طبقة Intelligence لم تُرجع Prediction بعد التحليل المحلي. تم إيقاف النتيجة لمنع عرض أرقام وهمية."
+        );
+      }
+
 
 
       /*
