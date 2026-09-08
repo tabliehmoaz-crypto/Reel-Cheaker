@@ -1,5 +1,5 @@
 /*
-  MTI — REEL MEMORY V3
+  MTI — REEL MEMORY V4
   --------------------
 
   Private account memory for MTI.
@@ -30,7 +30,7 @@ const STORAGE_PREFIX =
 
 
 const SCHEMA_VERSION =
-  "3.0.0";
+  "4.0.0";
 
 
 const MAX_EXPERIMENTS =
