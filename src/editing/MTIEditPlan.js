@@ -21,6 +21,9 @@ export function normalizeEditOperation(input = {}, index = 0) {
     speed: number(input.speed, null),
     text: input.text != null ? String(input.text) : null,
     position: input.position || "center",
+    segments: Array.isArray(input.segments)
+      ? input.segments.map(segment => ({ start: number(segment?.start, null), end: number(segment?.end, null) })).filter(segment => segment.start != null && segment.end != null && segment.end > segment.start)
+      : [],
     volume: number(input.volume, null), mute: input.mute === true,
     reason: input.reason || "", evidence: Array.isArray(input.evidence) ? input.evidence : [],
     confidence, executable: input.executable !== false && confidence >= 0.65
