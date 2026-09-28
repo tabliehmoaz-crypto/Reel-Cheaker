@@ -686,7 +686,9 @@
           }
         });
 
+        window.__mtiCurrentFile = file;
         renderBrandReport(report, file.name);
+        renderImprovePanel(report, file, reel);
         await refreshReelLibrary();
         await renderVersionIntelligence(activeReelId);
       } catch (err) {
@@ -771,7 +773,10 @@
         const analysis = latest.analysis;
         if (analysis) {
           dashboardReportContainer.classList.remove('hidden');
+          const latestFile = asset?.blob ? new File([asset.blob], latest.name || 'reel.mp4', { type: asset.blob.type || 'video/mp4' }) : null;
+          window.__mtiCurrentFile = latestFile;
           renderBrandReport(analysis, latest.title || latest.name || 'Reel');
+          renderImprovePanel(analysis, latestFile, latest);
           await renderVersionIntelligence(reelId);
         } else {
           dashboardReportContainer.classList.add('hidden');
@@ -838,7 +843,10 @@
       }
       if (version.analysis) {
         dashboardReportContainer.classList.remove('hidden');
-        renderBrandReport(version.analysis, version.title || version.name || `V${version.versionNumber}`);
+        const versionFile = asset?.blob ? new File([asset.blob], version.name || ('reel_v' + version.versionNumber + '.mp4'), { type: asset.blob.type || 'video/mp4' }) : null;
+        window.__mtiCurrentFile = versionFile;
+        renderBrandReport(version.analysis, version.title || version.name || ('V' + version.versionNumber));
+        renderImprovePanel(version.analysis, versionFile, version);
       }
       await renderVersionIntelligence(reelId);
     }
@@ -932,6 +940,148 @@
     } catch (iconError) {
       console.warn('MTI icons unavailable:', iconError);
     }
+    }
+
+
+    // ---------------------------------------------------------
+    // MTI IMPROVE — evidence-backed editing
+    // ---------------------------------------------------------
+    function renderImprovePanel(report, sourceFile, version) {
+      let panel = document.getElementById('mtiImprovePanel');
+      if (!panel) {
+        panel = document.createElement('section');
+        panel.id = 'mtiImprovePanel';
+        panel.className = 'mt-6 p-5 rounded-2xl bg-brand-navy border border-brand-navyBorder';
+        dashboardReportContainer.insertAdjacentElement('afterend', panel);
+      }
+
+      const plan = report?.diagnosis?.editPlan || report?.editPlan || null;
+      const operations = Array.isArray(plan?.operations) ? plan.operations : [];
+      if (!plan || !operations.length) {
+        panel.innerHTML = `
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <div class="text-brand-gold text-[10px] uppercase tracking-widest">MTI Improve</div>
+              <h3 class="text-white font-bold mt-1">ما في تعديل آمن كفاية حالياً</h3>
+              <p class="text-gray-500 text-xs mt-1">MTI ما رح يخترع قصّات أو تغييرات بدون دليل زمني واضح.</p>
+            </div>
+          </div>`;
+        return;
+      }
+
+      panel.innerHTML = `
+        <div class="flex flex-col gap-4">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <div class="text-brand-gold text-[10px] uppercase tracking-widest">MTI Improve</div>
+              <h3 class="text-white font-bold mt-1">خلّي MTI يعدّل الريل</h3>
+              <p class="text-gray-500 text-xs mt-1">${escapeHTML(plan.summary || '')}</p>
+            </div>
+            <span class="text-[10px] text-gray-500">${operations.length} اقتراح</span>
+          </div>
+          <div id="mtiEditOperations" class="space-y-2">
+            ${operations.map((op, i) => `
+              <label class="flex items-start gap-3 p-3 rounded-xl bg-black/10 border border-brand-navyBorder cursor-pointer">
+                <input type="checkbox" data-edit-index="${i}" class="mt-1 accent-brand-gold" ${op.executable ? 'checked' : 'disabled'}>
+                <span class="flex-1">
+                  <span class="block text-sm text-white">${escapeHTML(op.action)} · ${escapeHTML(op.target || 'video')}</span>
+                  <span class="block text-[11px] text-gray-500 mt-1">${escapeHTML(op.reason || '')}</span>
+                  <span class="block text-[10px] text-brand-gold/70 mt-1">confidence ${Math.round((op.confidence || 0) * 100)}%</span>
+                </span>
+              </label>`).join('')}
+          </div>
+          <button id="mtiApplyEditsBtn" type="button" class="w-full px-4 py-3 rounded-xl bg-brand-gold text-brand-navy font-bold disabled:opacity-40">
+            Apply MTI edits → V2 + Re-analyze
+          </button>
+          <div id="mtiEditStatus" class="hidden text-xs text-gray-400"></div>
+        </div>`;
+
+      panel.querySelector('#mtiApplyEditsBtn')?.addEventListener('click', async () => {
+        const file = sourceFile || window.__mtiCurrentFile;
+        if (!file) {
+          alert('ما عاد في نسخة الفيديو الأصلية متاحة. ارفع الريل من جديد.');
+          return;
+        }
+
+        const selected = [...panel.querySelectorAll('[data-edit-index]:checked')]
+          .map(input => operations[Number(input.dataset.editIndex)])
+          .filter(Boolean);
+
+        if (!selected.length) {
+          alert('اختار تعديل واحد على الأقل.');
+          return;
+        }
+
+        const status = panel.querySelector('#mtiEditStatus');
+        const button = panel.querySelector('#mtiApplyEditsBtn');
+        button.disabled = true;
+        status.classList.remove('hidden');
+        status.textContent = 'MTI عم يطبّق التعديلات فعلياً…';
+
+        try {
+          const selectedPlan = { ...plan, operations: selected, executableOperations: selected.filter(op => op.executable) };
+          const editedFile = await engine.renderEdit(file, selectedPlan);
+          status.textContent = 'تم التعديل. عم ننشئ V2 ونرجع نحلّلها…';
+
+          const next = await createReelVersion(version?.reelId || activeReelId, {
+            name: editedFile.name,
+            title: (version?.title || version?.name || 'Reel') + ' · MTI Edit',
+            platform: 'instagram',
+            status: 'DRAFT',
+            metadata: {
+              sourceVersionId: version?.versionId || null,
+              editPlan: selectedPlan,
+              editOperations: selected
+            }
+          });
+
+          const asset = await saveReelVideo(editedFile, {
+            name: editedFile.name,
+            mimeType: editedFile.type,
+            reelId: next.reelId,
+            versionId: next.versionId,
+            accountId: next.accountId,
+            createdAt: next.createdAt
+          });
+          next.assetId = asset.assetId;
+          next.metadata = {
+            ...(next.metadata || {}),
+            assetId: asset.assetId,
+            editPlan: selectedPlan,
+            editOperations: selected
+          };
+          await saveExperiment(next);
+
+          const run = await engine.analyze(editedFile, {
+            experimentId: next.id,
+            accountId: next.accountId,
+            reelId: next.reelId,
+            versionId: next.versionId,
+            versionNumber: next.versionNumber,
+            platform: 'instagram',
+            progressCallback: (progress) => {
+              status.textContent = progress?.message || 'عم نعيد التحليل…';
+            }
+          });
+
+          if (!run?.success || !run?.analysis?.intelligence) {
+            throw new Error(run?.error || 'V2 ما رجعت بنتيجة Intelligence كاملة.');
+          }
+
+          activeReelId = next.reelId;
+          window.__mtiCurrentFile = editedFile;
+          renderBrandReport(run.analysis, editedFile.name);
+          renderImprovePanel(run.analysis, editedFile, next);
+          await refreshReelLibrary();
+          await renderVersionIntelligence(next.reelId);
+          status.textContent = 'تم إنشاء V2 وتحليلها. قارنها مع V1 قبل ما تقرر النشر.';
+        } catch (error) {
+          console.error('[MTI Improve]', error);
+          status.textContent = error?.message || 'فشل تنفيذ التعديل.';
+          alert(error?.message || 'فشل تنفيذ التعديل.');
+          button.disabled = false;
+        }
+      });
     }
 
     // Helper: Extract 5 live canvas frames for Attention Map
