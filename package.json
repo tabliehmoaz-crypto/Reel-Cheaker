@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test:mti": "node tests/mti-edit-contract.test.js"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.7.2",
