@@ -57,6 +57,9 @@ import {
 ========================================================= */
 
 
+/* Compatibility export for legacy modules that import this binding directly. */
+export const addContextVariable = (...args) => addContext(...args);
+
 export class MTIMemoryService {
 
 
