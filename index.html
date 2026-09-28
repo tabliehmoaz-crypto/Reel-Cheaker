@@ -481,28 +481,39 @@
 
   <!-- ================= CLIENT LOGIC ================= -->
   <!-- AUTH BOOTSTRAP — intentionally isolated from MTI Core -->
-  <script type="module">
-    import { initGoogleAuth, logout } from './src/auth/googleAuth.js';
+  <!-- AUTH BOOTSTRAP — lazy-loaded so Firebase/Auth can never block the app -->
+  <script>
+    (() => {
+      const button = document.getElementById('googleLoginBtn');
 
-    try {
-      initGoogleAuth({
-        onLogin: (user) => {
-          window.__mtiAuthUser = user || null;
-          window.dispatchEvent(new CustomEvent('mti-auth-state', { detail: { user } }));
-        },
-        onLogout: () => {
-          window.__mtiAuthUser = null;
-          window.dispatchEvent(new CustomEvent('mti-auth-state', { detail: { user: null } }));
+      const setAuthBootError = (error) => {
+        console.error('[MTI Auth Bootstrap] Failed:', error);
+        window.__mtiAuthBootstrapError = error;
+        if (button) {
+          button.disabled = false;
+          button.title = 'Auth bootstrap failed — check browser console';
+          button.dataset.mtiAuthError = 'true';
         }
-      });
-    } catch (error) {
-      console.error('[MTI Auth Bootstrap] Failed:', error);
-      window.__mtiAuthBootstrapError = error;
-    }
+      };
+
+      import('./src/auth/googleAuth.js')
+        .then(({ initGoogleAuth }) => {
+          initGoogleAuth({
+            onLogin: (user) => {
+              window.__mtiAuthUser = user || null;
+              window.dispatchEvent(new CustomEvent('mti-auth-state', { detail: { user } }));
+            },
+            onLogout: () => {
+              window.__mtiAuthUser = null;
+              window.dispatchEvent(new CustomEvent('mti-auth-state', { detail: { user: null } }));
+            }
+          });
+        })
+        .catch(setAuthBootError);
+    })();
   </script>
 
   <script type="module">
-    import { logout } from './src/auth/googleAuth.js';
     import { updateExperiment, saveExperiment, getAllExperiments } from './src/engine/ExperimentEngine.js';
     import { saveReelVideo, getReelVideo } from './src/memory/ReelAssetStore.js';
     import { createReel, createReelVersion, getReel, getReelVersions, getReelHistory } from './src/core/MTIContentService.js';
@@ -613,6 +624,7 @@
 
     document.getElementById('logoutBtn')?.addEventListener('click', async () => {
       try {
+        const { logout } = await import('./src/auth/googleAuth.js?v=5.1.0');
         await logout();
         setAuthenticatedState(false);
       } catch (err) {
