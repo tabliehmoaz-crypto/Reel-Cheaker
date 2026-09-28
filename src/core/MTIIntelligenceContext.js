@@ -30,6 +30,7 @@ import {
 } from "../knowledge/MTIKnowledgeBase.js";
 
 import "../knowledge/MTIKnowledgeData.js";
+import { memoryService } from "./MTIMemoryService.js";
 
 
 const CONTEXT_VERSION =
@@ -147,6 +148,19 @@ export class MTIIntelligenceContext {
           ? null
           : this.knowledge
               .getBenchmarks();
+
+      // Private account learning is read-only here. It never leaves the
+      // account-scoped memory bucket and is kept separate from shared knowledge.
+      let personalMemory = null;
+      try {
+        memoryService.ensureInitialized();
+        personalMemory = {
+          summary: memoryService.getMemorySummary(),
+          contentSignals: memoryService.getContentSignals()
+        };
+      } catch {
+        personalMemory = null;
+      }
 
 
       /* ---------------------------------------------------
@@ -287,6 +301,8 @@ export class MTIIntelligenceContext {
         ----------------------------------------------- */
 
         benchmarks,
+
+        personalMemory,
 
 
         /* -----------------------------------------------
