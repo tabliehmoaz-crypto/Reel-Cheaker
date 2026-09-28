@@ -33,8 +33,8 @@ async function getWhisperModule() {
 const MAX_FRAME_SAMPLES = 48;
 const MOBILE_MAX_FRAME_SAMPLES = 10;
 
-// DIAGNOSTIC: local Whisper is disabled globally for this crash-isolation test.
-const USE_LOCAL_WHISPER = true;
+// Whisper is attempted only where the speech engine itself is available.
+// Mobile remains protected by safeTranscribe() and never loads the model.
 const FRAME_SAMPLE_SIZE = { width: 64, height: 114 }; // نسبة عمودية تقريبية
 const HOOK_WINDOW_SECONDS = 3;
 const AUDIO_WINDOW_MS = 100;
@@ -60,7 +60,10 @@ export async function extractLocalSignals(videoFile, progressCallback = () => {}
   const visualSignals = await extractVisualSignals(videoFile, metadata, progressCallback);
 
   progressCallback({ stage: "AUDIO", progress: 55, message: "تحليل الإشارة الصوتية..." });
-  const decodedAudio = isMobileDevice() ? null : await decodeAudioOnce(videoFile);
+  // Audio analysis is real on mobile too when the browser can decode the file.
+  // decodeAudioOnce already fails safely and returns null if Safari/codec support
+  // prevents decoding, so we don't need a blanket mobile skip.
+  const decodedAudio = await decodeAudioOnce(videoFile);
   const audioSignals = decodedAudio ? computeAudioSignals(decodedAudio, metadata) : null;
 
   progressCallback({ stage: "SPEECH", progress: 70, message: "تحليل الكلام..." });
