@@ -490,6 +490,9 @@ export class LocalIntelligenceEngine {
 
       evidencePolicy,
 
+      personalMemory:
+        intelligenceContext?.personalMemory || null,
+
       duration:
         video?.dimensions?.duration ||
         0,
@@ -2046,6 +2049,9 @@ export class LocalIntelligenceEngine {
           ? "PUBLISH AFTER MINOR FIXES"
           : "REWORK";
 
+    const personalSignals = context.personalMemory?.contentSignals?.signals || [];
+    const personalSampleSize = Number(context.personalMemory?.contentSignals?.sampleSize || 0);
+
     return {
 
       retentionEstimate: score,
@@ -2066,6 +2072,12 @@ export class LocalIntelligenceEngine {
 
       confidence:
         this.scoreConfidence(score),
+
+      personalLearning: {
+        available: personalSampleSize >= 3,
+        sampleSize: personalSampleSize,
+        signals: personalSignals
+      },
 
       explanation:
         "هذا تقدير مبني على تجميع إشارات محلية قابلة للقياس (جذب، إيقاع، فكرة، عاطفة، سردية)، وليس ضمانة أداء فعلي على المنصة.",
