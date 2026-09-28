@@ -399,10 +399,16 @@ export class AnalysisJob {
     options = {}
   ) {
 
+    // Video/File/Blob inputs must never pass through JSON cloning.
+    // JSON.stringify(File) becomes {}, which used to make the Reel Engine
+    // receive an empty object and fail before the first progress callback.
+    const isBinaryInput =
+      typeof Blob !== "undefined" && input instanceof Blob;
+
     this.input =
-      safeClone(
-        input
-      );
+      isBinaryInput
+        ? input
+        : safeClone(input);
 
 
     this.accountId =
