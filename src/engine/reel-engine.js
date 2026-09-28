@@ -15,7 +15,7 @@ import { extractLocalSignals } from "./LocalSignalExtractor.js";
 
 export class ReelEngine {
   constructor() {
-    this.version = "4.0.0";
+    this.version = "5.1.0";
   }
 
   async analyze(videoFile, userContext = {}, progressCallback = () => {}) {
