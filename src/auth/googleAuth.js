@@ -22,7 +22,22 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
 import { auth } from "../firebase.js";
-import { memoryService } from "../core/MTIMemoryService.js";
+/*
+  Auth must stay independent from MTI Memory/Core bootstrap.
+  If Memory has a module error, Google login must still initialize.
+*/
+let memoryServicePromise = null;
+async function getMemoryService() {
+  if (!memoryServicePromise) {
+    memoryServicePromise = import("../core/MTIMemoryService.js")
+      .then(module => module.memoryService || null)
+      .catch(error => {
+        console.warn("MTI Memory lazy-load warning:", error);
+        return null;
+      });
+  }
+  return memoryServicePromise;
+}
 
 
 /* ---------------------------------------
@@ -66,7 +81,13 @@ function initializeUserMemory(user) {
   if (!account) return null;
 
   try {
-    memoryService.setAccount(account);
+    getMemoryService().then((memoryService) => {
+      try {
+        memoryService?.setAccount(account);
+      } catch (error) {
+        console.error("MTI Memory Init Error:", error);
+      }
+    });
   } catch (error) {
     /*
       Memory failure must never prevent
@@ -300,7 +321,11 @@ export async function logout() {
     await signOut(auth);
 
     try {
-      memoryService.clearAccount?.();
+      getMemoryService().then((memoryService) => {
+        try { memoryService?.clearAccount?.(); } catch (memoryError) {
+          console.warn("MTI Memory Clear Warning:", memoryError);
+        }
+      });
     } catch (memoryError) {
       console.warn(
         "MTI Memory Clear Warning:",
