@@ -140,21 +140,28 @@ function ensurePersistence() {
 
 export async function signInWithGoogle() {
   try {
-    /*
-      Make sure Firebase persistence is configured
-      BEFORE opening Google's authentication flow.
-    */
     await ensurePersistence();
 
     /*
-      Primary method:
-      signInWithPopup keeps the authentication
-      inside the current browser session.
+      iOS/Safari is much more reliable with Firebase redirect auth
+      than popup auth. A popup can show the Google account picker,
+      then close before Firebase completes the opener handshake.
+      Use redirect first on mobile Safari.
     */
-    const result = await signInWithPopup(
-      auth,
-      provider
-    );
+    const ua = navigator.userAgent || "";
+    const isIOS = /iPad|iPhone|iPod/.test(ua) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const isAndroid = /Android/i.test(ua);
+
+    if (isIOS || isAndroid) {
+      await signInWithRedirect(auth, provider);
+      return {
+        success: true,
+        redirecting: true
+      };
+    }
+
+    const result = await signInWithPopup(auth, provider);
 
     if (!result?.user) {
       return {
@@ -163,9 +170,7 @@ export async function signInWithGoogle() {
       };
     }
 
-    const account = initializeUserMemory(
-      result.user
-    );
+    const account = initializeUserMemory(result.user);
 
     return {
       success: true,
@@ -173,63 +178,34 @@ export async function signInWithGoogle() {
     };
 
   } catch (error) {
-
     console.error(
       "MTI Google Sign-In Error:",
       error?.code,
       error?.message
     );
 
-
-    /* ---------------------------------------
-       USER CANCELLED
-    --------------------------------------- */
-
-    if (
-      error?.code === "auth/popup-closed-by-user" ||
-      error?.code === "auth/cancelled-popup-request"
-    ) {
-      return {
-        success: false,
-        cancelled: true
-      };
-    }
-
-
-    /* ---------------------------------------
-       POPUP BLOCKED / UNSUPPORTED
-       → FALL BACK TO REDIRECT
-    --------------------------------------- */
-
+    /*
+      Some mobile/browser configurations still attempt popup auth
+      through a wrapper. If the popup closes before Firebase can
+      complete, immediately retry through the redirect flow.
+    */
     const redirectCodes = new Set([
       "auth/popup-blocked",
-      "auth/operation-not-supported-in-this-environment"
+      "auth/popup-closed-by-user",
+      "auth/operation-not-supported-in-this-environment",
+      "auth/cancelled-popup-request"
     ]);
 
     if (redirectCodes.has(error?.code)) {
-
       try {
-
         await ensurePersistence();
-
-        await signInWithRedirect(
-          auth,
-          provider
-        );
-
-        /*
-          The browser will leave the page here.
-          getRedirectResult() will resolve the
-          authentication after the app returns.
-        */
+        await signInWithRedirect(auth, provider);
 
         return {
           success: true,
           redirecting: true
         };
-
       } catch (redirectError) {
-
         console.error(
           "MTI Google Redirect Error:",
           redirectError?.code,
@@ -249,11 +225,6 @@ export async function signInWithGoogle() {
         };
       }
     }
-
-
-    /* ---------------------------------------
-       NORMAL FIREBASE ERROR
-    --------------------------------------- */
 
     return {
       success: false,
