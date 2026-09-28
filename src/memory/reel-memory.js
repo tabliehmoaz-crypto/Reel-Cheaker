@@ -670,6 +670,13 @@ export function addContext(
 
 }
 
+/*
+  Backward-compatible alias.
+  Older MTI modules may import addContextVariable.
+  Keep both names pointing to the same implementation.
+*/
+export const addContextVariable = addContext;
+
 
 /* =====================================================
    USER NOTES
@@ -2991,6 +2998,7 @@ export default {
   saveComparison,
 
   addContext,
+  addContextVariable,
 
   addNote,
 
