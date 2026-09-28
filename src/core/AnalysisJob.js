@@ -501,9 +501,8 @@ export class AnalysisJob {
       const processedData =
         await processor(
 
-          safeClone(
-            this.input
-          ),
+          // Preserve the original File/Blob. The processor decodes the video.
+          this.input,
 
           this
 
