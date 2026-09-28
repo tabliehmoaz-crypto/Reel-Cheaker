@@ -44,6 +44,8 @@ import {
   resultMemoryBridge
 } from "./MTIResultMemoryBridge.js";
 
+import { diagnoseReel } from "../editing/MTIDiagnosisEngine.js";
+
 
 
 /* =========================================================
@@ -267,14 +269,20 @@ export class MTIAnalysisOrchestrator {
 
           recommendations:
             rawResult.recommendations ||
-            rawResult
-              ?.intelligence
-              ?.recommendations ||
-            []
+            rawResult?.intelligence?.recommendations ||
+            [],
+
+          diagnosis,
+          editPlan: diagnosis.editPlan
 
         });
 
 
+
+      const diagnosis = diagnoseReel(rawResult, {
+        experimentId,
+        versionId: options.versionId || experiment?.versionId || null
+      });
 
       /*
         STEP 7
