@@ -220,8 +220,14 @@ export function createAnalysisResult(
 
 
     diagnosis:
-      localAnalysis.diagnosis ||
       data.diagnosis ||
+      localAnalysis.diagnosis ||
+      null,
+
+    editPlan:
+      data.editPlan ||
+      data.diagnosis?.editPlan ||
+      localAnalysis.editPlan ||
       null,
 
 
@@ -414,17 +420,18 @@ export function createAnalysisResult(
     ----------------------------------------------------- */
 
 
-    metadata:
-      data.metadata ||
-      {
-
-        source:
-          "local",
-
-        externalAI:
-          false
-
-      }
+    metadata: {
+      ...(localAnalysis.metadata || {}),
+      ...(data.metadata || {}),
+      source: data.metadata?.source || localAnalysis.metadata?.source || "local",
+      externalAI: data.metadata?.externalAI ?? localAnalysis.metadata?.externalAI ?? false,
+      duration:
+        data.metadata?.duration ??
+        localAnalysis.metadata?.duration ??
+        localAnalysis.video?.dimensions?.duration ??
+        data.video?.dimensions?.duration ??
+        null
+    }
 
   };
 
