@@ -35,6 +35,7 @@ const MOBILE_MAX_FRAME_SAMPLES = 10;
 
 // Whisper is attempted only where the speech engine itself is available.
 // Mobile remains protected by safeTranscribe() and never loads the model.
+const USE_LOCAL_WHISPER = true;
 const FRAME_SAMPLE_SIZE = { width: 64, height: 114 }; // نسبة عمودية تقريبية
 const HOOK_WINDOW_SECONDS = 3;
 const AUDIO_WINDOW_MS = 100;
