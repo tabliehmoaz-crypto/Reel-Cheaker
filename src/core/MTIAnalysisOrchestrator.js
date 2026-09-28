@@ -516,7 +516,7 @@ export class MTIAnalysisOrchestrator {
         "MTIAnalysisOrchestrator",
 
       version:
-        "4.0.0",
+        "5.1.0",
 
       localFirst:
         true,
