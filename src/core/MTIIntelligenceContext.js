@@ -231,12 +231,29 @@ export class MTIIntelligenceContext {
         knowledge:
           knowledgeContext,
 
+        // Flatten the knowledge context for LocalIntelligenceEngine.
+        // The engine consumes arrays directly; keeping only the nested object
+        // made the scientific/general knowledge layer effectively invisible.
+        relevantKnowledge:
+          knowledgeContext?.relevantKnowledge || [],
+
+        scientificKnowledge:
+          knowledgeContext?.scientificKnowledge || [],
+
+        globalKnowledge:
+          knowledgeContext?.globalKnowledge || null,
+
+        evidencePolicy:
+          knowledgeContext?.evidencePolicy || null,
+
 
         /* -----------------------------------------------
            NEW GENERAL KNOWLEDGE BRAIN
         ----------------------------------------------- */
 
-        generalKnowledge: {
+        generalKnowledge: relevantGeneralKnowledge,
+
+        generalKnowledgeSnapshot: {
 
           version:
             generalKnowledgeSnapshot.version,
