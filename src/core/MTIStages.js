@@ -7,12 +7,13 @@ export const MTI_STAGES = Object.freeze({
   DIAGNOSE: { id: "diagnose", name: "MTI Diagnose", labelAr: "شخّص المشكلة" },
   IMPROVE: { id: "improve", name: "MTI Improve", labelAr: "حسّن المحتوى" },
   PREDICT: { id: "predict", name: "MTI Predict", labelAr: "توقّع قبل النشر" },
+  PUBLISH: { id: "publish", name: "MTI Publish", labelAr: "جهّز للنشر" },
   LEARN: { id: "learn", name: "MTI Learn", labelAr: "تعلّم من النتيجة" },
   BRAIN: { id: "brain", name: "MTI Brain", labelAr: "ابنِ فكرة جديدة" }
 });
 
 export const MTI_STAGE_ORDER = Object.freeze([
-  "analyze", "understand", "diagnose", "improve", "predict", "learn", "brain"
+  "analyze", "understand", "diagnose", "improve", "predict", "publish", "learn", "brain"
 ]);
 
 export function getMTIStage(id) {
