@@ -14,6 +14,15 @@ const PORT = process.env.PORT || 3000;
 const TEMP_DIR = path.join(os.tmpdir(), "mti-edit");
 await fsp.mkdir(TEMP_DIR, { recursive: true });
 
+// MTI ships frequently during development. Do not let the browser keep stale
+// ES modules after a deploy; stale module bindings were masking source fixes.
+app.use((req, res, next) => {
+  if (req.path.endsWith(".js")) {
+    res.setHeader("Cache-Control", "no-store, max-age=0");
+  }
+  next();
+});
+
 app.use(express.static(__dirname));
 app.use(express.json({ limit: "2mb" }));
 
