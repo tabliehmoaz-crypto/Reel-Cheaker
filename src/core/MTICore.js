@@ -1,7 +1,9 @@
 /* MTI Core — one public entry point for the product's intelligence layer. */
 
-import { mtiAnalysisOrchestrator } from "./MTIAnalysisOrchestrator.js";
+import { analysisOrchestrator as mtiAnalysisOrchestrator } from "./MTIAnalysisOrchestrator.js";
 import { mtiBrain } from "./MTIBrain.js";
+import { diagnoseReel } from "../editing/MTIDiagnosisEngine.js";
+import { renderEditPlan } from "../editing/MTIEditEngine.js";
 import { getMTIStage, MTI_STAGE_ORDER } from "./MTIStages.js";
 import {
   getReelRoomContext,
@@ -32,6 +34,9 @@ export const mtiCore = {
   addReelConversationMessage(reelId, message) {
     return addReelConversationMessage(reelId, message);
   },
+
+  diagnose(report, options = {}) { return diagnoseReel(report, options); },
+  async renderEdit(file, plan, options = {}) { return renderEditPlan(file, plan, options); },
 
   brain: mtiBrain
 };
