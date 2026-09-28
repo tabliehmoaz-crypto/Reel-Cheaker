@@ -35,6 +35,7 @@ import {
   savePerformance,
   saveComparison,
   addContext,
+  addContextVariable,
   addNote,
   saveConversationMessage,
   saveExtractedData,
@@ -397,6 +398,20 @@ export class MTIMemoryService {
 
   }
 
+
+
+  /* Backward-compatible alias for older MTI modules. */
+  addContextVariable(
+    experimentId,
+    variable
+  ) {
+
+    return this.addContext(
+      experimentId,
+      variable
+    );
+
+  }
 
 
   /* =======================================================
