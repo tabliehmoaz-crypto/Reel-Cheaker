@@ -14,8 +14,9 @@ export class MTIBrain {
   }
 
   generateIdeas({ nicheId, count = 5, context = {} } = {}) {
-    const ideas = generateFreshIdeas({ nicheId, count });
-    return ideas.map((idea, index) => ({
+    const result = generateFreshIdeas({ nicheId, count });
+    if (!result?.success) return result;
+    return result.ideas.map((idea, index) => ({
       ...idea,
       brainId: `brain_${Date.now()}_${index}`,
       context: { ...context }
