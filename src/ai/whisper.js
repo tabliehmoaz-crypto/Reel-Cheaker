@@ -36,9 +36,9 @@ env.useBrowserCache = true;
 const DESKTOP_MODEL = "Xenova/whisper-base";
 const TARGET_SAMPLE_RATE = 16000;
 
-// DIAGNOSTIC: disable local Whisper completely.
-// This flag is intentionally false for the crash-isolation test.
-const USE_LOCAL_WHISPER = false;
+// Real local speech analysis is enabled on supported desktop browsers.
+// Mobile is still blocked inside loadWhisper/transcribeVideo to protect RAM.
+const USE_LOCAL_WHISPER = true;
 
 function isMobileDevice() {
   if (typeof navigator === "undefined") return false;
@@ -308,7 +308,6 @@ export async function transcribeVideo(
   options = {}
 ) {
 
-  // Hard stop: this diagnostic build must never initialize or run Whisper.
   if (!USE_LOCAL_WHISPER) {
     return {
       text: "",
