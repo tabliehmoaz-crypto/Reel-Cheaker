@@ -237,7 +237,7 @@ export function searchKnowledge(query, options = {}) {
   // Matching the entire phrase against one JSON item made retrieval return
   // almost nothing. Token matching keeps retrieval local and deterministic.
   const terms = [...new Set(
-    text.split(/\\s+/).map(term => term.trim()).filter(term => term.length >= 2)
+    text.split(/\s+/).map(term => term.trim()).filter(term => term.length >= 2)
   )];
 
   const requestedCategories = Array.isArray(options.categories)
