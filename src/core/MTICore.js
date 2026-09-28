@@ -15,7 +15,7 @@ import {
   getReelConversation
 } from "./MTIReelConversationService.js";
 
-export const MTI_CORE_VERSION = "4.0.0";
+export const MTI_CORE_VERSION = "5.0.0";
 
 export const mtiCore = {
   version: MTI_CORE_VERSION,
