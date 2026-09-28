@@ -480,36 +480,64 @@
   </div>
 
   <!-- ================= CLIENT LOGIC ================= -->
-  <!-- AUTH BOOTSTRAP — intentionally isolated from MTI Core -->
-  <!-- AUTH BOOTSTRAP — lazy-loaded so Firebase/Auth can never block the app -->
+  <!-- AUTH BOOTSTRAP — hard-wired click bridge for reliable mobile/browser binding -->
   <script>
     (() => {
       const button = document.getElementById('googleLoginBtn');
 
-      const setAuthBootError = (error) => {
-        console.error('[MTI Auth Bootstrap] Failed:', error);
-        window.__mtiAuthBootstrapError = error;
+      window.__mtiGoogleLogin = async () => {
         if (button) {
-          button.disabled = false;
-          button.title = 'Auth bootstrap failed — check browser console';
-          button.dataset.mtiAuthError = 'true';
+          button.disabled = true;
+          button.dataset.mtiAuthBusy = 'true';
+          button.innerHTML = '<span>جاري فتح Google...</span>';
+        }
+
+        try {
+          const authModule = await import('./src/auth/googleAuth.js?v=5.1.1');
+          const result = await authModule.signInWithGoogle();
+
+          if (result?.success && result.user) {
+            window.__mtiAuthUser = result.user;
+            window.dispatchEvent(new CustomEvent('mti-auth-state', { detail: { user: result.user } }));
+          } else if (result?.error) {
+            console.error('[MTI Google Login]', result.error);
+            alert('تعذّر تسجيل الدخول: ' + result.error);
+          }
+        } catch (error) {
+          console.error('[MTI Google Login Bootstrap]', error);
+          alert('Google Auth خطأ: ' + (error?.message || error));
+        } finally {
+          if (button) {
+            button.disabled = false;
+            button.dataset.mtiAuthBusy = 'false';
+            button.innerHTML = '<span class="hidden sm:inline">تسجيل الدخول</span>';
+          }
         }
       };
 
-      import('./src/auth/googleAuth.js')
-        .then(({ initGoogleAuth }) => {
-          initGoogleAuth({
-            onLogin: (user) => {
-              window.__mtiAuthUser = user || null;
-              window.dispatchEvent(new CustomEvent('mti-auth-state', { detail: { user } }));
-            },
-            onLogout: () => {
-              window.__mtiAuthUser = null;
-              window.dispatchEvent(new CustomEvent('mti-auth-state', { detail: { user: null } }));
+      if (button) {
+        button.addEventListener('click', window.__mtiGoogleLogin, { once: false });
+      } else {
+        console.error('[MTI Auth] googleLoginBtn not found.');
+      }
+
+      // Session restore / logout observer is loaded separately.
+      import('./src/auth/googleAuth.js?v=5.1.1')
+        .then(({ observeAuth, resolveGoogleRedirect }) => {
+          resolveGoogleRedirect().then((account) => {
+            if (account && !account.error) {
+              window.__mtiAuthUser = account;
+              window.dispatchEvent(new CustomEvent('mti-auth-state', { detail: { user: account } }));
             }
           });
+          observeAuth((user) => {
+            window.__mtiAuthUser = user || null;
+            window.dispatchEvent(new CustomEvent('mti-auth-state', { detail: { user } }));
+          });
         })
-        .catch(setAuthBootError);
+        .catch((error) => {
+          console.error('[MTI Auth Observer]', error);
+        });
     })();
   </script>
 
