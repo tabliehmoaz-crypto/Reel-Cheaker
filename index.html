@@ -277,15 +277,15 @@
                   <div class="font-syne font-extrabold text-2xl sm:text-3xl text-brand-navy mt-1" id="valHookScore">--</div>
                 </div>
 
-                <!-- Metric 2: Retention Score -->
+                <!-- Metric 2: Continuation Proxy -->
                 <div class="bg-white/85 border border-black/5 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
-                  <span class="text-[11px] font-inter font-medium text-brand-slate block">Retention Score:</span>
+                  <span class="text-[11px] font-inter font-medium text-brand-slate block">Continuation Proxy:</span>
                   <div class="font-syne font-extrabold text-2xl sm:text-3xl text-brand-navy mt-1" id="valRetentionScore">--</div>
                 </div>
 
-                <!-- Metric 3: Overall Score (Gold Box from Board) -->
+                <!-- Metric 3: Local Prediction Proxy (Gold Box from Board) -->
                 <div class="gold-score-box rounded-2xl p-4 flex flex-col justify-between shadow-md">
-                  <span class="text-[11px] font-syne font-bold text-brand-navy block uppercase tracking-wider">Overall Score:</span>
+                  <span class="text-[11px] font-syne font-bold text-brand-navy block uppercase tracking-wider">Local Prediction Proxy:</span>
                   <div class="font-syne font-extrabold text-3xl sm:text-4xl text-brand-navy mt-1" id="valOverallScore">--</div>
                 </div>
 
@@ -866,8 +866,8 @@
 
       grid.innerHTML = [
         ['Hook', a.hook, b.hook],
-        ['Retention', a.retention, b.retention],
-        ['Overall', a.overall, b.overall]
+        ['Continuation Proxy', a.retention, b.retention],
+        ['Prediction Proxy', a.overall, b.overall]
       ].map(([label, x, y]) => `
         <div class="p-4 rounded-xl bg-brand-navy border border-brand-navyBorder">
           <div class="text-[10px] text-gray-500 uppercase tracking-wider">${label}</div>
