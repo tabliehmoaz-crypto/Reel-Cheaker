@@ -462,6 +462,8 @@ export class LocalIntelligenceEngine {
 
       technical,
 
+      audio,
+
       speech,
 
       idea,
@@ -1467,49 +1469,64 @@ export class LocalIntelligenceEngine {
     context
   ) {
 
-    const available =
-      context.speechAvailable;
+    const measured = context.audio || {};
+    const speechAvailable = context.speechAvailable;
+    const speechScore = this.normalize(context.speech?.analysis?.score);
 
+    // Audio quality is intentionally reported from measured signals rather
+    // than guessed from speech presence alone. RMS is level, not quality;
+    // silence/dynamism are descriptive signals, not platform-performance claims.
+    const level = Number(measured.avgRms);
+    const silenceRatio = Number(measured.silenceRatio);
+    const dynamism = Number(measured.dynamism);
+    const hasMeasuredAudio = Number.isFinite(level);
 
-    const score =
-      this.normalize(
-        context.speech?.analysis?.score
-      );
+    const levelScore = hasMeasuredAudio
+      ? this.clamp(100 - Math.abs(level - 0.08) / 0.08 * 45)
+      : 0;
 
+    const score = speechAvailable
+      ? this.weightedAverage({ speech: [speechScore, 0.55], level: [levelScore, 0.45] })
+      : (hasMeasuredAudio ? levelScore : 0);
 
     return {
 
-      available,
+      available: hasMeasuredAudio || speechAvailable,
 
       score,
 
-      speechDetected:
-        available,
+      speechDetected: speechAvailable,
 
       wordCount:
-        context.speech?.wordCount ||
-        0,
+        context.speech?.wordCount || 0,
+
+      measured: hasMeasuredAudio
+        ? {
+            avgRms: Number(level.toFixed(4)),
+            silenceRatio: Number(silenceRatio.toFixed(3)),
+            dynamism: Number(dynamism.toFixed(4)),
+            earlyAvgRms: Number.isFinite(Number(measured.earlyAvgRms))
+              ? Number(Number(measured.earlyAvgRms).toFixed(4))
+              : null
+          }
+        : null,
 
       interpretation:
-        available
-          ? "توجد بيانات كلام يمكن استخدامها في التحليل."
-          : "لا تتوفر بيانات كلام كافية للتحليل الصوتي العميق.",
+        hasMeasuredAudio
+          ? (speechAvailable
+              ? "تم قياس الإشارة الصوتية والكلام محلياً؛ المؤشرات تصف التسجيل نفسه ولا تثبت أداء المنصة."
+              : "تم قياس مستوى الإشارة الصوتية محلياً، لكن لم يتوفر تفريغ كلام موثوق.")
+          : "لا تتوفر بيانات صوتية قابلة للقياس على هذا المتصفح.",
 
       knowledgeSupport:
         this.getRelevantKnowledge(
           context,
-          [
-            "audio",
-            "voice",
-            "speech",
-            "silence"
-          ]
+          ["audio", "voice", "speech", "silence"]
         )
 
     };
 
   }
-
 
 
   /* =======================================================
