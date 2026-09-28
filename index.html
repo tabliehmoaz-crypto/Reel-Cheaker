@@ -480,9 +480,29 @@
   </div>
 
   <!-- ================= CLIENT LOGIC ================= -->
+  <!-- AUTH BOOTSTRAP — intentionally isolated from MTI Core -->
   <script type="module">
-    import { mtiCore } from './src/core/MTICore.js?v=4.4';
     import { initGoogleAuth, logout } from './src/auth/googleAuth.js';
+
+    try {
+      initGoogleAuth({
+        onLogin: (user) => {
+          window.__mtiAuthUser = user || null;
+          window.dispatchEvent(new CustomEvent('mti-auth-state', { detail: { user } }));
+        },
+        onLogout: () => {
+          window.__mtiAuthUser = null;
+          window.dispatchEvent(new CustomEvent('mti-auth-state', { detail: { user: null } }));
+        }
+      });
+    } catch (error) {
+      console.error('[MTI Auth Bootstrap] Failed:', error);
+      window.__mtiAuthBootstrapError = error;
+    }
+  </script>
+
+  <script type="module">
+    import { logout } from './src/auth/googleAuth.js';
     import { updateExperiment, saveExperiment, getAllExperiments } from './src/engine/ExperimentEngine.js';
     import { saveReelVideo, getReelVideo } from './src/memory/ReelAssetStore.js';
     import { createReel, createReelVersion, getReel, getReelVersions, getReelHistory } from './src/core/MTIContentService.js';
@@ -509,8 +529,29 @@
     const heroSelectVideoBtn = document.getElementById('heroSelectVideoBtn');
     const loginHintText = document.getElementById('loginHintText');
 
-    const engine = mtiCore;
+    let engine = null;
+    let engineLoadPromise = null;
     let isAuthenticated = false;
+
+    async function getMTIEngine() {
+      if (engine) return engine;
+      if (!engineLoadPromise) {
+        engineLoadPromise = import('./src/core/MTICore.js?v=5.0.0')
+          .then((module) => {
+            if (!module?.mtiCore) {
+              throw new Error('MTI Core loaded without mtiCore export.');
+            }
+            engine = module.mtiCore;
+            return engine;
+          })
+          .catch((error) => {
+            engineLoadPromise = null;
+            console.error('[MTI Core Bootstrap] Failed:', error);
+            throw error;
+          });
+      }
+      return engineLoadPromise;
+    }
     let activeReelId = null;
     let activeObjectURL = null;
 
@@ -545,13 +586,29 @@
     // الحالة الابتدائية: غير مسجّل دخول
     setAuthenticatedState(false);
 
-    try {
-      initGoogleAuth({
-        onLogin: async (user) => { setAuthenticatedState(true, user); await refreshReelLibrary(); },
-        onLogout: () => { activeReelId = null; setAuthenticatedState(false); document.getElementById('myReelsSection')?.classList.add('hidden'); }
-      });
-    } catch (err) {
-      console.warn('Google Auth waiting for credentials:', err);
+    async function handleMTIAuthState(user) {
+      if (user) {
+        setAuthenticatedState(true, user);
+        await refreshReelLibrary();
+      } else {
+        activeReelId = null;
+        setAuthenticatedState(false);
+        document.getElementById('myReelsSection')?.classList.add('hidden');
+      }
+    }
+
+    window.addEventListener('mti-auth-state', (event) => {
+      handleMTIAuthState(event.detail?.user || null);
+    });
+
+    // Auth bootstrap runs independently. If it completed before this module,
+    // consume the already-known user here.
+    if (window.__mtiAuthUser) {
+      handleMTIAuthState(window.__mtiAuthUser);
+    }
+
+    if (window.__mtiAuthBootstrapError) {
+      console.error('[MTI Auth] Bootstrap error:', window.__mtiAuthBootstrapError);
     }
 
     document.getElementById('logoutBtn')?.addEventListener('click', async () => {
@@ -645,7 +702,8 @@
 
         // التحليل الفعلي يمر الآن عبر MTI Core فقط.
         // لا يوجد مسار UI يتجاوز Orchestrator/Contract/Memory.
-        const run = await engine.analyze(file, {
+        const mti = await getMTIEngine();
+        const run = await mti.analyze(file, {
           experimentId: reel.id,
           accountId: reel.accountId,
           reelId: reel.reelId,
@@ -1020,7 +1078,8 @@
 
         try {
           const selectedPlan = { ...plan, operations: selected, executableOperations: selected.filter(op => op.executable) };
-          const editedFile = await engine.renderEdit(file, selectedPlan);
+          const mti = await getMTIEngine();
+          const editedFile = await mti.renderEdit(file, selectedPlan);
           status.textContent = 'تم التعديل. عم ننشئ V2 ونرجع نحلّلها…';
 
           const next = await createReelVersion(version?.reelId || activeReelId, {
