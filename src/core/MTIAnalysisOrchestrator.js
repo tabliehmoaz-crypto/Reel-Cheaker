@@ -244,6 +244,11 @@ export class MTIAnalysisOrchestrator {
         Build Unified Result
       */
 
+      const diagnosis = diagnoseReel(rawResult, {
+        experimentId,
+        versionId: options.versionId || experiment?.versionId || null
+      });
+
       const result =
         createAnalysisResult({
 
@@ -279,12 +284,7 @@ export class MTIAnalysisOrchestrator {
 
 
 
-      const diagnosis = diagnoseReel(rawResult, {
-        experimentId,
-        versionId: options.versionId || experiment?.versionId || null
-      });
-
-      /*
+/*
         STEP 7
         Save Complete Result
         into Private Memory
