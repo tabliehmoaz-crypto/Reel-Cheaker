@@ -1,8 +1,6 @@
 import {
   createAnalysisResult,
-  normalizeAnalysisResult,
-  validateAnalysisResult as validateCanonicalAnalysisResult,
-  assertValidAnalysisResult
+  validateAnalysisResult as validateCanonicalAnalysisResult
 } from "./MTIAnalysisResult.js";
 /*
   MTI — Analysis Contract
