@@ -324,7 +324,10 @@ export class MTIAnalysisService {
               options.includeScientificKnowledge !== false,
 
             includeBenchmarks:
-              options.includeBenchmarks !== false
+              options.includeBenchmarks !== false,
+
+            reelId:
+              options.reelId || null
 
           }
         );
@@ -470,7 +473,10 @@ export class MTIAnalysisService {
               options.includeScientificKnowledge !== false,
 
             includeBenchmarks:
-              options.includeBenchmarks !== false
+              options.includeBenchmarks !== false,
+
+            reelId:
+              options.reelId || null
 
           }
         );
