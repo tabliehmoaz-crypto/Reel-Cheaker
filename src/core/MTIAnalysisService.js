@@ -327,7 +327,22 @@ export class MTIAnalysisService {
               options.includeBenchmarks !== false,
 
             reelId:
-              options.reelId || null
+              options.reelId || null,
+
+            accountProfile:
+              options.accountProfile || null,
+
+            contentAccount:
+              options.contentAccount || null,
+
+            baselineViews:
+              options.baselineViews ?? null,
+
+            followerCount:
+              options.followerCount ?? null,
+
+            contentTypes:
+              options.contentTypes || []
 
           }
         );
