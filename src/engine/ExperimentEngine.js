@@ -15,6 +15,10 @@ import {
   memoryService
 } from "../core/MTIMemoryService.js";
 
+import {
+  getActiveContentAccount
+} from "../account/MTIAccountProfileService.js";
+
 
 // ============================================================
 // ENGINE CONFIG
@@ -297,6 +301,11 @@ function toStoredExperiment(
       experiment.accountId ||
       null,
 
+    contentAccountId:
+      experiment.contentAccountId ||
+      experiment.metadata?.contentAccountId ||
+      null,
+
     input:
       experiment.input ||
       null,
@@ -574,6 +583,11 @@ export function createExperiment(
     accountId:
       data.accountId ||
       memoryService.getActiveAccountId() ||
+      null,
+
+    contentAccountId:
+      data.contentAccountId ||
+      getActiveContentAccount()?.id ||
       null,
 
     type:
