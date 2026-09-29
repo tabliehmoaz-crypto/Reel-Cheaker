@@ -77,14 +77,16 @@ export class AccountLearningEngine {
     this.strongSamples = options.strongSamples || STRONG_ACCOUNT_SAMPLES;
   }
 
-  getDataset() {
+  getDataset(contentAccountId = null) {
     memoryService.ensureInitialized();
-    return memoryService.getLearningDataset() || [];
+    const dataset = memoryService.getLearningDataset() || [];
+    if (!contentAccountId) return dataset;
+    return dataset.filter(item => item?.contentAccountId === contentAccountId);
   }
 
-  getSnapshot() {
+  getSnapshot(contentAccountId = null) {
     memoryService.ensureInitialized();
-    const dataset = this.getDataset();
+    const dataset = this.getDataset(contentAccountId);
     const stored = memoryService.getLearnings();
 
     return {
@@ -130,8 +132,8 @@ export class AccountLearningEngine {
     };
   }
 
-  evaluate(analysis = {}) {
-    const dataset = this.getDataset();
+  evaluate(analysis = {}, contentAccountId = null) {
+    const dataset = this.getDataset(contentAccountId);
 
     if (dataset.length < this.minSamples) {
       return {
