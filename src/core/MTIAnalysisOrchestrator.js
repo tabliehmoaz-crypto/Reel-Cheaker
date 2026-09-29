@@ -282,6 +282,10 @@ export class MTIAnalysisOrchestrator {
 
         });
 
+      // One canonical result contract leaves the orchestrator.
+      // Reject malformed results before Memory/UI can consume them.
+      assertValidAnalysisResult(result);
+
 
 
 /*
