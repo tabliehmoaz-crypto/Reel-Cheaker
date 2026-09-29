@@ -1017,6 +1017,11 @@ export function getLearningDataset() {
         accountId:
           experiment.accountId,
 
+        contentAccountId:
+          experiment.contentAccountId ||
+          experiment.metadata?.contentAccountId ||
+          null,
+
         platform:
           experiment.platform,
 
