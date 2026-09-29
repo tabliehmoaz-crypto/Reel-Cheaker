@@ -165,7 +165,11 @@ export class MTIIntelligenceContext {
           summary: memoryService.getMemorySummary(),
           contentSignals: memoryService.getContentSignals()
         };
-        accountLearning = accountLearningEngine.getSnapshot();
+        accountLearning = accountLearningEngine.getSnapshot(
+          options.contentAccount?.id ||
+          getActiveContentAccount()?.id ||
+          null
+        );
         accountProfile = options.accountProfile || getAccountProfile();
         activeContentAccount = options.contentAccount || getActiveContentAccount();
         if (options.reelId) {
