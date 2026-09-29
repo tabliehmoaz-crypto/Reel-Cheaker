@@ -363,3 +363,62 @@ The core differentiator is not one clever score.
 
 It is the persistent loop between:
 Content → Evidence → Understanding → Action → Outcome → Learning → Better Content.
+
+## 24. Creator and Content Account Context
+
+After authentication, MTI should establish a lightweight creator profile before analysis begins.
+
+The onboarding may collect:
+- approximate follower count
+- typical Reel views
+- up to three declared content types
+- language preference
+- a label/handle for the publishing account
+
+These values are user-provided baselines, not verified performance facts.
+
+A creator can manage multiple content accounts under the same MTI identity. Each content account must keep its own:
+- baseline
+- declared content types
+- Reel library
+- Reel Rooms
+- analysis history
+- predictions
+- performance history
+- learning
+- Brain context
+- conversations
+
+For example, a creator may have a personal account and a separate brand account. Performance from one account must not silently become evidence for the other.
+
+MTI should compare declared context with observed content over time. A user's initial estimate can be refined by verified performance data, while the original declaration remains identifiable as a user estimate.
+
+## 25. Privacy and Trust in Onboarding
+
+Onboarding copy should be concise, professional and clear.
+
+At each step MTI should explain:
+1. why the information is requested
+2. how it improves account-aware analysis
+3. that user estimates are baselines rather than verified facts
+4. how account context is kept separated from other content accounts
+
+Privacy language must match the actual storage and sharing architecture. MTI must not promise absolute confidentiality beyond what the implementation can technically guarantee.
+
+The product should avoid long privacy notices inside the workflow. Detailed data controls belong in account settings and the privacy documentation.
+
+## 26. Content-Type-Aware Intelligence
+
+MTI should use content type as analysis context, not as a predetermined quality judgment.
+
+The core analysis engine remains shared, while relevant intelligence emphasis can change by content type.
+
+Examples:
+- Fashion: visual presentation, product visibility, styling, visual pacing
+- Education: clarity, information progression, curiosity, comprehension
+- Comedy: setup, anticipation, timing, payoff
+- Advertising: attention, offer clarity, trust, value proposition, CTA
+- Storytelling: narrative progression, tension, emotion, payoff
+- Lifestyle: authenticity signals, narrative flow, visual context, relatability
+
+The declared type is a starting context. MTI should be able to observe the actual content and refine its understanding rather than permanently trusting the initial selection.
