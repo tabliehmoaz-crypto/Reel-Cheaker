@@ -33,6 +33,7 @@ import "../knowledge/MTIKnowledgeData.js";
 import { memoryService } from "./MTIMemoryService.js";
 import { getReelRoomContext } from "./MTIContentService.js";
 import { accountLearningEngine } from "../learning/AccountLearningEngine.js";
+import { getAccountProfile, getActiveContentAccount } from "../account/MTIAccountProfileService.js";
 
 
 const CONTEXT_VERSION =
@@ -155,6 +156,8 @@ export class MTIIntelligenceContext {
       // account-scoped memory bucket and is kept separate from shared knowledge.
       let personalMemory = null;
       let accountLearning = null;
+      let accountProfile = null;
+      let activeContentAccount = null;
       let reelContext = null;
       try {
         memoryService.ensureInitialized();
@@ -163,6 +166,8 @@ export class MTIIntelligenceContext {
           contentSignals: memoryService.getContentSignals()
         };
         accountLearning = accountLearningEngine.getSnapshot();
+        accountProfile = options.accountProfile || getAccountProfile();
+        activeContentAccount = options.contentAccount || getActiveContentAccount();
         if (options.reelId) {
           const room = getReelRoomContext(options.reelId);
           reelContext = room
@@ -322,6 +327,8 @@ export class MTIIntelligenceContext {
 
         personalMemory,
         accountLearning,
+        accountProfile,
+        activeContentAccount,
         reelContext,
 
 
