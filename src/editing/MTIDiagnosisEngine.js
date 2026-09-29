@@ -64,6 +64,17 @@ export function diagnoseReel(report = {}, options = {}) {
     summary: operations.length ? "تم استخراج تعديلات قابلة للتنفيذ من إشارات مقاسة." : "لم تظهر حالياً تعديلات آمنة بثقة كافية للتنفيذ.",
     warnings: operations.some(op => op.action === "cut") ? ["القص المقترح مبني على proxy محلي وليس على retention فعلي من Instagram."] : []
   });
-  return { version:"1.0.0", generatedAt:new Date().toISOString(), issues, suggestedActions:editPlan.operations, editPlan };
+  return {
+    version: "1.1.0",
+    generatedAt: new Date().toISOString(),
+    issues,
+    suggestedActions: editPlan.operations,
+    editPlan,
+    provenance: {
+      mode: "evidence-backed",
+      retentionSource: "local-proxy",
+      instagramRetentionVerified: false
+    }
+  };
 }
 export default diagnoseReel;
