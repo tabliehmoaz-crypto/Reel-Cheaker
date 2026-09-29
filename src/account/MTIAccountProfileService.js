@@ -173,6 +173,7 @@ export function addContentAccount(data = {}) {
     typicalViews: normalizeNumber(data.typicalViews),
     declaredContentTypes: normalizeContentTypes(data.declaredContentTypes),
     baselineSource: "user_estimate",
+    isPrimary: data.isPrimary === true,
     createdAt: data.createdAt || now(),
     updatedAt: now()
   };
