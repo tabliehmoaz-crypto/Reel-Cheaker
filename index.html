@@ -480,68 +480,9 @@
   </div>
 
   <!-- ================= CLIENT LOGIC ================= -->
-  <!-- AUTH BOOTSTRAP — hard-wired click bridge for reliable mobile/browser binding -->
-  <script>
-    (() => {
-      const button = document.getElementById('googleLoginBtn');
-
-      window.__mtiGoogleLogin = async () => {
-        if (button) {
-          button.disabled = true;
-          button.dataset.mtiAuthBusy = 'true';
-          button.innerHTML = '<span>جاري فتح Google...</span>';
-        }
-
-        try {
-          const authModule = await import('./src/auth/googleAuth.js?v=5.1.1');
-          const result = await authModule.signInWithGoogle();
-
-          if (result?.success && result.user) {
-            window.__mtiAuthUser = result.user;
-            window.dispatchEvent(new CustomEvent('mti-auth-state', { detail: { user: result.user } }));
-          } else if (result?.error) {
-            console.error('[MTI Google Login]', result.error);
-            alert('تعذّر تسجيل الدخول: ' + result.error);
-          }
-        } catch (error) {
-          console.error('[MTI Google Login Bootstrap]', error);
-          alert('Google Auth خطأ: ' + (error?.message || error));
-        } finally {
-          if (button) {
-            button.disabled = false;
-            button.dataset.mtiAuthBusy = 'false';
-            button.innerHTML = '<span class="hidden sm:inline">تسجيل الدخول</span>';
-          }
-        }
-      };
-
-      if (button) {
-        button.addEventListener('click', window.__mtiGoogleLogin, { once: false });
-      } else {
-        console.error('[MTI Auth] googleLoginBtn not found.');
-      }
-
-      // Session restore / logout observer is loaded separately.
-      import('./src/auth/googleAuth.js?v=5.1.1')
-        .then(({ observeAuth, resolveGoogleRedirect }) => {
-          resolveGoogleRedirect().then((account) => {
-            if (account && !account.error) {
-              window.__mtiAuthUser = account;
-              window.dispatchEvent(new CustomEvent('mti-auth-state', { detail: { user: account } }));
-            }
-          });
-          observeAuth((user) => {
-            window.__mtiAuthUser = user || null;
-            window.dispatchEvent(new CustomEvent('mti-auth-state', { detail: { user } }));
-          });
-        })
-        .catch((error) => {
-          console.error('[MTI Auth Observer]', error);
-        });
-    })();
-  </script>
-
   <script type="module">
+    import { initGoogleAuth } from './src/auth/googleAuth.js';
+    import { initMTIOnboarding } from './src/account/MTIOnboarding.js';
     import { updateExperiment, saveExperiment, getAllExperiments } from './src/engine/ExperimentEngine.js';
     import { saveReelVideo, getReelVideo } from './src/memory/ReelAssetStore.js';
     import { createReel, createReelVersion, getReel, getReelVersions, getReelHistory } from './src/core/MTIContentService.js';
@@ -636,19 +577,19 @@
       }
     }
 
-    window.addEventListener('mti-auth-state', (event) => {
-      handleMTIAuthState(event.detail?.user || null);
+    // Firebase session ownership lives in googleAuth.js.
+    // The UI only renders the authenticated state and starts account onboarding.
+    initGoogleAuth({
+      onLogin: async (user) => {
+        window.__mtiAuthUser = user;
+        await handleMTIAuthState(user);
+        initMTIOnboarding();
+      },
+      onLogout: async () => {
+        window.__mtiAuthUser = null;
+        await handleMTIAuthState(null);
+      }
     });
-
-    // Auth bootstrap runs independently. If it completed before this module,
-    // consume the already-known user here.
-    if (window.__mtiAuthUser) {
-      handleMTIAuthState(window.__mtiAuthUser);
-    }
-
-    if (window.__mtiAuthBootstrapError) {
-      console.error('[MTI Auth] Bootstrap error:', window.__mtiAuthBootstrapError);
-    }
 
     document.getElementById('logoutBtn')?.addEventListener('click', async () => {
       try {
