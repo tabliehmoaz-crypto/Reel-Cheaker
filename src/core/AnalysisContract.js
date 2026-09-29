@@ -1,3 +1,9 @@
+import {
+  createAnalysisResult,
+  normalizeAnalysisResult,
+  validateAnalysisResult,
+  assertValidAnalysisResult
+} from "./MTIAnalysisResult.js";
 /*
   MTI — Analysis Contract
   -----------------------
@@ -309,7 +315,7 @@ export function createEmptyPrediction() {
    RESULT
 ===================================================== */
 
-export function createAnalysisResult(data = {}) {
+function createLegacyAnalysisResult(data = {}) {
 
   return {
 
