@@ -698,7 +698,7 @@
           }
         });
 
-        const report = run?.analysis ?? run?.result ?? run ?? null;
+        const report = run?.success ? run.analysis : null;
         if (!report) throw new Error('MTI Core لم يُرجع نتيجة تحليل موحّدة.');
         console.log('[MTI V4.4] analysis boundary:', {
           wrapper: run,
