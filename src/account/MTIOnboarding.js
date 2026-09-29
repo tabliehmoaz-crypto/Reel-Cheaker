@@ -312,7 +312,8 @@ function finish() {
   const root = document.getElementById("mtiOnboarding");
   const profile = getAccountProfile();
 
-  if (!profile.contentAccounts?.length) {
+  const accounts = Array.isArray(profile.contentAccounts) ? profile.contentAccounts : [];
+  if (!accounts.some(item => item.isPrimary === true)) {
     const primary = {
       id: `content_${Date.now()}`,
       label: document.getElementById("mtiAccountLabel")?.value?.trim() || "Primary Instagram",
@@ -320,10 +321,11 @@ function finish() {
       followers: profile.followers,
       typicalViews: profile.typicalViews,
       declaredContentTypes: profile.declaredContentTypes,
-      baselineSource: "user_estimate"
+      baselineSource: "user_estimate",
+      isPrimary: true
     };
     saveAccountProfile({
-      contentAccounts: [primary],
+      contentAccounts: [primary, ...accounts],
       activeContentAccountId: primary.id
     });
   }
