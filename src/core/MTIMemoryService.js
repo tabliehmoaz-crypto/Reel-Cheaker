@@ -35,7 +35,6 @@ import {
   savePerformance,
   saveComparison,
   addContext,
-  addContextVariable,
   addNote,
   saveConversationMessage,
   saveExtractedData,
