@@ -24,6 +24,7 @@ import {
 
 import { memoryService } from "./MTIMemoryService.js";
 import { accountLearningEngine } from "../learning/AccountLearningEngine.js";
+import { getActiveContentAccount } from "../account/MTIAccountProfileService.js";
 
 export const REEL_ROOM_SCHEMA_VERSION = "1.0.0";
 
@@ -177,7 +178,9 @@ export function getReelRoomContext(reelId) {
   // private room as a new learning observation.
   let accountLearning = null;
   try {
-    accountLearning = accountLearningEngine.getSnapshot();
+    accountLearning = accountLearningEngine.getSnapshot(
+      getActiveContentAccount()?.id || null
+    );
   } catch {
     accountLearning = null;
   }
