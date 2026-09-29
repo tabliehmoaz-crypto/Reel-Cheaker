@@ -1,4 +1,4 @@
-/* MTI Core — one public entry point for the product's intelligence layer. */
+/* MTI Core — single public application facade. */
 
 import { analysisOrchestrator as mtiAnalysisOrchestrator } from "./MTIAnalysisOrchestrator.js";
 import { mtiBrain } from "./MTIBrain.js";
@@ -8,14 +8,15 @@ import { getMTIStage, MTI_STAGE_ORDER } from "./MTIStages.js";
 import {
   getReelRoomContext,
   getReelHistory,
-  createReelVersion
+  createReelVersion,
+  getReelConversation,
+  getReelIdeas,
+  addReelMessage,
+  addReelBrainMessage,
+  updateReelBrainContext
 } from "./MTIContentService.js";
-import {
-  addReelConversationMessage,
-  getReelConversation
-} from "./MTIReelConversationService.js";
 
-export const MTI_CORE_VERSION = "5.0.0";
+export const MTI_CORE_VERSION = "6.0.0";
 
 export const mtiCore = {
   version: MTI_CORE_VERSION,
@@ -24,19 +25,80 @@ export const mtiCore = {
     return mtiAnalysisOrchestrator.analyze(file, options);
   },
 
-  getStage(id) { return getMTIStage(id); },
-  getStages() { return MTI_STAGE_ORDER.map(getMTIStage).filter(Boolean); },
-
-  getReelRoom(reelId) { return getReelRoomContext(reelId); },
-  getReelHistory(reelId) { return getReelHistory(reelId); },
-  createReelVersion(reelId, data) { return createReelVersion(reelId, data); },
-  getReelConversation(reelId) { return getReelConversation(reelId); },
-  addReelConversationMessage(reelId, message) {
-    return addReelConversationMessage(reelId, message);
+  getStage(id) {
+    return getMTIStage(id);
   },
 
-  diagnose(report, options = {}) { return diagnoseReel(report, options); },
-  async renderEdit(file, plan, options = {}) { return renderEditPlan(file, plan, options); },
+  getStages() {
+    return MTI_STAGE_ORDER.map(getMTIStage).filter(Boolean);
+  },
+
+  /* ---------------------------------------------------------
+     Canonical Reel Room
+     ---------------------------------------------------------
+     One call returns the persistent workspace for the Reel:
+     versions + results + prediction/reality + learning +
+     Brain context + ideas + conversation.
+  */
+  getReelRoom(reelId) {
+    return getReelRoomContext(reelId);
+  },
+
+  getReelHistory(reelId) {
+    return getReelHistory(reelId);
+  },
+
+  createReelVersion(reelId, data) {
+    return createReelVersion(reelId, data);
+  },
+
+  getReelConversation(reelId) {
+    return getReelConversation(reelId);
+  },
+
+  addReelConversationMessage(reelId, message) {
+    return addReelMessage(reelId, message);
+  },
+
+  addReelBrainMessage(reelId, message) {
+    return addReelBrainMessage(reelId, message);
+  },
+
+  getReelIdeas(reelId) {
+    return getReelIdeas(reelId);
+  },
+
+  getReelAnalysis(reelId) {
+    return getReelRoomContext(reelId)?.results || [];
+  },
+
+  getReelLearning(reelId) {
+    return getReelRoomContext(reelId)?.learning || null;
+  },
+
+  getReelBrainContext(reelId) {
+    return mtiBrain.getReelBrainContext(reelId);
+  },
+
+  async generateIdeasForReel(options = {}) {
+    return mtiBrain.generateIdeasForReel(options);
+  },
+
+  async developIdeaForReel(options = {}) {
+    return mtiBrain.developIdeaForReel(options);
+  },
+
+  updateReelBrainContext(reelId, context = {}) {
+    return updateReelBrainContext(reelId, context);
+  },
+
+  diagnose(report, options = {}) {
+    return diagnoseReel(report, options);
+  },
+
+  async renderEdit(file, plan, options = {}) {
+    return renderEditPlan(file, plan, options);
+  },
 
   brain: mtiBrain
 };
