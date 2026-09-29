@@ -2066,9 +2066,9 @@ export class LocalIntelligenceEngine {
     });
 
     const decision =
-      score >= 65
+      calibratedScore >= 65
         ? "PUBLISH"
-        : score >= 45
+        : calibratedScore >= 45
           ? "PUBLISH AFTER MINOR FIXES"
           : "REWORK";
 
@@ -2112,7 +2112,7 @@ export class LocalIntelligenceEngine {
       decision,
 
       confidence:
-        this.scoreConfidence(score),
+        this.scoreConfidence(calibratedScore),
 
       personalLearning: {
         available: personalSampleSize >= 3,
