@@ -118,8 +118,10 @@ function esc(value) {
   }[char]));
 }
 
-function inputNumber(id, value) {
-  const n = Number(document.getElementById(id)?.value);
+function inputNumber(id) {
+  const raw = document.getElementById(id)?.value?.trim();
+  if (!raw) return null;
+  const n = Number(raw);
   return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
@@ -183,7 +185,7 @@ function renderStep(step, state = {}) {
 
   if (step === 2) {
     const types = getContentTypes().map(type => `
-      <button type="button" data-content-type="${esc(type)}" class="mti-type px-3 py-2 rounded-xl border border-brand-navyBorder text-xs text-gray-300 hover:border-brand-gold/60 transition">
+      <button type="button" data-content-type="${esc(type)}" class="mti-type px-3 py-2 rounded-xl border ${selectedTypes.includes(type) ? "border-brand-gold text-brand-gold" : "border-brand-navyBorder text-gray-300"} text-xs hover:border-brand-gold/60 transition">
         ${esc(t.typesMap[type] || type)}
       </button>`).join("");
 
@@ -238,6 +240,13 @@ function renderStep(step, state = {}) {
 
 let step = 1;
 let selectedTypes = [];
+
+function restoreOnboardingState() {
+  const profile = getAccountProfile();
+  selectedTypes = Array.isArray(profile.declaredContentTypes)
+    ? [...profile.declaredContentTypes].slice(0, MAX_CONTENT_TYPES)
+    : [];
+}
 
 function bind() {
   const root = document.getElementById("mtiOnboarding");
