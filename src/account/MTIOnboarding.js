@@ -229,7 +229,8 @@ function renderStep(step, state = {}) {
         <button type="button" id="mtiOnboardingBack" class="px-4 py-2.5 rounded-xl border border-brand-navyBorder text-gray-300 text-sm">${t.back}</button>
         <div class="flex gap-2">
           <button type="button" id="mtiOnboardingSkipAccount" class="px-4 py-2.5 rounded-xl border border-brand-navyBorder text-gray-400 text-sm">${t.skip}</button>
-          <button type="button" id="mtiOnboardingFinish" class="px-5 py-2.5 rounded-xl bg-brand-gold text-brand-navy font-semibold text-sm">${t.finish}</button>
+          <button type="button" id="mtiOnboardingAddAccount" class="px-4 py-2.5 rounded-xl border border-brand-navyBorder text-gray-300 text-sm">${t.addAnother}</button>
+                    <button type="button" id="mtiOnboardingFinish" class="px-5 py-2.5 rounded-xl bg-brand-gold text-brand-navy font-semibold text-sm">${t.finish}</button>
         </div>
       </div>
     </div>`;
