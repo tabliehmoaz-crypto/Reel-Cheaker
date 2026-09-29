@@ -32,6 +32,7 @@ import {
 import "../knowledge/MTIKnowledgeData.js";
 import { memoryService } from "./MTIMemoryService.js";
 import { getReelRoomContext } from "./MTIContentService.js";
+import { accountLearningEngine } from "../learning/AccountLearningEngine.js";
 
 
 const CONTEXT_VERSION =
@@ -161,7 +162,7 @@ export class MTIIntelligenceContext {
           summary: memoryService.getMemorySummary(),
           contentSignals: memoryService.getContentSignals()
         };
-        accountLearning = memoryService.getLearnings();
+        accountLearning = accountLearningEngine.getSnapshot();
         if (options.reelId) {
           const room = getReelRoomContext(options.reelId);
           reelContext = room
