@@ -29,6 +29,7 @@ export const mtiCore = {
       ...options,
       accountProfile: options.accountProfile || profile,
       contentAccount: options.contentAccount || contentAccount,
+      contentAccountId: options.contentAccountId || contentAccount?.id || null,
       baselineViews: options.baselineViews ?? contentAccount?.typicalViews ?? profile.typicalViews ?? null,
       followerCount: options.followerCount ?? contentAccount?.followers ?? profile.followers ?? null,
       contentTypes: options.contentTypes || contentAccount?.declaredContentTypes || profile.declaredContentTypes || []
