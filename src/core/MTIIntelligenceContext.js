@@ -31,6 +31,7 @@ import {
 
 import "../knowledge/MTIKnowledgeData.js";
 import { memoryService } from "./MTIMemoryService.js";
+import { getReelRoomContext } from "./MTIContentService.js";
 
 
 const CONTEXT_VERSION =
@@ -152,12 +153,28 @@ export class MTIIntelligenceContext {
       // Private account learning is read-only here. It never leaves the
       // account-scoped memory bucket and is kept separate from shared knowledge.
       let personalMemory = null;
+      let accountLearning = null;
+      let reelContext = null;
       try {
         memoryService.ensureInitialized();
         personalMemory = {
           summary: memoryService.getMemorySummary(),
           contentSignals: memoryService.getContentSignals()
         };
+        accountLearning = memoryService.getLearnings();
+        if (options.reelId) {
+          const room = getReelRoomContext(options.reelId);
+          reelContext = room
+            ? {
+                reelId: room.reelId,
+                latestVersion: room.latestVersion,
+                results: room.results,
+                learning: room.learning,
+                brain: room.brain,
+                ideas: room.ideas
+              }
+            : null;
+        }
       } catch {
         personalMemory = null;
       }
@@ -303,6 +320,8 @@ export class MTIIntelligenceContext {
         benchmarks,
 
         personalMemory,
+        accountLearning,
+        reelContext,
 
 
         /* -----------------------------------------------
