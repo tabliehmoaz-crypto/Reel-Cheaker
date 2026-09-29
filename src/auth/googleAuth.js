@@ -75,28 +75,15 @@ function mapFirebaseUser(user) {
    INITIALIZE MTI MEMORY
 --------------------------------------- */
 
-function initializeUserMemory(user) {
+async function initializeUserMemory(user) {
   const account = mapFirebaseUser(user);
-
   if (!account) return null;
 
   try {
-    getMemoryService().then((memoryService) => {
-      try {
-        memoryService?.setAccount(account);
-      } catch (error) {
-        console.error("MTI Memory Init Error:", error);
-      }
-    });
+    const service = await getMemoryService();
+    service?.setAccount(account);
   } catch (error) {
-    /*
-      Memory failure must never prevent
-      successful Google authentication.
-    */
-    console.error(
-      "MTI Memory Init Error:",
-      error
-    );
+    console.error("MTI Memory Init Error:", error);
   }
 
   return account;
@@ -170,7 +157,7 @@ export async function signInWithGoogle() {
       };
     }
 
-    const account = initializeUserMemory(result.user);
+    const account = await initializeUserMemory(result.user);
 
     return {
       success: true,
@@ -327,14 +314,17 @@ export function observeAuth(callback) {
   return onAuthStateChanged(
     auth,
     (user) => {
-
-      if (user) {
-        callback(
-          initializeUserMemory(user)
-        );
-      } else {
+      if (!user) {
         callback(null);
+        return;
       }
+
+      initializeUserMemory(user)
+        .then((account) => callback(account))
+        .catch((error) => {
+          console.error("MTI Auth/Memory bootstrap error:", error);
+          callback(mapFirebaseUser(user));
+        });
     }
   );
 }
