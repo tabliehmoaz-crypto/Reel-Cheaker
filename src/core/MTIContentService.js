@@ -85,6 +85,10 @@ function normalizeRoom(room, reelId, title) {
 
 export async function createReel(data = {}) {
   const accountId = ensureAccount();
+  const contentAccountId =
+    data.contentAccountId ||
+    getActiveContentAccount()?.id ||
+    null;
   const title = data.title || data.name || "Untitled Reel";
   const reel = createExperiment({
     ...data,
@@ -93,6 +97,7 @@ export async function createReel(data = {}) {
     versionNumber: 1,
     parentVersionId: null,
     accountId,
+    contentAccountId,
     reelRoom: emptyRoom(data.reelId || null, title)
   });
 
@@ -110,6 +115,11 @@ export async function createReelVersion(reelId, data = {}) {
   }
 
   const latest = versions[0];
+  const contentAccountId =
+    data.contentAccountId ||
+    latest.contentAccountId ||
+    getActiveContentAccount()?.id ||
+    null;
   const inheritedRoom = normalizeRoom(
     latest.reelRoom,
     reelId,
@@ -124,6 +134,7 @@ export async function createReelVersion(reelId, data = {}) {
     versionNumber: latest.versionNumber + 1,
     parentVersionId: latest.versionId,
     accountId: memoryService.getActiveAccountId(),
+    contentAccountId,
     status: data.status || "DRAFT",
     // Reel Room belongs to the permanent Reel, not to one version.
     reelRoom: inheritedRoom,
