@@ -7,8 +7,19 @@ function num(value, fallback = null) { const n = Number(value); return Number.is
 function getLocal(report = {}) { return report?.localAnalysis || report?.localSignals || report || {}; }
 function getScenes(local) { return local?.sceneAnalysis || local?.scenes || local?.scene?.scenes || []; }
 function getDropOff(local, intel) {
-  const a = local?.dropOff?.points || local?.dropOff?.risks || local?.dropOff || [];
-  return Array.isArray(a) ? a : (Array.isArray(intel?.dropOffRisks) ? intel.dropOffRisks : []);
+  const localDropOff =
+    local?.dropOff?.points ||
+    local?.dropOff?.risks ||
+    local?.dropOff ||
+    null;
+
+  if (Array.isArray(localDropOff) && localDropOff.length) {
+    return localDropOff;
+  }
+
+  return Array.isArray(intel?.dropOffRisks)
+    ? intel.dropOffRisks
+    : [];
 }
 function getHookScore(local, intel) { return num(intel?.attention?.score ?? local?.hook?.score ?? local?.scores?.hook, null); }
 function getDuration(report, local) {
