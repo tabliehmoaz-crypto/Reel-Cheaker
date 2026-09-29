@@ -357,9 +357,4 @@ export function initMTIOnboarding() {
   }
   mount();
 }
-
-window.addEventListener("mti-auth-state", event => {
-  if (event.detail?.user) initMTIOnboarding();
-});
-
 export default initMTIOnboarding;
