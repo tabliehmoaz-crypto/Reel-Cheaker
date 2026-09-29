@@ -495,6 +495,12 @@ export class LocalIntelligenceEngine {
       personalMemory:
         intelligenceContext?.personalMemory || null,
 
+      accountLearning:
+        intelligenceContext?.accountLearning || null,
+
+      activeContentAccount:
+        intelligenceContext?.activeContentAccount || null,
+
       duration:
         video?.dimensions?.duration ||
         0,
@@ -2068,10 +2074,27 @@ export class LocalIntelligenceEngine {
 
     const personalSignals = context.personalMemory?.contentSignals?.signals || [];
     const personalSampleSize = Number(context.personalMemory?.contentSignals?.sampleSize || 0);
+    const accountLearning = context.accountLearning || null;
+    const learningSampleSize = Number(accountLearning?.sampleSize || 0);
+
+    // Account learning is deliberately a small calibration signal, not a replacement
+    // for the video's measured signals. It only activates after 3 real performances.
+    let calibratedScore = score;
+    let learningAdjustment = 0;
+
+    if (
+      accountLearning?.profile?.averages &&
+      learningSampleSize >= 3 &&
+      Number.isFinite(Number(accountLearning.profile.averages.overall))
+    ) {
+      const accountAverage = Number(accountLearning.profile.averages.overall);
+      learningAdjustment = Math.max(-8, Math.min(8, (score - accountAverage) * 0.12));
+      calibratedScore = this.clamp(score + learningAdjustment);
+    }
 
     return {
 
-      retentionEstimate: score,
+      retentionEstimate: calibratedScore,
 
       estimateType: "local_heuristic_proxy",
 
@@ -2080,7 +2103,8 @@ export class LocalIntelligenceEngine {
         "local_pacing_signal",
         "local_visual_signal",
         "local_text_or_speech_signal",
-        "local_emotion_narrative_rules"
+        "local_emotion_narrative_rules",
+        ...(learningSampleSize >= 3 ? ["account_learning_calibration"] : [])
       ],
 
       platformRetentionAvailable: false,
@@ -2094,6 +2118,13 @@ export class LocalIntelligenceEngine {
         available: personalSampleSize >= 3,
         sampleSize: personalSampleSize,
         signals: personalSignals
+      },
+
+      accountLearning: {
+        available: learningSampleSize >= 3,
+        sampleSize: learningSampleSize,
+        stage: accountLearning?.stage || "cold-start",
+        adjustment: Math.round(learningAdjustment * 10) / 10
       },
 
       explanation:
