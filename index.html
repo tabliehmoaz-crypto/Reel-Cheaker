@@ -637,6 +637,16 @@
       emptyHeroState.classList.add('hidden');
       dashboardReportContainer.classList.add('hidden');
       scanProgressBar.classList.remove('hidden');
+      scanProgressFill.style.width = '1%';
+      scanPercentLabel.textContent = '1%';
+      scanStageLabel.textContent = 'تهيئة الريل…';
+
+      const reportProgress = (progress = {}) => {
+        const value = Math.max(1, Math.min(100, Number(progress.progress) || 0));
+        scanProgressFill.style.width = value + '%';
+        scanPercentLabel.textContent = Math.round(value) + '%';
+        scanStageLabel.textContent = progress.message || 'MTI عم يحلل الريل…';
+      };
 
       try {
         // -----------------------------------------------------
@@ -663,6 +673,7 @@
         }
 
         activeReelId = reel.reelId;
+        reportProgress({ progress: 3, message: 'تم إنشاء هوية الـReel…' });
 
         const asset = await saveReelVideo(file, {
           name: file.name,
@@ -674,7 +685,9 @@
         });
 
         reel.assetId = asset.assetId;
+        reportProgress({ progress: 6, message: 'تم حفظ الفيديو محلياً…' });
         await saveExperiment(reel);
+        reportProgress({ progress: 8, message: 'بدء التحليل الفعلي…' });
 
         // على الموبايل لا ننشئ decoder ثانٍ للفيديو. هذا يمنع تكرار buffers داخل Safari.
         const isMobileMTI = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
@@ -693,9 +706,7 @@
           versionNumber: reel.versionNumber,
           platform: 'instagram',
           progressCallback: (progress) => {
-            scanStageLabel.innerHTML = `<span>${progress.message}</span>`;
-            scanPercentLabel.textContent = `${Math.round(progress.progress)}%`;
-            scanProgressFill.style.width = `${progress.progress}%`;
+            reportProgress(progress);
           }
         });
 
