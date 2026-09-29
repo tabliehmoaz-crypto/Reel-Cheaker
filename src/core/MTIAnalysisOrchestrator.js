@@ -36,7 +36,8 @@ import {
 
 
 import {
-  createAnalysisResult
+  createAnalysisResult,
+  assertValidAnalysisResult
 } from "./MTIAnalysisResult.js";
 
 
@@ -212,6 +213,7 @@ export class MTIAnalysisOrchestrator {
             ...options,
             experimentId,
             accountId: options.accountId || experiment?.accountId || null,
+            contentAccountId: options.contentAccountId || experiment?.contentAccountId || null,
             reelId: options.reelId || experiment?.reelId || null,
             versionId: options.versionId || experiment?.versionId || null,
             versionNumber: options.versionNumber || experiment?.versionNumber || null,
@@ -256,6 +258,7 @@ export class MTIAnalysisOrchestrator {
 
           experimentId,
           accountId: options.accountId || experiment?.accountId || null,
+          contentAccountId: options.contentAccountId || experiment?.contentAccountId || null,
           reelId: options.reelId || experiment?.reelId || null,
           versionId: options.versionId || experiment?.versionId || null,
           versionNumber: options.versionNumber || experiment?.versionNumber || null,
