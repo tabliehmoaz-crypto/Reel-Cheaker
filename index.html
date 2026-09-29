@@ -486,6 +486,7 @@
     import { updateExperiment, saveExperiment, getAllExperiments } from './src/engine/ExperimentEngine.js';
     import { saveReelVideo, getReelVideo } from './src/memory/ReelAssetStore.js';
     import { createReel, createReelVersion, getReel, getReelVersions, getReelHistory } from './src/core/MTIContentService.js';
+    import { getActiveContentAccount } from './src/account/MTIAccountProfileService.js';
 
     // Lucide is visual enhancement only. Never let a blocked CDN stop the app/auth.
     try {
@@ -768,8 +769,13 @@
       const list = document.getElementById('myReelsList');
       if (!section || !list) return;
 
+      const activeContentAccount = getActiveContentAccount();
       const reels = getAllExperiments()
-        .filter((item) => item.type === 'reel' && item.reelId)
+        .filter((item) =>
+          item.type === 'reel' &&
+          item.reelId &&
+          (!activeContentAccount?.id || item.contentAccountId === activeContentAccount.id)
+        )
         .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
 
       const latestByReel = new Map();
