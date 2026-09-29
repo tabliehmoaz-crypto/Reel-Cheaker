@@ -5,6 +5,7 @@ import { mtiBrain } from "./MTIBrain.js";
 import { diagnoseReel } from "../editing/MTIDiagnosisEngine.js";
 import { renderEditPlan } from "../editing/MTIEditEngine.js";
 import { getMTIStage, MTI_STAGE_ORDER } from "./MTIStages.js";
+import { getAccountProfile, getActiveContentAccount } from "../account/MTIAccountProfileService.js";
 import {
   getReelRoomContext,
   getReelHistory,
@@ -22,7 +23,16 @@ export const mtiCore = {
   version: MTI_CORE_VERSION,
 
   async analyze(file, options = {}) {
-    return mtiAnalysisOrchestrator.analyze(file, options);
+    const profile = getAccountProfile();
+    const contentAccount = getActiveContentAccount();
+    return mtiAnalysisOrchestrator.analyze(file, {
+      ...options,
+      accountProfile: options.accountProfile || profile,
+      contentAccount: options.contentAccount || contentAccount,
+      baselineViews: options.baselineViews ?? contentAccount?.typicalViews ?? profile.typicalViews ?? null,
+      followerCount: options.followerCount ?? contentAccount?.followers ?? profile.followers ?? null,
+      contentTypes: options.contentTypes || contentAccount?.declaredContentTypes || profile.declaredContentTypes || []
+    });
   },
 
   getStage(id) {
