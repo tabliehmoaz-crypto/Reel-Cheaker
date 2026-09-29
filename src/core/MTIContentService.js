@@ -23,6 +23,7 @@ import {
 } from "../engine/ExperimentEngine.js";
 
 import { memoryService } from "./MTIMemoryService.js";
+import { accountLearningEngine } from "../learning/AccountLearningEngine.js";
 
 export const REEL_ROOM_SCHEMA_VERSION = "1.0.0";
 
@@ -176,7 +177,7 @@ export function getReelRoomContext(reelId) {
   // private room as a new learning observation.
   let accountLearning = null;
   try {
-    accountLearning = memoryService.getLearnings();
+    accountLearning = accountLearningEngine.getSnapshot();
   } catch {
     accountLearning = null;
   }
