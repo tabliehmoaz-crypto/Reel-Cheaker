@@ -63,9 +63,18 @@ function correlation(xs, ys) {
 
 function extractScore(item, key) {
   return (
+    item?.analysis?.scores?.[key]?.score ??
     item?.analysis?.scores?.[key] ??
     item?.analysis?.[key]?.score ??
     item?.analysis?.[key] ??
+    null
+  );
+}
+
+function extractOverall(item) {
+  return (
+    item?.analysis?.overall?.score ??
+    item?.analysis?.overall ??
     null
   );
 }
@@ -109,7 +118,7 @@ export class AccountLearningEngine {
   }
 
   buildProfile(dataset = this.getDataset()) {
-    const scores = dataset.map(item => finite(item?.analysis?.overall));
+    const scores = dataset.map(extractOverall);
     const hooks = dataset.map(item => extractScore(item, "hook"));
     const pacing = dataset.map(item => extractScore(item, "pacing"));
     const visual = dataset.map(item => extractScore(item, "visual"));
@@ -146,7 +155,10 @@ export class AccountLearningEngine {
 
     const profile = this.buildProfile(dataset);
     const current = {
-      overall: finite(analysis?.overall),
+      overall: finite(
+        analysis?.overall?.score ??
+        analysis?.overall
+      ),
       hook: extractScore({ analysis }, "hook"),
       pacing: extractScore({ analysis }, "pacing"),
       visual: extractScore({ analysis }, "visual")
