@@ -31,7 +31,7 @@ export async function analyzeSpeech(audioBuffer, options = {}) {
   }
 
   try {
-    const whisper = await import("../ai/whisper.js");
+    const whisper = await import("../ai/whisper.js?v=6.5.0");
 
     if (typeof whisper.transcribeAudioBufferChunked !== "function") {
       throw new Error("Chunked local transcription engine is unavailable.");
