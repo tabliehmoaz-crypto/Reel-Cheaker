@@ -2460,3 +2460,13 @@ export class LocalIntelligenceEngine {
   }
 
 }
+
+
+/* =========================================================
+   SINGLETON
+========================================================= */
+
+export const localIntelligenceEngine =
+  new LocalIntelligenceEngine();
+
+export default localIntelligenceEngine;
