@@ -7,7 +7,7 @@ import {
   generateFreshIdeas,
   generateContentFromIdea,
   analyzeIdea
-} from "../generation/IdeaToContentEngine.js";
+} from "../generation/IdeaToContentEngine.js?v=6.2.0";
 
 import {
   getReelRoomContext,
