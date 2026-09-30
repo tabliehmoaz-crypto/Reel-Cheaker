@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "test:mti": "node tests/mti-edit-contract.test.js",
+    "test:mti": "node tests/mti-edit-contract.test.js && node tests/mti-intelligence-runtime.test.js",
     "test": "npm run test:mti"
   },
   "dependencies": {
