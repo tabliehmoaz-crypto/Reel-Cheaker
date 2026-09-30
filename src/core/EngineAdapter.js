@@ -26,12 +26,12 @@ import {
   attachActualPerformance,
   comparePredictionToReality,
   addContext,
-  addUserNote,
-  addLearningObservation,
-  addLearningHypothesis,
-  addLearningPattern,
+  addNote as addUserNote,
+  attachLearning as addLearningObservation,
+  attachLearning as addLearningHypothesis,
+  attachLearning as addLearningPattern,
   addConversationMessage,
-  addExtractedConversationData,
+  saveExtractedData as addExtractedConversationData,
   getExperimentSummary,
   getEngineInfo
 } from "../engine/ExperimentEngine.js";
