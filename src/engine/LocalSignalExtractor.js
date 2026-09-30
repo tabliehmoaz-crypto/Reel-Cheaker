@@ -70,18 +70,19 @@ export async function extractLocalSignals(videoFile, progressCallback = () => {}
   // Audio analysis is real on mobile too when the browser can decode the file.
   // decodeAudioOnce already fails safely and returns null if Safari/codec support
   // prevents decoding, so we don't need a blanket mobile skip.
-  const decodedAudio = await decodeAudioOnce(videoFile);
+  const decodedAudio = await decodeAudioOnce(videoFile, metadata);
   const audioSignals = decodedAudio ? computeAudioSignals(decodedAudio, metadata) : null;
 
   progressCallback({ stage: "SPEECH", progress: 70, message: "تحليل الكلام..." });
-  const speechResult = await safeTranscribe(videoFile, decodedAudio);
+  const speechResult = await safeTranscribe(videoFile, decodedAudio, metadata);
 
   progressCallback({ stage: "SCORING", progress: 90, message: "ربط الأدلة وبناء الإشارات..." });
 
-  const hook = buildHookSignal(visualSignals, audioSignals);
+  const deliveryPattern = buildDeliveryPattern(speechResult, metadata);
+  const hook = buildHookSignal(visualSignals, audioSignals, speechResult);
   const pacing = buildPacingSignal(visualSignals, metadata);
   const visual = buildVisualQualitySignal(visualSignals);
-  const dropOff = buildDropOffSignal(visualSignals, metadata);
+  const dropOff = buildDropOffSignal(visualSignals, metadata, deliveryPattern);
   const idea = buildIdeaSignal(speechResult, metadata);
   const speech = buildSpeechSignal(speechResult, metadata);
   const technical = buildTechnicalSignal(metadata);
@@ -93,6 +94,7 @@ export async function extractLocalSignals(videoFile, progressCallback = () => {}
   return {
     video: { dimensions: metadata },
     hook, pacing, visual, technical, speech, idea, dropOff,
+    deliveryPattern,
     audio: audioSignals,
     scores: {},
     frames: visualSignals.frames.map((f) => f.thumbnailDataUrl).filter(Boolean),
@@ -392,15 +394,11 @@ function analyzePixels(data) {
    AUDIO SIGNALS (Web Audio API)
 ========================================================= */
 
-async function decodeAudioOnce(videoFile) {
-  if (isMobileDevice()) {
-    return null;
-  }
-
+async function decodeAudioOnce(videoFile, metadata = {}) {
   try {
     return await withTimeout(
       loadAndExtractAudio(videoFile),
-      12000,
+      isMobileDevice() ? 9000 : 12000,
       "انتهت مهلة تحليل الصوت على هذا المتصفح."
     );
   } catch (error) {
@@ -486,8 +484,7 @@ function stdDev(arr) {
    SPEECH (local Whisper — runs fully in-browser)
 ========================================================= */
 
-async function safeTranscribe(videoFile, preDecodedAudioBuffer) {
-  // Hard stop: do not invoke the local Whisper module in this diagnostic build.
+async function safeTranscribe(videoFile, preDecodedAudioBuffer, metadata = {}) {
   if (!USE_LOCAL_WHISPER) {
     return {
       text: "",
@@ -500,16 +497,16 @@ async function safeTranscribe(videoFile, preDecodedAudioBuffer) {
   }
 
   try {
-    // على الهواتف Whisper المحلي ممنوع عمداً لحماية التبويب من ضغط الذاكرة.
-    // باقي التحليل البصري والصوتي يستمر بشكل طبيعي.
-    if (typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "")) {
+    // Mobile: allow local Whisper only for short-form reels.
+    // We use the lighter mobile model in whisper.js; long videos stay protected.
+    if (isMobileDevice() && Number(metadata.duration || 0) > 20) {
       return {
         text: "",
         wordCount: 0,
         hasSpeech: false,
         segments: [],
         unavailable: true,
-        reason: "mobile-safe-mode"
+        reason: "mobile-duration-safe-limit"
       };
     }
 
@@ -553,7 +550,7 @@ function clamp(v, min = 0, max = 100) {
   return Math.min(max, Math.max(min, v));
 }
 
-function buildHookSignal(visualSignals, audioSignals) {
+function buildHookSignal(visualSignals, audioSignals, speechResult = null) {
 
   const earlyFrames = visualSignals.frames.filter(
     (f) => f.timestamp <= HOOK_WINDOW_SECONDS
@@ -567,15 +564,32 @@ function buildHookSignal(visualSignals, audioSignals) {
     ? clamp((audioSignals.earlyAvgRms / 0.15) * 100)
     : 0;
 
-  const score = audioSignals
-    ? clamp(visualHookScore * 0.6 + audioHookScore * 0.4)
-    : visualHookScore;
+  const earlySpeech =
+    Boolean(
+      speechResult?.hasSpeech &&
+      Array.isArray(speechResult?.segments) &&
+      speechResult.segments.some(
+        (segment) =>
+          Number(segment?.start ?? 999) < HOOK_WINDOW_SECONDS &&
+          Number(segment?.end ?? segment?.start ?? 0) > 0
+      )
+    );
+
+  const speechPresenceComponent = earlySpeech ? 70 : 0;
+
+  const score = clamp(
+    visualHookScore * 0.45 +
+    audioHookScore * 0.30 +
+    speechPresenceComponent * 0.25
+  );
 
   return {
     score,
     visualComponent: visualHookScore,
     audioComponent: audioSignals ? audioHookScore : null,
-    measuredWindowSeconds: HOOK_WINDOW_SECONDS
+    speechPresenceComponent: earlySpeech ? speechPresenceComponent : null,
+    measuredWindowSeconds: HOOK_WINDOW_SECONDS,
+    basis: "visual_audio_speech_presence"
   };
 }
 
@@ -625,7 +639,7 @@ function buildVisualQualitySignal(visualSignals) {
   };
 }
 
-function buildDropOffSignal(visualSignals, metadata) {
+function buildDropOffSignal(visualSignals, metadata, deliveryPattern = null) {
 
   const frames = visualSignals.frames;
   if (frames.length < 4) return { points: [] };
@@ -644,7 +658,12 @@ function buildDropOffSignal(visualSignals, metadata) {
       frames[i].timestamp > 2.5 &&
       frames[i].timestamp < (metadata.duration || 0) - 1;
 
-    if (isLowChange && isMidVideo) {
+    const likelyIntentionalPause =
+      deliveryPattern?.type === "spoken_setup_pause" &&
+      Number.isFinite(deliveryPattern?.speechEnd) &&
+      frames[i].timestamp >= deliveryPattern.speechEnd;
+
+    if (isLowChange && isMidVideo && !likelyIntentionalPause) {
       points.push({
         stage: "middle",
         timestamp: Number(frames[i].timestamp.toFixed(1)),
@@ -667,6 +686,42 @@ function buildDropOffSignal(visualSignals, metadata) {
     basis: "visual_stagnation_proxy",
     measuredFrom: "sampled_video_frames",
     platformRetentionAvailable: false
+  };
+}
+
+function buildDeliveryPattern(speechResult, metadata) {
+  if (!speechResult?.hasSpeech || !Array.isArray(speechResult?.segments) || !speechResult.segments.length) {
+    return {
+      type: "unknown",
+      basis: "no_timed_speech"
+    };
+  }
+
+  const duration = Number(metadata.duration || 0);
+  const validSegments = speechResult.segments.filter(
+    (segment) => Number.isFinite(Number(segment?.start)) || Number.isFinite(Number(segment?.end))
+  );
+  const speechEnd = Math.max(
+    ...validSegments.map((segment) => Number(segment?.end ?? segment?.start ?? 0)),
+    0
+  );
+  const finalPause = Math.max(0, duration - speechEnd);
+
+  if (duration <= 15 && speechEnd > 0 && finalPause >= 0.35) {
+    return {
+      type: "spoken_setup_pause",
+      speechEnd: Number(speechEnd.toFixed(2)),
+      finalPause: Number(finalPause.toFixed(2)),
+      basis: "timed_speech_and_final_pause",
+      confidence: "medium"
+    };
+  }
+
+  return {
+    type: "continuous_speech",
+    speechEnd: Number(speechEnd.toFixed(2)),
+    finalPause: Number(finalPause.toFixed(2)),
+    basis: "timed_speech"
   };
 }
 
