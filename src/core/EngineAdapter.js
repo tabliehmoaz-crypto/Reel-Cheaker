@@ -25,7 +25,7 @@ import {
   attachPrediction,
   attachActualPerformance,
   comparePredictionToReality,
-  addContextVariable,
+  addContext,
   addUserNote,
   addLearningObservation,
   addLearningHypothesis,
@@ -562,7 +562,7 @@ export class EngineAdapter {
     try {
 
       const result =
-        await addContextVariable(
+        await addContext(
           id,
           variable
         );
