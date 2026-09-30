@@ -32,7 +32,7 @@ import {
 
 import {
   analysisService
-} from "./MTIAnalysisService.js?v=6.1.0";
+} from "./MTIAnalysisService.js?v=6.2.0";
 
 
 import {
