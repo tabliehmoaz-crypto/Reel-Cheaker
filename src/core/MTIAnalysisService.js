@@ -500,13 +500,25 @@ export class MTIAnalysisService {
         await this.pipeline.executeWithJob(
           job,
           file,
-          options
+          {
+            ...options,
+            saveResult: false
+          }
         );
 
 
       const localAnalysis =
-        result?.analysis ||
-        result;
+        result?.result ||
+        null;
+
+      if (!localAnalysis) {
+        throw new MTIError({
+          message: "محرك التحليل المحلي لم يُرجع نتيجة قابلة للقراءة.",
+          type: "engine",
+          code: "LOCAL_ANALYSIS_EMPTY",
+          stage: "local-analysis"
+        });
+      }
 
 
       /*
@@ -529,7 +541,18 @@ export class MTIAnalysisService {
               options.includeBenchmarks !== false,
 
             reelId:
-              options.reelId || null
+              options.reelId || null,
+
+            accountProfile:
+              options.accountProfile || null,
+
+            contentAccount:
+              options.contentAccount || null,
+
+            contentAccountId:
+              options.contentAccountId ||
+              options.contentAccount?.id ||
+              null
 
           }
         );
