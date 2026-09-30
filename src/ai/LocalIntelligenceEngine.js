@@ -2065,13 +2065,6 @@ export class LocalIntelligenceEngine {
       pacing: [this.normalize(domains.pacing?.score), 0.15]
     });
 
-    const decision =
-      calibratedScore >= 65
-        ? "PUBLISH"
-        : calibratedScore >= 45
-          ? "PUBLISH AFTER MINOR FIXES"
-          : "REWORK";
-
     const personalSignals = context.personalMemory?.contentSignals?.signals || [];
     const personalSampleSize = Number(context.personalMemory?.contentSignals?.sampleSize || 0);
     const accountLearning = context.accountLearning || null;
@@ -2091,6 +2084,13 @@ export class LocalIntelligenceEngine {
       learningAdjustment = Math.max(-8, Math.min(8, (score - accountAverage) * 0.12));
       calibratedScore = this.clamp(score + learningAdjustment);
     }
+
+    const decision =
+      calibratedScore >= 65
+        ? "PUBLISH"
+        : calibratedScore >= 45
+          ? "PUBLISH AFTER MINOR FIXES"
+          : "REWORK";
 
     return {
 
