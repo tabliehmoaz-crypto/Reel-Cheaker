@@ -129,6 +129,8 @@ function mount() {
   if (document.getElementById("mtiOnboarding")) return;
   if (hasCompletedAccountProfile()) return;
 
+  restoreOnboardingState();
+
   const root = document.createElement("div");
   root.id = "mtiOnboarding";
   root.className = "fixed inset-0 z-[100] bg-brand-navy/95 backdrop-blur-md flex items-center justify-center p-4";
@@ -153,6 +155,10 @@ function renderStep(step, state = {}) {
     </div>`;
 
   if (step === 1) {
+    const profile = getAccountProfile();
+    const followersValue = profile.followers ?? "";
+    const viewsValue = profile.typicalViews ?? "";
+
     return `
       <div class="w-full max-w-lg bg-brand-navyElevated border border-brand-navyBorder rounded-3xl shadow-2xl p-6 sm:p-8" dir="${dir}">
         ${languageControl}
@@ -165,12 +171,12 @@ function renderStep(step, state = {}) {
         <div class="mt-6 space-y-4">
           <label class="block">
             <span class="block text-sm text-gray-200 mb-1.5">${t.followers}</span>
-            <input id="mtiFollowers" type="number" min="0" inputmode="numeric" class="w-full bg-brand-navy border border-brand-navyBorder rounded-xl px-4 py-3 text-white outline-none focus:border-brand-gold" placeholder="2,000">
+            <input id="mtiFollowers" type="number" min="0" inputmode="numeric" value="${esc(followersValue)}" class="w-full bg-brand-navy border border-brand-navyBorder rounded-xl px-4 py-3 text-white outline-none focus:border-brand-gold" placeholder="2,000">
             <span class="block text-[11px] text-gray-500 mt-1.5">${t.followersHint}</span>
           </label>
           <label class="block">
             <span class="block text-sm text-gray-200 mb-1.5">${t.views}</span>
-            <input id="mtiViews" type="number" min="0" inputmode="numeric" class="w-full bg-brand-navy border border-brand-navyBorder rounded-xl px-4 py-3 text-white outline-none focus:border-brand-gold" placeholder="3,000">
+            <input id="mtiViews" type="number" min="0" inputmode="numeric" value="${esc(viewsValue)}" class="w-full bg-brand-navy border border-brand-navyBorder rounded-xl px-4 py-3 text-white outline-none focus:border-brand-gold" placeholder="3,000">
             <span class="block text-[11px] text-gray-500 mt-1.5">${t.viewsHint}</span>
           </label>
         </div>
