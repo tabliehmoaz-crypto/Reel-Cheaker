@@ -34,6 +34,7 @@ env.useBrowserCache = true;
 */
 
 const DESKTOP_MODEL = "Xenova/whisper-base";
+const MOBILE_MODEL = "Xenova/whisper-tiny";
 const TARGET_SAMPLE_RATE = 16000;
 
 // Real local speech analysis is enabled on supported desktop browsers.
@@ -48,7 +49,7 @@ function isMobileDevice() {
 function getModel() {
   // لا نشغّل Whisper المحلي على الهواتف: هذا المسار هو الأكثر عرضة
   // لاستهلاك RAM/CPU والتسبب بانهيار التبويب.
-  return DESKTOP_MODEL;
+  return isMobileDevice() ? MOBILE_MODEL : DESKTOP_MODEL;
 }
 
 
@@ -64,10 +65,6 @@ async function loadWhisper() {
 
   if (!USE_LOCAL_WHISPER) {
     throw new Error("LOCAL_WHISPER_DISABLED_FOR_DIAGNOSTIC");
-  }
-
-  if (isMobileDevice()) {
-    throw new Error("LOCAL_WHISPER_UNAVAILABLE_ON_MOBILE");
   }
 
   if (transcriber)
@@ -327,17 +324,6 @@ export async function transcribeVideo(
 
   }
 
-
-  if (isMobileDevice()) {
-    return {
-      text: "",
-      segments: [],
-      wordCount: 0,
-      hasSpeech: false,
-      unavailable: true,
-      reason: "mobile-safe-mode"
-    };
-  }
 
   const whisper =
     await loadWhisper();
