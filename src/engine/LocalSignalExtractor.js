@@ -97,6 +97,7 @@ export async function extractLocalSignals(videoFile, progressCallback = () => {}
     video: { dimensions: metadata },
     hook, pacing, visual, technical, speech, idea, dropOff,
     deliveryPattern,
+    voiceProfile: speechResult?.voiceProfile || null,
     audio: audioSignals,
     scores: {},
     frames: visualSignals.frames.map((f) => f.thumbnailDataUrl).filter(Boolean),
@@ -781,7 +782,8 @@ function buildSpeechSignal(speechResult, metadata) {
     segments: speechResult?.segments || [],
     analysis: {
       score: deliveryScore,
-      wordsPerSecond: Number(wordsPerSecond.toFixed(2))
+      wordsPerSecond: Number(wordsPerSecond.toFixed(2)),
+      voiceProfile: speechResult?.voiceProfile || null
     }
   };
 }
