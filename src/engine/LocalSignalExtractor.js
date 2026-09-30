@@ -497,17 +497,23 @@ async function safeTranscribe(videoFile, preDecodedAudioBuffer, metadata = {}) {
   }
 
   try {
-    // Mobile: allow local Whisper only for short-form reels.
-    // We use the lighter mobile model in whisper.js; long videos stay protected.
-    if (isMobileDevice() && Number(metadata.duration || 0) > 20) {
-      return {
-        text: "",
-        wordCount: 0,
-        hasSpeech: false,
-        segments: [],
-        unavailable: true,
-        reason: "mobile-duration-safe-limit"
-      };
+    // Mobile/iOS: do NOT load Whisper. It can exhaust browser memory and
+    // kill the tab even when the video itself is short. We still perform
+    // real speech-activity detection from the already-decoded audio.
+    // Desktop keeps the full local Whisper path.
+    if (isMobileDevice()) {
+      if (!preDecodedAudioBuffer) {
+        return {
+          text: "",
+          wordCount: 0,
+          hasSpeech: false,
+          segments: [],
+          unavailable: true,
+          reason: "mobile-no-decoded-audio"
+        };
+      }
+
+      return detectSpeechActivity(preDecodedAudioBuffer);
     }
 
     const whisperModule = await getWhisperModule();
@@ -527,6 +533,81 @@ async function safeTranscribe(videoFile, preDecodedAudioBuffer, metadata = {}) {
     console.warn("MTI Whisper Error (متابعة بدون نص):", error);
     return { text: "", wordCount: 0, hasSpeech: false, segments: [], unavailable: true };
   }
+}
+
+function detectSpeechActivity(audioBuffer) {
+  const channelCount = audioBuffer?.numberOfChannels || 0;
+  const sampleRate = audioBuffer?.sampleRate || 0;
+  const length = audioBuffer?.length || 0;
+
+  if (!channelCount || !sampleRate || !length) {
+    return {
+      text: "",
+      wordCount: 0,
+      hasSpeech: false,
+      segments: [],
+      unavailable: true,
+      reason: "speech-activity-no-audio"
+    };
+  }
+
+  const windowSize = Math.max(1, Math.floor(sampleRate * 0.10));
+  const threshold = 0.018;
+  const segments = [];
+  let activeStart = null;
+  let activeEnd = null;
+
+  for (let offset = 0; offset < length; offset += windowSize) {
+    const end = Math.min(length, offset + windowSize);
+    let sum = 0;
+    let count = 0;
+
+    for (let channel = 0; channel < channelCount; channel++) {
+      const data = audioBuffer.getChannelData(channel);
+      for (let i = offset; i < end; i += 4) {
+        const sample = data[i] || 0;
+        sum += sample * sample;
+        count++;
+      }
+    }
+
+    const rms = count ? Math.sqrt(sum / count) : 0;
+    const startSec = offset / sampleRate;
+    const endSec = end / sampleRate;
+
+    if (rms >= threshold) {
+      if (activeStart == null) activeStart = startSec;
+      activeEnd = endSec;
+    } else if (activeStart != null) {
+      if (activeEnd - activeStart >= 0.20) {
+        segments.push({
+          text: "",
+          start: Number(activeStart.toFixed(2)),
+          end: Number(activeEnd.toFixed(2))
+        });
+      }
+      activeStart = null;
+      activeEnd = null;
+    }
+  }
+
+  if (activeStart != null && activeEnd - activeStart >= 0.20) {
+    segments.push({
+      text: "",
+      start: Number(activeStart.toFixed(2)),
+      end: Number(activeEnd.toFixed(2))
+    });
+  }
+
+  return {
+    text: "",
+    wordCount: 0,
+    hasSpeech: segments.length > 0,
+    segments,
+    unavailable: false,
+    activityOnly: true,
+    reason: "mobile-speech-activity-detection"
+  };
 }
 
 function withTimeout(promise, ms, message) {
