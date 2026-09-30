@@ -143,8 +143,13 @@ export class AnalysisPipeline {
         options.comparison || null,
 
       learning:
-        options.learning || null
+        options.learning || null,
 
+      processorOptions:
+        options,
+
+      saveResult:
+        options.saveResult !== false
     });
 
   }
