@@ -36,7 +36,10 @@ export function diagnoseReel(report = {}, options = {}) {
   const scenes = getScenes(local), dropOff = getDropOff(local, intel);
   const operations = [], issues = [];
   const firstScene = scenes[0];
-  if (hookScore != null && hookScore < 55 && firstScene && num(firstScene.duration, 0) > 1.35) {
+  const deliveryPattern = local?.deliveryPattern || {};
+  const preserveSpokenPause = deliveryPattern.type === "spoken_setup_pause";
+
+  if (hookScore != null && hookScore < 55 && !preserveSpokenPause && firstScene && num(firstScene.duration, 0) > 1.35) {
     const end = Math.min(num(firstScene.end, 1.2), 1.15);
     addOperation(operations, {
       action: "trim", target: "intro", start: 0, end,
@@ -72,7 +75,11 @@ export function diagnoseReel(report = {}, options = {}) {
     sourceVersionId: options.versionId || report?.versionId || null,
     sourceExperimentId: options.experimentId || report?.experimentId || null,
     operations,
-    summary: operations.length ? "تم استخراج تعديلات قابلة للتنفيذ من إشارات مقاسة." : "لم تظهر حالياً تعديلات آمنة بثقة كافية للتنفيذ.",
+    summary: operations.length
+      ? "تم استخراج تعديلات قابلة للتنفيذ من إشارات مقاسة."
+      : preserveSpokenPause
+        ? "تم الحفاظ على السكتة المحتملة لأنها قد تكون جزءاً من الـdelivery والـpayoff."
+        : "لم تظهر حالياً تعديلات آمنة بثقة كافية للتنفيذ.",
     warnings: operations.some(op => op.action === "cut") ? ["القص المقترح مبني على proxy محلي وليس على retention فعلي من Instagram."] : []
   });
   return {
