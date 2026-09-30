@@ -230,3 +230,9 @@ export function getErrorMessage(error) {
 
 
 export default MTIError;
+
+
+// Backward-compatible alias for older MTI modules.
+export function normalizeError(error, fallback = {}) {
+  return normalizeMTIError(error, fallback);
+}
