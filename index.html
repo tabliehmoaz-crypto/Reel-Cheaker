@@ -517,7 +517,7 @@
     async function getMTIEngine() {
       if (engine) return engine;
       if (!engineLoadPromise) {
-        engineLoadPromise = import('./src/core/MTICore.js?v=6.3.0')
+        engineLoadPromise = import('./src/core/MTICore.js?v=6.4.0')
           .then((module) => {
             if (!module?.mtiCore) {
               throw new Error('MTI Core loaded without mtiCore export.');
