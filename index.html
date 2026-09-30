@@ -689,12 +689,10 @@
         await saveExperiment(reel);
         reportProgress({ progress: 8, message: 'بدء التحليل الفعلي…' });
 
-        // على الموبايل لا ننشئ decoder ثانٍ للفيديو. هذا يمنع تكرار buffers داخل Safari.
-        const isMobileMTI = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
-        if (!isMobileMTI) {
-          await extractFiveKeyframes(file);
-        }
-
+        // لا ننشئ decoder ثانٍ هنا.
+        // MTI Core يستخرج الإطارات الفعلية ضمن نفس مسار التحليل، وإعادة فتح الفيديو
+        // قبل التحليل كانت تسبب timeout على Safari/iOS وتوقف العملية عند 8%.
+        
         // التحليل الفعلي يمر الآن عبر MTI Core فقط.
         // لا يوجد مسار UI يتجاوز Orchestrator/Contract/Memory.
         const mti = await getMTIEngine();
@@ -947,6 +945,19 @@
       const topRec = intel.recommendations?.[0];
       document.getElementById('theOneActionTitle').textContent = topRec?.action || 'لا توجد توصية بأولوية عالية حالياً';
       document.getElementById('theOneActionImpact').textContent = topRec?.expectedEffect || '';
+
+      // Attention Map thumbnails تأتي من الإطارات التي قاسها LocalSignalExtractor
+      // ضمن نفس جلسة التحليل. لا نعيد فتح الفيديو ولا ننشئ decoder ثانياً.
+      const measuredFrames = Array.isArray(local.frames) ? local.frames : [];
+      for (let i = 0; i < 5; i++) {
+        const img = document.getElementById(`thumbFrame${i + 1}`);
+        if (!img) continue;
+        const frame = measuredFrames[Math.min(
+          measuredFrames.length - 1,
+          Math.round((i / 4) * Math.max(measuredFrames.length - 1, 0))
+        )];
+        img.src = typeof frame === 'string' ? frame : '';
+      }
 
       // الهوك: نص فعلي مستخرج (وليس مخترع) + تفسير محلي
       const speechText = local.speech?.text?.trim();
