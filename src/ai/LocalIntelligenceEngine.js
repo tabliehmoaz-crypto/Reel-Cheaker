@@ -386,6 +386,11 @@ export class LocalIntelligenceEngine {
       {};
 
 
+    const audio =
+      localAnalysis.audio ||
+      null;
+
+
     const speech =
       localAnalysis.speech ||
       {};
