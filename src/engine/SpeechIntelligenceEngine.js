@@ -24,9 +24,10 @@ export async function analyzeSpeech(audioBuffer, options = {}) {
   if (mobile && options.mobileWhisper !== true) {
     return {
       ...detectSpeechActivity(audioBuffer),
+      voiceProfile: analyzeVoiceDelivery(audioBuffer),
       mode: "mobile-activity-only",
       transcriptionReady: false,
-      limitation: "mobile-local-transcription-disabled-until-device-safe-path-is enabled"
+      limitation: "mobile-local-transcription-disabled-until-device-safe-path-is-enabled"
     };
   }
 
@@ -49,6 +50,7 @@ export async function analyzeSpeech(audioBuffer, options = {}) {
 
     return {
       ...result,
+      voiceProfile: analyzeVoiceDelivery(audioBuffer),
       mode: mobile ? "mobile-whisper-chunked" : "desktop-whisper-chunked",
       transcriptionReady: Boolean(result?.text)
     };
@@ -56,6 +58,7 @@ export async function analyzeSpeech(audioBuffer, options = {}) {
     console.warn("MTI Speech Intelligence:", error);
     return {
       ...detectSpeechActivity(audioBuffer),
+      voiceProfile: analyzeVoiceDelivery(audioBuffer),
       mode: mobile ? "mobile-activity-fallback" : "desktop-activity-fallback",
       transcriptionReady: false,
       unavailable: false,
@@ -122,6 +125,98 @@ function detectSpeechActivity(audioBuffer) {
     activityOnly: true,
     reason: "speech-activity-detection"
   };
+}
+
+function analyzeVoiceDelivery(audioBuffer) {
+  const sampleRate = audioBuffer?.sampleRate || 0;
+  const length = audioBuffer?.length || 0;
+  const channels = audioBuffer?.numberOfChannels || 0;
+
+  if (!sampleRate || !length || !channels) {
+    return { available: false, reason: "invalid-audio-buffer" };
+  }
+
+  const mono = new Float32Array(Math.min(length, sampleRate * 180));
+  const source = audioBuffer.getChannelData(0);
+  const step = Math.max(1, Math.floor(length / mono.length));
+  for (let i = 0; i < mono.length; i++) mono[i] = source[i * step] || 0;
+
+  const windowSize = Math.max(1, Math.floor(sampleRate * 0.04));
+  const energies = [];
+  const pitches = [];
+
+  for (let start = 0; start + windowSize < mono.length; start += windowSize * 2) {
+    let sum = 0;
+    for (let i = start; i < start + windowSize; i++) {
+      const s = mono[i];
+      sum += s * s;
+    }
+    const rms = Math.sqrt(sum / windowSize);
+    if (rms < 0.012) continue;
+
+    energies.push(rms);
+    const pitch = estimatePitch(mono, start, windowSize, sampleRate);
+    if (pitch) pitches.push(pitch);
+  }
+
+  if (!energies.length) return { available: true, spoken: false };
+
+  const energyMean = averageNumbers(energies);
+  const energyStd = standardDeviation(energies, energyMean);
+  const pitchMean = pitches.length ? averageNumbers(pitches) : null;
+  const pitchStd = pitches.length ? standardDeviation(pitches, pitchMean) : null;
+
+  return {
+    available: true,
+    spoken: true,
+    energyMean: Number(energyMean.toFixed(4)),
+    energyVariation: Number((energyStd / Math.max(energyMean, 0.0001)).toFixed(3)),
+    pitchMeanHz: pitchMean ? Number(pitchMean.toFixed(1)) : null,
+    pitchVariationHz: pitchStd ? Number(pitchStd.toFixed(1)) : null,
+    expressiveEnergy: energyStd / Math.max(energyMean, 0.0001) >= 0.45,
+    expressivePitch: Boolean(pitchStd && pitchStd >= 22),
+    note: "Prosody is measured acoustically; emotion or intent is not claimed from these signals alone."
+  };
+}
+
+function estimatePitch(samples, start, windowSize, sampleRate) {
+  const minLag = Math.max(1, Math.floor(sampleRate / 400));
+  const maxLag = Math.min(Math.floor(sampleRate / 80), windowSize - 1);
+  let bestLag = 0;
+  let bestCorrelation = 0;
+
+  for (let lag = minLag; lag <= maxLag; lag += 2) {
+    let sum = 0;
+    let energyA = 0;
+    let energyB = 0;
+    const limit = Math.min(windowSize - lag, 1200);
+    for (let i = 0; i < limit; i++) {
+      const a = samples[start + i];
+      const b = samples[start + i + lag];
+      sum += a * b;
+      energyA += a * a;
+      energyB += b * b;
+    }
+    const denom = Math.sqrt(energyA * energyB);
+    const correlation = denom ? sum / denom : 0;
+    if (correlation > bestCorrelation) {
+      bestCorrelation = correlation;
+      bestLag = lag;
+    }
+  }
+
+  return bestCorrelation >= 0.72 && bestLag ? sampleRate / bestLag : null;
+}
+
+function averageNumbers(values) {
+  if (!values.length) return 0;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function standardDeviation(values, mean = averageNumbers(values)) {
+  if (!values.length) return 0;
+  const variance = values.reduce((sum, value) => sum + ((value - mean) ** 2), 0) / values.length;
+  return Math.sqrt(variance);
 }
 
 function unavailable(reason) {
