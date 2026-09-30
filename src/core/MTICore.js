@@ -1,6 +1,6 @@
 /* MTI Core — single public application facade. */
 
-import { analysisOrchestrator as mtiAnalysisOrchestrator } from "./MTIAnalysisOrchestrator.js?v=6.1.0";
+import { analysisOrchestrator as mtiAnalysisOrchestrator } from "./MTIAnalysisOrchestrator.js?v=6.2.0";
 import { mtiBrain } from "./MTIBrain.js";
 import { diagnoseReel } from "../editing/MTIDiagnosisEngine.js";
 import { renderEditPlan } from "../editing/MTIEditEngine.js";
