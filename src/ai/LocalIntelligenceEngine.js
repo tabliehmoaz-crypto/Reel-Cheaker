@@ -405,6 +405,10 @@ export class LocalIntelligenceEngine {
       localAnalysis.dropOff ||
       {};
 
+    const deliveryPattern =
+      localAnalysis.deliveryPattern ||
+      { type: "unknown" };
+
 
     /*
       Intelligence Context is built by
@@ -474,6 +478,8 @@ export class LocalIntelligenceEngine {
       idea,
 
       dropOff,
+
+      deliveryPattern,
 
       diagnosis:
         localAnalysis.diagnosis ||
@@ -1815,7 +1821,8 @@ export class LocalIntelligenceEngine {
 
 
     if (
-      hook < 45
+      hook < 45 &&
+      context.deliveryPattern?.type !== "spoken_setup_pause"
     ) {
 
       risks.push({
@@ -1839,7 +1846,8 @@ export class LocalIntelligenceEngine {
 
 
     if (
-      pacing < 40
+      pacing < 40 &&
+      context.deliveryPattern?.type !== "spoken_setup_pause"
     ) {
 
       risks.push({
@@ -1988,7 +1996,10 @@ export class LocalIntelligenceEngine {
     const push = (data) =>
       recommendations.push(createRecommendation(data));
 
-    if (this.normalize(domains.attention?.score) < 55) {
+    if (
+      this.normalize(domains.attention?.score) < 55 &&
+      context.deliveryPattern?.type !== "spoken_setup_pause"
+    ) {
       push({
         priority: "high",
         category: "attention",
@@ -2000,7 +2011,10 @@ export class LocalIntelligenceEngine {
       });
     }
 
-    if (this.normalize(domains.pacing?.score) < 50) {
+    if (
+      this.normalize(domains.pacing?.score) < 50 &&
+      context.deliveryPattern?.type !== "spoken_setup_pause"
+    ) {
       push({
         priority: "medium",
         category: "pacing",
@@ -2186,7 +2200,7 @@ export class LocalIntelligenceEngine {
 
     const limitations = [
 
-      "هذا محرك قواعد محلي (Local Reasoning Engine) وليس نموذج ذكاء اصطناعي مدرّب، ويعتمد فقط على إشارات قابلة للقياس من الصورة والصوت والنص.",
+      "هذا محرك قواعد محلي (Local Reasoning Engine) وليس نموذجاً مدرّباً على بيانات أداء المنصات، ويعتمد فقط على إشارات قابلة للقياس من الصورة والصوت والنص.",
 
       "النتائج مؤشرات احتمالية مبنية على الأدلة المتاحة، وليست ضمانة لأداء الفيديو الفعلي على أي منصة."
 
@@ -2318,7 +2332,7 @@ export class LocalIntelligenceEngine {
     if (s >= 45) {
       return "إشارات الجذب المبكرة متوسطة، في مجال للتحسين بأول ثوانٍ.";
     }
-    return "إشارات الجذب المبكرة ضعيفة، احتمال ترك الفيديو بالثواني الأولى مرتفع نسبياً.";
+    return "إشارة الجذب البصرية المبكرة منخفضة حسب القياس المحلي؛ هذا لا يثبت وحده أن المشاهد سيغادر.";
   }
 
 
