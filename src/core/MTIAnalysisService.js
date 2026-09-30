@@ -131,21 +131,14 @@ export class MTIAnalysisService {
         !this.engine
       ) {
 
-        throw new MTIError({
-
-          message:
-            "لم يتم العثور على محرك تحليل الفيديو.",
-
-          type:
-            "engine",
-
-          code:
-            "ANALYSIS_ENGINE_NOT_FOUND",
-
-          stage:
-            "initialization"
-
-        });
+        throw new MTIError(
+          "لم يتم العثور على محرك تحليل الفيديو.",
+          {
+            type: "engine",
+            code: "ANALYSIS_ENGINE_NOT_FOUND",
+            stage: "initialization"
+          }
+        );
 
       }
 
@@ -155,21 +148,14 @@ export class MTIAnalysisService {
         "function"
       ) {
 
-        throw new MTIError({
-
-          message:
-            "محرك التحليل لا يدعم عملية analyze.",
-
-          type:
-            "engine",
-
-          code:
-            "ANALYSIS_ENGINE_INVALID",
-
-          stage:
-            "initialization"
-
-        });
+        throw new MTIError(
+          "محرك التحليل لا يدعم عملية analyze.",
+          {
+            type: "engine",
+            code: "ANALYSIS_ENGINE_INVALID",
+            stage: "initialization"
+          }
+        );
 
       }
 
@@ -180,21 +166,14 @@ export class MTIAnalysisService {
           "function"
       ) {
 
-        throw new MTIError({
-
-          message:
-            "محرك الذكاء المحلي غير جاهز.",
-
-          type:
-            "ai",
-
-          code:
-            "LOCAL_INTELLIGENCE_NOT_READY",
-
-          stage:
-            "initialization"
-
-        });
+        throw new MTIError(
+          "محرك الذكاء المحلي غير جاهز.",
+          {
+            type: "ai",
+            code: "LOCAL_INTELLIGENCE_NOT_READY",
+            stage: "initialization"
+          }
+        );
 
       }
 
@@ -205,21 +184,14 @@ export class MTIAnalysisService {
           "function"
       ) {
 
-        throw new MTIError({
-
-          message:
-            "سياق الذكاء غير جاهز.",
-
-          type:
-            "unknown",
-
-          code:
-            "INTELLIGENCE_CONTEXT_NOT_READY",
-
-          stage:
-            "initialization"
-
-        });
+        throw new MTIError(
+          "سياق الذكاء غير جاهز.",
+          {
+            type: "unknown",
+            code: "INTELLIGENCE_CONTEXT_NOT_READY",
+            stage: "initialization"
+          }
+        );
 
       }
 
@@ -313,12 +285,14 @@ export class MTIAnalysisService {
         jobSnapshot?.result || null;
 
       if (!localAnalysis) {
-        throw new MTIError({
-          message: "محرك التحليل المحلي لم يُرجع نتيجة قابلة للقراءة.",
-          type: "engine",
-          code: "LOCAL_ANALYSIS_EMPTY",
-          stage: "local-analysis"
-        });
+        throw new MTIError(
+          "محرك التحليل المحلي لم يُرجع نتيجة قابلة للقراءة.",
+          {
+            type: "engine",
+            code: "LOCAL_ANALYSIS_EMPTY",
+            stage: "local-analysis"
+          }
+        );
       }
 
       options.progressCallback?.({
@@ -512,12 +486,14 @@ export class MTIAnalysisService {
         null;
 
       if (!localAnalysis) {
-        throw new MTIError({
-          message: "محرك التحليل المحلي لم يُرجع نتيجة قابلة للقراءة.",
-          type: "engine",
-          code: "LOCAL_ANALYSIS_EMPTY",
-          stage: "local-analysis"
-        });
+        throw new MTIError(
+          "محرك التحليل المحلي لم يُرجع نتيجة قابلة للقراءة.",
+          {
+            type: "engine",
+            code: "LOCAL_ANALYSIS_EMPTY",
+            stage: "local-analysis"
+          }
+        );
       }
 
 
