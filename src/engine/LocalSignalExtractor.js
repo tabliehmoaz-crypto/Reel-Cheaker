@@ -400,11 +400,25 @@ async function decodeAudioOnce(videoFile) {
 }
 
 async function loadAndExtractAudio(videoFile) {
-  const whisperModule = await getWhisperModule();
-  if (typeof whisperModule?.extractAudio !== "function") {
-    throw new Error("محرك استخراج الصوت المحلي غير متاح.");
+  const AudioContextCtor =
+    typeof window !== "undefined"
+      ? (window.AudioContext || window.webkitAudioContext)
+      : null;
+
+  if (!AudioContextCtor) {
+    throw new Error("المتصفح لا يدعم Web Audio.");
   }
-  return whisperModule.extractAudio(videoFile);
+
+  const arrayBuffer = await videoFile.arrayBuffer();
+  const audioContext = new AudioContextCtor();
+
+  try {
+    return await audioContext.decodeAudioData(arrayBuffer.slice(0));
+  } finally {
+    try {
+      await audioContext.close();
+    } catch {}
+  }
 }
 
 function computeAudioSignals(audioBuffer, metadata) {
