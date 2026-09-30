@@ -300,6 +300,91 @@ function audioBufferToMono(audioBuffer) {
 // تحليل الكلام
 // -----------------------------------------------------
 
+export async function transcribeAudioBufferChunked(audioBuffer, options = {}) {
+  if (!audioBuffer) throw new Error("لم يتم توفير AudioBuffer.");
+
+  const whisper = await loadWhisper();
+  const sampleRate = audioBuffer.sampleRate || 48000;
+  const channels = audioBuffer.numberOfChannels || 1;
+  const chunkSeconds = Math.max(4, Math.min(Number(options.chunkLength || 12), 15));
+  const overlapSeconds = Math.max(0, Math.min(Number(options.overlap || 1.5), 3));
+  const totalDuration = audioBuffer.duration || (audioBuffer.length / sampleRate);
+  const targetRate = TARGET_SAMPLE_RATE;
+  const segments = [];
+  const texts = [];
+
+  const mono = audioBufferToMono(audioBuffer).data;
+  const samplesPerSecond = targetRate;
+  const chunkSamples = Math.max(1, Math.round(chunkSeconds * samplesPerSecond));
+  const overlapSamples = Math.max(0, Math.round(overlapSeconds * samplesPerSecond));
+  const stepSamples = Math.max(1, chunkSamples - overlapSamples);
+
+  for (let startSample = 0; startSample < mono.length; startSample += stepSamples) {
+    const endSample = Math.min(mono.length, startSample + chunkSamples);
+    const chunk = mono.slice(startSample, endSample);
+    const offset = startSample / samplesPerSecond;
+
+    const result = await whisper(chunk, {
+      chunk_length_s: Math.min(chunkSeconds, 15),
+      stride_length_s: 1,
+      return_timestamps: true,
+      language: options.language || "ar",
+      task: "transcribe"
+    });
+
+    const normalized = normalizeResult(result);
+    if (normalized.text) texts.push(normalized.text);
+
+    for (const segment of normalized.segments) {
+      if (!segment.text) continue;
+      const start = Number.isFinite(segment.start) ? segment.start + offset : offset;
+      const end = Number.isFinite(segment.end) ? segment.end + offset : Math.min(totalDuration, offset + chunkSeconds);
+      segments.push({
+        text: segment.text,
+        start: Number(Math.max(0, start).toFixed(2)),
+        end: Number(Math.min(totalDuration, end).toFixed(2))
+      });
+    }
+
+    if (endSample >= mono.length) break;
+  }
+
+  const text = dedupeTranscriptSegments(segments, texts);
+  return {
+    text,
+    segments,
+    wordCount: text ? text.split(/\\s+/).filter(Boolean).length : 0,
+    hasSpeech: segments.length > 0 || text.length > 0,
+    chunked: true,
+    chunkSeconds,
+    totalDuration: Number(totalDuration.toFixed(2))
+  };
+}
+
+function dedupeTranscriptSegments(segments, fallbackTexts = []) {
+  const clean = [];
+  for (const segment of segments) {
+    const normalized = String(segment.text || "").replace(/\\s+/g, " ").trim();
+    if (!normalized) continue;
+    const previous = clean[clean.length - 1];
+    if (
+      previous &&
+      Math.abs((previous.start || 0) - (segment.start || 0)) < 2 &&
+      (previous.text === normalized ||
+       previous.text.includes(normalized) ||
+       normalized.includes(previous.text))
+    ) {
+      if (normalized.length > previous.text.length) previous.text = normalized;
+      previous.end = Math.max(previous.end || 0, segment.end || 0);
+      continue;
+    }
+    clean.push({ ...segment, text: normalized });
+  }
+
+  if (clean.length) return clean.map((s) => s.text).join(" ").replace(/\\s+/g, " ").trim();
+  return fallbackTexts.join(" ").replace(/\\s+/g, " ").trim();
+}
+
 export async function transcribeVideo(
   videoFile,
   options = {}
