@@ -52,6 +52,12 @@ export async function extractLocalSignals(videoFile, progressCallback = () => {}
   if (!videoFile) throw new Error("لم يتم اختيار فيديو.");
   if (!videoFile.type?.startsWith("video/")) throw new Error("الملف المختار ليس فيديو.");
 
+  progressCallback({
+    stage: "VALIDATING",
+    progress: 3,
+    message: "تم استلام الفيديو. عم نجهّزه للتحليل..."
+  });
+
   // Mobile/Safari gets a lower-cost real decoding path — not a fake zero-signal fallback.
   // We still decode actual frames. Only expensive full-file audio/Whisper work is optional.
   const metadata = await getVideoMetadata(videoFile);
