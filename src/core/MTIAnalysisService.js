@@ -51,7 +51,7 @@ import {
 
 import {
   localIntelligenceEngine
-} from "../ai/LocalIntelligenceEngine.js?v=6.0.2";
+} from "../ai/LocalIntelligenceEngine.js?v=6.1.0";
 
 
 import {
