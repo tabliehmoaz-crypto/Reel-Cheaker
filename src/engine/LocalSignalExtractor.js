@@ -393,6 +393,10 @@ function analyzePixels(data) {
 ========================================================= */
 
 async function decodeAudioOnce(videoFile) {
+  if (isMobileDevice()) {
+    return null;
+  }
+
   try {
     return await withTimeout(
       loadAndExtractAudio(videoFile),
