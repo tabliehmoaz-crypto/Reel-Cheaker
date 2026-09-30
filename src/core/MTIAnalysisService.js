@@ -51,12 +51,12 @@ import {
 
 import {
   localIntelligenceEngine
-} from "../ai/LocalIntelligenceEngine.js?v=6.0.1?v=6.0.1";
+} from "../ai/LocalIntelligenceEngine.js?v=6.0.2";
 
 
 import {
   MTIError,
-  normalizeError
+  normalizeMTIError
 } from "./MTIError.js";
 
 
@@ -259,7 +259,7 @@ export class MTIAnalysisService {
     } catch (error) {
 
       this.lastError =
-        normalizeError(
+        normalizeMTIError(
           error,
           {
             stage:
@@ -440,7 +440,7 @@ export class MTIAnalysisService {
     } catch (error) {
 
       this.lastError =
-        normalizeError(
+        normalizeMTIError(
           error,
           {
             stage:
@@ -598,7 +598,7 @@ export class MTIAnalysisService {
     } catch (error) {
 
       this.lastError =
-        normalizeError(
+        normalizeMTIError(
           error,
           {
             stage:
