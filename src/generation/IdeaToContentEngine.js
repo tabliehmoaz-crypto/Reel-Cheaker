@@ -546,3 +546,153 @@ export function generateFreshIdeas({ nicheId, count = 5 } = {}) {
       "هاي أفكار مبنية تركيبياً من نقاط ألم وأخطاء حقيقية مسجلة لهالمجال — مش توليد حر. اختر فكرة وحطها بـ generateContentPlan لتطويرها لهوك وسكربت كامل."
   };
 }
+
+
+/* =========================================================
+   Brain compatibility API
+   ---------------------------------------------------------
+   MTIBrain works with a small public API:
+   - generateContentFromIdea(idea, context)
+   - analyzeIdea(idea, context)
+   Keep these wrappers here so Brain does not depend on
+   internal helper functions or duplicate generation logic.
+   ========================================================= */
+
+function normalizeIdeaInput(idea) {
+  if (typeof idea === "string") {
+    return idea.trim();
+  }
+
+  if (idea && typeof idea === "object") {
+    return String(
+      idea.idea ||
+      idea.text ||
+      idea.title ||
+      ""
+    ).trim();
+  }
+
+  return "";
+}
+
+function normalizeGenerationContext(context = {}) {
+  return {
+    nicheId:
+      context.nicheId ||
+      context.niche?.id ||
+      context.niche?.nicheId,
+
+    platformId:
+      context.platformId ||
+      context.platform?.id ||
+      context.platform?.platform,
+
+    regionId:
+      context.regionId ||
+      context.region?.id ||
+      context.region?.region,
+
+    targetDuration:
+      Number.isFinite(context.targetDuration)
+        ? context.targetDuration
+        : Number.isFinite(context.duration)
+          ? context.duration
+          : undefined
+  };
+}
+
+/**
+ * Public Brain API:
+ * idea + optional Reel/Account context -> complete content plan.
+ *
+ * Context is intentionally used only for generation parameters here.
+ * Analysis/learning objects are preserved by MTIBrain at the caller
+ * level and are not treated as facts by this local generator.
+ */
+export function generateContentFromIdea(
+  idea,
+  context = {}
+) {
+  const normalizedIdea = normalizeIdeaInput(idea);
+
+  if (!normalizedIdea) {
+    return {
+      success: false,
+      error: "لازم تزودنا بفكرة نصية (idea) قبل التوليد."
+    };
+  }
+
+  const plan = generateContentPlan({
+    idea: normalizedIdea,
+    ...normalizeGenerationContext(context)
+  });
+
+  if (!plan?.success) {
+    return plan;
+  }
+
+  return {
+    ...plan,
+    source: "mti-brain",
+    contextAware: Boolean(
+      context?.reelId ||
+      context?.latestAnalysis ||
+      context?.reelLearning ||
+      context?.accountLearning ||
+      context?.conversation
+    )
+  };
+}
+
+/**
+ * Public Brain API:
+ * deterministic, local analysis of an idea before development.
+ */
+export function analyzeIdea(
+  idea,
+  context = {}
+) {
+  const normalizedIdea = normalizeIdeaInput(idea);
+
+  if (!normalizedIdea) {
+    return {
+      success: false,
+      error: "لازم تزودنا بفكرة لتحليلها."
+    };
+  }
+
+  const { nicheId, platformId, regionId } =
+    normalizeGenerationContext(context);
+
+  const niche = findById(NICHES, nicheId);
+  const hookOptions = buildHookOptions(niche, normalizedIdea);
+  const ctaChoice = pickCTA(niche);
+
+  return {
+    success: true,
+    idea: normalizedIdea,
+    niche: niche
+      ? {
+          id: niche.id,
+          name: niche.name,
+          primaryGoal: niche.primaryGoal,
+          commonMistakes: niche.commonMistakes || [],
+          painPoints: niche.painPoints || []
+        }
+      : null,
+    hookOptions,
+    recommendedHookType: hookOptions[0]?.type || null,
+    cta: ctaChoice || null,
+    platformNotes: getPlatformNotes(platformId),
+    regionNotes: getRegionNotes(regionId),
+    contextAware: Boolean(
+      context?.reelId ||
+      context?.latestAnalysis ||
+      context?.reelLearning ||
+      context?.accountLearning ||
+      context?.conversation
+    ),
+    note:
+      "هذا تحليل محلي للفكرة مبني على قاعدة معرفة MTI، وليس حكماً مبنياً على بيانات أداء فعلية ما لم تكن تلك البيانات موجودة ضمن سياق التحليل."
+  };
+}
