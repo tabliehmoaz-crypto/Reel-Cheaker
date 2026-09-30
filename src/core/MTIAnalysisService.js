@@ -51,13 +51,13 @@ import {
 
 import {
   localIntelligenceEngine
-} from "../ai/LocalIntelligenceEngine.js?v=6.2.0";
+} from "../ai/LocalIntelligenceEngine.js?v=6.3.0";
 
 
 import {
   MTIError,
   normalizeMTIError
-} from "./MTIError.js?v=6.2.0";
+} from "./MTIError.js?v=6.3.0";
 
 
 
