@@ -82,7 +82,7 @@ export async function extractLocalSignals(videoFile, progressCallback = () => {}
   const scenes = buildSceneAnalysis(visualSignals.frames, metadata);
   const attentionMap = buildAttentionMap(visualSignals.frames, audioSignals, speechResult, metadata, { hook, pacing, dropOff });
 
-  progressCallback({ stage: "COMPLETE", progress: 100, message: "اكتمل الاستخراج المحلي الحقيقي." });
+  progressCallback({ stage: "LOCAL_SIGNALS_READY", progress: 90, message: "اكتمل استخراج الإشارات المحلية الحقيقية." });
 
   return {
     video: { dimensions: metadata },
@@ -388,11 +388,23 @@ function analyzePixels(data) {
 
 async function decodeAudioOnce(videoFile) {
   try {
-    return await extractAudio(videoFile);
+    return await withTimeout(
+      loadAndExtractAudio(videoFile),
+      12000,
+      "انتهت مهلة تحليل الصوت على هذا المتصفح."
+    );
   } catch (error) {
     console.warn("MTI Audio Decode Error (متابعة بدون تحليل صوتي):", error);
     return null;
   }
+}
+
+async function loadAndExtractAudio(videoFile) {
+  const whisperModule = await getWhisperModule();
+  if (typeof whisperModule?.extractAudio !== "function") {
+    throw new Error("محرك استخراج الصوت المحلي غير متاح.");
+  }
+  return whisperModule.extractAudio(videoFile);
 }
 
 function computeAudioSignals(audioBuffer, metadata) {
@@ -477,8 +489,13 @@ async function safeTranscribe(videoFile, preDecodedAudioBuffer) {
       };
     }
 
+    const whisperModule = await getWhisperModule();
+    if (typeof whisperModule?.transcribeVideo !== "function") {
+      throw new Error("محرك الكلام المحلي غير متاح.");
+    }
+
     return await withTimeout(
-      transcribeVideo(videoFile, {
+      whisperModule.transcribeVideo(videoFile, {
         language: "ar",
         preDecodedAudioBuffer
       }),
