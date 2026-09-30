@@ -300,11 +300,32 @@ export class MTIAnalysisService {
         Local video analysis
       */
 
-      const localAnalysis =
+      const jobSnapshot =
         await this.pipeline.execute(
           file,
-          options
+          {
+            ...options,
+            saveResult: false
+          }
         );
+
+      const localAnalysis =
+        jobSnapshot?.result || null;
+
+      if (!localAnalysis) {
+        throw new MTIError({
+          message: "محرك التحليل المحلي لم يُرجع نتيجة قابلة للقراءة.",
+          type: "engine",
+          code: "LOCAL_ANALYSIS_EMPTY",
+          stage: "local-analysis"
+        });
+      }
+
+      options.progressCallback?.({
+        stage: "LOCAL_READY",
+        progress: 93,
+        message: "اكتمل التحليل المحلي. عم نبني Intelligence..."
+      });
 
 
       /*
@@ -334,6 +355,11 @@ export class MTIAnalysisService {
 
             contentAccount:
               options.contentAccount || null,
+
+            contentAccountId:
+              options.contentAccountId ||
+              options.contentAccount?.id ||
+              null,
 
             baselineViews:
               options.baselineViews ?? null,
@@ -365,11 +391,23 @@ export class MTIAnalysisService {
           }
         );
 
+      options.progressCallback?.({
+        stage: "INTELLIGENCE_COMPLETE",
+        progress: 98,
+        message: "اكتمل Intelligence. عم نتحقق من النتيجة..."
+      });
+
 
       /*
         STEP 4
         Final result
       */
+
+      options.progressCallback?.({
+        stage: "ANALYSIS_COMPLETE",
+        progress: 100,
+        message: "اكتمل تحليل MTI."
+      });
 
       return {
 
