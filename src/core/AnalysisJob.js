@@ -450,7 +450,8 @@ export class AnalysisJob {
   =================================================== */
 
   async process(
-    processor
+    processor,
+    processorOptions = {}
   ) {
 
     if (
@@ -503,6 +504,8 @@ export class AnalysisJob {
 
           // Preserve the original File/Blob. The processor decodes the video.
           this.input,
+
+          processorOptions,
 
           this
 
@@ -1172,7 +1175,13 @@ export class AnalysisJob {
         {},
 
       accountId =
-        null
+        null,
+
+      processorOptions =
+        {},
+
+      saveResult =
+        true
 
     } = config;
 
@@ -1192,7 +1201,8 @@ export class AnalysisJob {
 
       const processedData =
         await this.process(
-          processor
+          processor,
+          processorOptions
         );
 
 
@@ -1206,16 +1216,16 @@ export class AnalysisJob {
 
 
       /*
-        CRITICAL:
-
-        التحليل الأساسي يُحفظ
-        قبل التوصيات.
-
-        إذا فشلت التوصيات،
-        النتيجة تبقى محفوظة.
+        The caller may continue enriching the raw result before persistence.
+        MTIAnalysisService uses this mode so Intelligence is never persisted
+        as a separate/partial pipeline result.
       */
 
-      await this.save();
+      if (saveResult) {
+        await this.save();
+      } else {
+        this._record("save_deferred");
+      }
 
 
       if (performance) {
