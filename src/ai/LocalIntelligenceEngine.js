@@ -1133,7 +1133,7 @@ export class LocalIntelligenceEngine {
   ) {
 
     const textLength =
-      context.transcript.length;
+      String(context.transcript || "").length;
 
 
     const duration =
@@ -1144,13 +1144,30 @@ export class LocalIntelligenceEngine {
 
 
     const wordsPerSecond =
-      context.speech?.analysis
-        ?.wordsPerSecond ||
+      context.speech?.analysis?.wordsPerSecond ||
       (
         (context.speech?.wordCount || 0) /
         duration
       );
 
+    const hasCognitiveEvidence =
+      textLength > 0 ||
+      Number(context.speech?.wordCount || 0) > 0 ||
+      Number.isFinite(Number(context.speech?.analysis?.wordsPerSecond));
+
+
+    if (!hasCognitiveEvidence) {
+      return {
+        score: null,
+        cognitiveLoad: null,
+        wordsPerSecond: null,
+        interpretation: "لا توجد إشارات كلامية/نصية كافية لقياس الحمل المعرفي.",
+        knowledgeSupport: this.getRelevantKnowledge(
+          context,
+          ["cognition", "cognitive_load", "processing_fluency", "chunking"]
+        )
+      };
+    }
 
     let loadScore =
       50;
@@ -1325,15 +1342,9 @@ export class LocalIntelligenceEngine {
 
         idea: [idea, 0.60],
 
-        speechPresence: [
-
-          speech > 0
-            ? 70
-            : 20,
-
-          0.40
-
-        ]
+        speechPresence: speech > 0
+          ? [70, 0.40]
+          : [null, 0.40]
 
       });
 
@@ -1822,6 +1833,7 @@ export class LocalIntelligenceEngine {
 
 
     if (
+      hook !== null &&
       hook < 45 &&
       context.deliveryPattern?.type !== "spoken_setup_pause"
     ) {
@@ -1847,6 +1859,7 @@ export class LocalIntelligenceEngine {
 
 
     if (
+      pacing !== null &&
       pacing < 40 &&
       context.deliveryPattern?.type !== "spoken_setup_pause"
     ) {
@@ -2331,6 +2344,9 @@ export class LocalIntelligenceEngine {
 
   attentionInterpretation(score) {
     const s = this.normalize(score);
+    if (s === null) {
+      return "لا توجد إشارات كافية لقياس الجذب المبكر.";
+    }
     if (s >= 70) {
       return "إشارات الجذب المبكرة قوية نسبياً حسب القياس المحلي.";
     }
