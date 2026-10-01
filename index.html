@@ -535,6 +535,7 @@
     }
     let activeReelId = null;
     let activeObjectURL = null;
+    window.__mtiGetActiveReelId = () => activeReelId;
 
     // ---------------------------------------------------------
     // AUTH GATING
@@ -673,6 +674,7 @@
         }
 
         activeReelId = reel.reelId;
+        window.dispatchEvent(new CustomEvent('mti:reel-changed', { detail: { reelId: activeReelId } }));
         reportProgress({ progress: 3, message: 'تم إنشاء هوية الـReel…' });
 
         const asset = await saveReelVideo(file, {
@@ -740,6 +742,7 @@
         renderImprovePanel(report, file, reel);
         await refreshReelLibrary();
         await renderVersionIntelligence(activeReelId);
+        document.dispatchEvent(new CustomEvent('mti:analysis-complete', { detail: { reelId: activeReelId } }));
       } catch (err) {
         console.error(err);
         alert(err.message || 'حدث خطأ أثناء فحص الفيديو');
@@ -814,6 +817,7 @@
         const latest = getReel(reelId);
         if (!latest) throw new Error('Reel غير موجود.');
         activeReelId = reelId;
+        window.dispatchEvent(new CustomEvent('mti:reel-opened', { detail: { reelId } }));
 
         const accountId = latest.accountId || 'local';
         const asset = latest.assetId ? await getReelVideo(latest.assetId, accountId) : null;
