@@ -820,10 +820,12 @@ export class LocalIntelligenceEngine {
         decision: "pause",
 
         probability:
-          this.clamp(
-            35 +
-            (context.visual?.score || 0) * 0.3
-          ) / 100,
+          visualScore === null
+            ? null
+            : this.clamp(
+                35 +
+                visualScore * 0.3
+              ) / 100,
 
         stage:
           "middle",
