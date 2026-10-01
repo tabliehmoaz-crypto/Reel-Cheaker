@@ -1152,7 +1152,8 @@ export async function comparePredictionToReality(
 
       prediction.overall ??
       prediction.score ??
-      prediction.predictedScore
+      prediction.predictedScore ??
+      prediction.retentionEstimate
 
     );
 
@@ -1161,7 +1162,8 @@ export async function comparePredictionToReality(
     normalizeScore(
 
       actual.overall ??
-      actual.score
+      actual.score ??
+      actual.performanceScore
 
     );
 
