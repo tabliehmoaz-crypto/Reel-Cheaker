@@ -892,6 +892,7 @@
       const version = getReelVersions(reelId).find((item) => item.versionId === versionId);
       if (!version) return;
       activeReelId = reelId;
+      window.dispatchEvent(new CustomEvent('mti:reel-opened', { detail: { reelId, versionId } }));
       const asset = version.assetId ? await getReelVideo(version.assetId, version.accountId || 'local') : null;
       if (asset?.blob) {
         if (activeObjectURL) URL.revokeObjectURL(activeObjectURL);
