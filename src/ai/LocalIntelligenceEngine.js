@@ -905,10 +905,9 @@ export class LocalIntelligenceEngine {
         decision: "skip",
 
         probability:
-          this.clamp(
-            100 -
-            continueScore
-          ) / 100,
+          hasContinuationEvidence
+            ? this.clamp(100 - continueScore) / 100
+            : null,
 
         stage:
           "opening",
@@ -1074,18 +1073,17 @@ export class LocalIntelligenceEngine {
       });
 
 
+    const curiosityScore =
+      score === null ? null : this.clamp(score + knowledgeGapSignal);
+
     return {
 
       score:
-        this.clamp(
-          score +
-          knowledgeGapSignal
-        ),
+        curiosityScore,
 
       strength:
         this.classifyScore(
-          score +
-          knowledgeGapSignal
+          curiosityScore
         ),
 
       signals: {
@@ -1102,9 +1100,11 @@ export class LocalIntelligenceEngine {
       },
 
       interpretation:
-        score >= 70
-          ? "توجد إشارات جيدة إلى وجود فجوة معلوماتية أو وعد يدفع للاستمرار."
-          : "لا توجد إشارات محلية كافية لإثبات فضول قوي.",
+        curiosityScore === null
+          ? "لا توجد إشارات كافية لقياس الفضول."
+          : curiosityScore >= 70
+            ? "توجد إشارات جيدة إلى وجود فجوة معلوماتية أو وعد يدفع للاستمرار."
+            : "لا توجد إشارات محلية كافية لإثبات فضول قوي.",
 
       knowledgeSupport:
         this.getRelevantKnowledge(
@@ -1501,7 +1501,7 @@ export class LocalIntelligenceEngine {
 
     const score = speechAvailable
       ? this.weightedAverage({ speech: [speechScore, 0.55], level: [levelScore, 0.45] })
-      : (hasMeasuredAudio ? levelScore : 0);
+      : (hasMeasuredAudio ? levelScore : null);
 
     return {
 
