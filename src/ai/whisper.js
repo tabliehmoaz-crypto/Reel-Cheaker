@@ -353,7 +353,7 @@ export async function transcribeAudioBufferChunked(audioBuffer, options = {}) {
   return {
     text,
     segments,
-    wordCount: text ? text.split(/\\s+/).filter(Boolean).length : 0,
+    wordCount: text ? text.split(/\s+/).filter(Boolean).length : 0,
     hasSpeech: segments.length > 0 || text.length > 0,
     chunked: true,
     chunkSeconds,
@@ -362,27 +362,48 @@ export async function transcribeAudioBufferChunked(audioBuffer, options = {}) {
 }
 
 function dedupeTranscriptSegments(segments, fallbackTexts = []) {
+  const sorted = [...segments]
+    .filter((s) => s && String(s.text || "").trim())
+    .map((s) => ({
+      ...s,
+      text: String(s.text || "").replace(/\s+/g, " ").trim(),
+      start: Number.isFinite(Number(s.start)) ? Number(s.start) : null,
+      end: Number.isFinite(Number(s.end)) ? Number(s.end) : null
+    }))
+    .sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
+
   const clean = [];
-  for (const segment of segments) {
-    const normalized = String(segment.text || "").replace(/\\s+/g, " ").trim();
-    if (!normalized) continue;
+  for (const segment of sorted) {
     const previous = clean[clean.length - 1];
     if (
       previous &&
-      Math.abs((previous.start || 0) - (segment.start || 0)) < 2 &&
-      (previous.text === normalized ||
-       previous.text.includes(normalized) ||
-       normalized.includes(previous.text))
+      previous.end != null &&
+      segment.start != null &&
+      segment.start <= previous.end + 0.65 &&
+      (
+        previous.text === segment.text ||
+        previous.text.includes(segment.text) ||
+        segment.text.includes(previous.text)
+      )
     ) {
-      if (normalized.length > previous.text.length) previous.text = normalized;
-      previous.end = Math.max(previous.end || 0, segment.end || 0);
+      if (segment.text.length > previous.text.length) previous.text = segment.text;
+      previous.end = Math.max(previous.end ?? 0, segment.end ?? previous.end ?? 0);
       continue;
     }
-    clean.push({ ...segment, text: normalized });
+    clean.push(segment);
   }
 
-  if (clean.length) return clean.map((s) => s.text).join(" ").replace(/\\s+/g, " ").trim();
-  return fallbackTexts.join(" ").replace(/\\s+/g, " ").trim();
+  const finalSegments = clean.map((s) => ({
+    text: s.text,
+    start: s.start,
+    end: s.end
+  }));
+
+  const text = finalSegments.length
+    ? finalSegments.map((s) => s.text).join(" ").replace(/\s+/g, " ").trim()
+    : String(fallbackTexts.join(" ") || "").replace(/\s+/g, " ").trim();
+
+  return { text, segments: finalSegments };
 }
 
 export async function transcribeVideo(
