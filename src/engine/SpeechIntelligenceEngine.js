@@ -27,7 +27,8 @@ export async function analyzeSpeech(audioBuffer, options = {}) {
       voiceProfile: analyzeVoiceDelivery(audioBuffer),
       mode: "mobile-activity-only",
       transcriptionReady: false,
-      limitation: "mobile-local-transcription-disabled-until-device-safe-path-is-enabled"
+      limitation: "mobile-local-transcription-disabled-until-device-safe-path-is-enabled",
+      diagnostics: { stage: "mobile-guard", transcriptionAttempted: false }
     };
   }
 
@@ -52,7 +53,13 @@ export async function analyzeSpeech(audioBuffer, options = {}) {
       ...result,
       voiceProfile: analyzeVoiceDelivery(audioBuffer),
       mode: mobile ? "mobile-whisper-chunked" : "desktop-whisper-chunked",
-      transcriptionReady: Boolean(result?.text)
+      transcriptionReady: Boolean(result?.text),
+      diagnostics: {
+        stage: "transcription-complete",
+        transcriptionAttempted: true,
+        segmentCount: Array.isArray(result?.segments) ? result.segments.length : 0,
+        textLength: String(result?.text || "").length
+      }
     };
   } catch (error) {
     console.warn("MTI Speech Intelligence:", error);
@@ -62,7 +69,13 @@ export async function analyzeSpeech(audioBuffer, options = {}) {
       mode: mobile ? "mobile-activity-fallback" : "desktop-activity-fallback",
       transcriptionReady: false,
       unavailable: false,
-      fallbackReason: error?.message || "local-transcription-failed"
+      fallbackReason: error?.message || "local-transcription-failed",
+      diagnostics: {
+        stage: "transcription-failed",
+        transcriptionAttempted: true,
+        errorName: error?.name || "Error",
+        errorMessage: error?.message || "local-transcription-failed"
+      }
     };
   }
 }
