@@ -2067,15 +2067,21 @@ export class LocalIntelligenceEngine {
     }
 
     if (recommendations.length === 0) {
-      push({
-        priority: "low",
-        category: "general",
-        problem: "لا توجد نقطة ضعف واضحة حسب الإشارات المحلية المتاحة.",
-        action: "حافظ على نفس البنية، وجرّب اختبار A/B على الهوك بفيديوهات مشابهة.",
-        reason: "الإشارات المقاسة ضمن نطاق جيد.",
-        expectedEffect: "استقرار الأداء الحالي.",
-        confidence: CONFIDENCE.MEDIUM
-      });
+      const hasAnyEvidence = Object.values(domains || {}).some(
+        domain => domain && this.normalize(domain.score) !== null
+      );
+
+      if (hasAnyEvidence) {
+        push({
+          priority: "low",
+          category: "general",
+          problem: "لا توجد نقطة ضعف واضحة ضمن الإشارات المقاسة.",
+          action: "حافظ على البنية الحالية، وجرّب اختبار نسخة بديلة من الهوك إذا عندك سبب إبداعي واضح.",
+          reason: "الإشارات المحلية المتاحة لا تكشف نقطة ضعف محددة تستحق تعديلاً إلزامياً.",
+          expectedEffect: "اختبار تحسيني، وليس وعداً بارتفاع الأداء.",
+          confidence: CONFIDENCE.MEDIUM
+        });
+      }
     }
 
     return recommendations;
@@ -2250,9 +2256,9 @@ export class LocalIntelligenceEngine {
 
     let points = 0;
 
-    if (context.hook?.score !== undefined && context.hook?.score !== null) points++;
-    if (context.pacing?.score !== undefined && context.pacing?.score !== null) points++;
-    if (context.visual?.score !== undefined && context.visual?.score !== null) points++;
+    if (context.hook?.score != null) points++;
+    if (context.pacing?.score != null) points++;
+    if (context.visual?.score != null) points++;
     if (context.speechAvailable) points++;
     if (Array.isArray(evidence) && evidence.length >= 4) points++;
 
