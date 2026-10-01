@@ -2393,7 +2393,11 @@ export class LocalIntelligenceEngine {
       reasons.push("توجد بنية فكرة يمكن أن تشد الانتباه.");
     }
     if (reasons.length === 0) {
-      reasons.push("الإشارات المحلية المتاحة لا تدعم استمراراً قوياً بشكل واضح.");
+      reasons.push(
+        continueScore === null
+          ? "لا توجد إشارات محلية كافية لبناء تفسير مسؤول للاستمرار."
+          : "الإشارات المحلية المتاحة لا تدعم استمراراً قوياً بشكل واضح."
+      );
     }
     return reasons;
   }
