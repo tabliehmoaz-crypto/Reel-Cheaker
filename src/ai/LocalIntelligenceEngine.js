@@ -1348,9 +1348,11 @@ export class LocalIntelligenceEngine {
         ),
 
       interpretation:
-        score >= 70
-          ? "هناك بنية معلوماتية أو فكرة واضحة يمكن أن تدعم مساراً سردياً."
-          : "البنية السردية غير واضحة بما يكفي من الإشارات المحلية.",
+        score === null
+          ? "لا توجد إشارات كافية لقراءة البنية السردية."
+          : score >= 70
+            ? "هناك بنية معلوماتية أو فكرة واضحة يمكن أن تدعم مساراً سردياً."
+            : "البنية السردية غير واضحة بما يكفي من الإشارات المحلية.",
 
       knowledgeSupport:
         this.getRelevantKnowledge(
@@ -1401,9 +1403,11 @@ export class LocalIntelligenceEngine {
       duration,
 
       interpretation:
-        score >= 70
-          ? "الإيقاع يحتوي على مستوى جيد من التغيرات الزمنية."
-          : "الإيقاع قد يحتاج إلى مراجعة بحسب طبيعة المحتوى.",
+        score === null
+          ? "لا توجد بيانات كافية لقياس الإيقاع."
+          : score >= 70
+            ? "الإيقاع يحتوي على مستوى جيد من التغيرات الزمنية."
+            : "الإيقاع قد يحتاج إلى مراجعة بحسب طبيعة المحتوى.",
 
       knowledgeSupport:
         this.getRelevantKnowledge(
@@ -2004,7 +2008,7 @@ export class LocalIntelligenceEngine {
         action: "أضف تغيير بصري أو صوتي واضح (قصة/حركة/جملة مباشرة) بأول ثانيتين.",
         reason: "الفيديوهات القصيرة بتخسر جزء كبير من المشاهدين إذا ما في إشارة جذب مبكرة.",
         expectedEffect: "رفع محتمل بنسبة الاستمرار بالثواني الأولى.",
-        confidence: this.scoreConfidence(domains.attention?.score ?? 0)
+        confidence: this.scoreConfidence(domains.attention?.score)
       });
     }
 
@@ -2019,7 +2023,7 @@ export class LocalIntelligenceEngine {
         action: "قصّر اللقطات الطويلة الثابتة أو أضف قطع/زاوية جديدة كل 2-3 ثوانٍ.",
         reason: "قلة التغير الزمني بترفع احتمال فقدان الانتباه بمنتصف المقطع.",
         expectedEffect: "تحسين محتمل بالاحتفاظ بالمشاهدين لمنتصف الفيديو.",
-        confidence: this.scoreConfidence(domains.pacing?.score ?? 0)
+        confidence: this.scoreConfidence(domains.pacing?.score)
       });
     }
 
@@ -2035,7 +2039,7 @@ export class LocalIntelligenceEngine {
       });
     }
 
-    if (this.normalize(domains.curiosity?.score) < 50) {
+    if (this.normalize(domains.curiosity?.score) !== null && this.normalize(domains.curiosity?.score) < 50) {
       push({
         priority: "medium",
         category: "curiosity",
@@ -2043,7 +2047,7 @@ export class LocalIntelligenceEngine {
         action: "استخدم سؤال أو وعد صريح بأول جملة (مثال: كيف/ليش/شو رح يصير).",
         reason: "فجوة معلوماتية واضحة بترفع احتمال الاستمرار بالمشاهدة.",
         expectedEffect: "رفع محتمل بالفضول ونية الاستمرار.",
-        confidence: this.scoreConfidence(domains.curiosity?.score ?? 0)
+        confidence: this.scoreConfidence(domains.curiosity?.score)
       });
     }
 
@@ -2231,9 +2235,9 @@ export class LocalIntelligenceEngine {
 
     let points = 0;
 
-    if (context.hook?.score !== undefined) points++;
-    if (context.pacing?.score !== undefined) points++;
-    if (context.visual?.score !== undefined) points++;
+    if (context.hook?.score !== undefined && context.hook?.score !== null) points++;
+    if (context.pacing?.score !== undefined && context.pacing?.score !== null) points++;
+    if (context.visual?.score !== undefined && context.visual?.score !== null) points++;
     if (context.speechAvailable) points++;
     if (Array.isArray(evidence) && evidence.length >= 4) points++;
 
@@ -2374,6 +2378,7 @@ export class LocalIntelligenceEngine {
   calculateRewatchPotential(context) {
     const idea = this.normalize(context.idea?.score);
     const cognition = this.normalize(context.speech?.wordCount ? 60 : 30);
+    if (idea === null || cognition === null) return null;
     return this.clamp(idea * 0.6 + cognition * 0.4);
   }
 
@@ -2381,6 +2386,7 @@ export class LocalIntelligenceEngine {
   calculateSharePotential(context) {
     const emotionalWords = this.countEmotionalSignals(context.transcript);
     const idea = this.normalize(context.idea?.score);
+    if (idea === null) return null;
     return this.clamp(emotionalWords * 0.5 + idea * 0.5);
   }
 
@@ -2389,6 +2395,7 @@ export class LocalIntelligenceEngine {
     const idea = this.normalize(context.idea?.score);
     const wordCount = context.speech?.wordCount || 0;
     const infoDensity = wordCount > 20 ? 65 : 35;
+    if (idea === null) return null;
     return this.clamp(idea * 0.5 + infoDensity * 0.5);
   }
 
