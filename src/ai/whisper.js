@@ -349,12 +349,14 @@ export async function transcribeAudioBufferChunked(audioBuffer, options = {}) {
     if (endSample >= mono.length) break;
   }
 
-  const text = dedupeTranscriptSegments(segments, texts);
+  const deduped = dedupeTranscriptSegments(segments, texts);
+  const text = deduped.text;
+  const cleanSegments = deduped.segments;
   return {
     text,
-    segments,
+    segments: cleanSegments,
     wordCount: text ? text.split(/\s+/).filter(Boolean).length : 0,
-    hasSpeech: segments.length > 0 || text.length > 0,
+    hasSpeech: cleanSegments.length > 0 || text.length > 0,
     chunked: true,
     chunkSeconds,
     totalDuration: Number(totalDuration.toFixed(2))
