@@ -696,38 +696,47 @@ function buildDropOffSignal(visualSignals, metadata, deliveryPattern = null) {
 }
 
 function buildDeliveryPattern(speechResult, metadata) {
-  if (!speechResult?.hasSpeech || !Array.isArray(speechResult?.segments) || !speechResult.segments.length) {
-    return {
-      type: "unknown",
-      basis: "no_timed_speech"
-    };
+  const segments = Array.isArray(speechResult?.segments)
+    ? speechResult.segments
+        .filter((s) => Number.isFinite(Number(s?.start)) && Number.isFinite(Number(s?.end)))
+        .sort((a, b) => Number(a.start) - Number(b.start))
+    : [];
+
+  if (!speechResult?.hasSpeech || !segments.length) {
+    return { type: "unknown", basis: "no_timed_speech", confidence: "low" };
   }
 
   const duration = Number(metadata.duration || 0);
-  const validSegments = speechResult.segments.filter(
-    (segment) => Number.isFinite(Number(segment?.start)) || Number.isFinite(Number(segment?.end))
-  );
-  const speechEnd = Math.max(
-    ...validSegments.map((segment) => Number(segment?.end ?? segment?.start ?? 0)),
-    0
-  );
+  const speechStart = Number(segments[0].start);
+  const speechEnd = Math.max(...segments.map((s) => Number(s.end)), 0);
   const finalPause = Math.max(0, duration - speechEnd);
 
-  if (duration <= 15 && speechEnd > 0 && finalPause >= 0.35) {
-    return {
-      type: "spoken_setup_pause",
-      speechEnd: Number(speechEnd.toFixed(2)),
-      finalPause: Number(finalPause.toFixed(2)),
-      basis: "timed_speech_and_final_pause",
-      confidence: "medium"
-    };
+  const pauses = [];
+  for (let i = 1; i < segments.length; i++) {
+    const gap = Number(segments[i].start) - Number(segments[i - 1].end);
+    if (gap >= 0.35) {
+      pauses.push({
+        start: Number(Number(segments[i - 1].end).toFixed(2)),
+        end: Number(Number(segments[i].start).toFixed(2)),
+        duration: Number(gap.toFixed(2))
+      });
+    }
   }
 
+  const likelyFinalPayoffPause =
+    finalPause >= 0.35 &&
+    finalPause <= 3.5 &&
+    speechEnd >= Math.max(1.0, duration * 0.45);
+
   return {
-    type: "continuous_speech",
+    type: likelyFinalPayoffPause ? "spoken_setup_pause" : "timed_speech",
+    speechStart: Number(speechStart.toFixed(2)),
     speechEnd: Number(speechEnd.toFixed(2)),
     finalPause: Number(finalPause.toFixed(2)),
-    basis: "timed_speech"
+    pauses,
+    likelyPayoffPause: likelyFinalPayoffPause,
+    basis: "timestamped_speech_and_pause_structure",
+    confidence: likelyFinalPayoffPause ? "medium" : "high"
   };
 }
 
@@ -741,7 +750,7 @@ function buildIdeaSignal(speechResult, metadata) {
   if (!speechResult?.hasSpeech || !speechResult.text) {
     // بدون كلام، لا يمكن قياس بنية الفكرة من النص؛
     // نعطي قيمة متحفظة بدل اختلاق تقييم.
-    return { score: 30, basis: "no_speech_detected" };
+    return { score: null, available: false, basis: "no_speech_detected" };
   }
 
   const text = speechResult.text;
@@ -773,7 +782,7 @@ function buildSpeechSignal(speechResult, metadata) {
 
   const deliveryScore = speechResult?.hasSpeech
     ? clamp(100 - Math.abs(wordsPerSecond - 2.4) * 22)
-    : 0;
+    : null;
 
   return {
     available: Boolean(speechResult?.hasSpeech),
