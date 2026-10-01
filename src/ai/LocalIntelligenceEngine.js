@@ -386,6 +386,11 @@ export class LocalIntelligenceEngine {
       {};
 
 
+    const audio =
+      localAnalysis.audio ||
+      null;
+
+
     const speech =
       localAnalysis.speech ||
       {};
@@ -399,6 +404,10 @@ export class LocalIntelligenceEngine {
     const dropOff =
       localAnalysis.dropOff ||
       {};
+
+    const deliveryPattern =
+      localAnalysis.deliveryPattern ||
+      { type: "unknown" };
 
 
     /*
@@ -462,11 +471,15 @@ export class LocalIntelligenceEngine {
 
       technical,
 
+      audio,
+
       speech,
 
       idea,
 
       dropOff,
+
+      deliveryPattern,
 
       diagnosis:
         localAnalysis.diagnosis ||
@@ -489,6 +502,15 @@ export class LocalIntelligenceEngine {
       benchmarks,
 
       evidencePolicy,
+
+      personalMemory:
+        intelligenceContext?.personalMemory || null,
+
+      accountLearning:
+        intelligenceContext?.accountLearning || null,
+
+      activeContentAccount:
+        intelligenceContext?.activeContentAccount || null,
 
       duration:
         video?.dimensions?.duration ||
@@ -763,16 +785,13 @@ export class LocalIntelligenceEngine {
 
     const continueScore =
       this.weightedAverage({
-
         hook: [hookScore, 0.35],
-
         pacing: [pacingScore, 0.20],
-
         visual: [visualScore, 0.20],
-
         idea: [ideaScore, 0.25]
-
       });
+
+    const hasContinuationEvidence = continueScore !== null;
 
 
     return [
@@ -782,7 +801,7 @@ export class LocalIntelligenceEngine {
         decision: "continue",
 
         probability:
-          continueScore / 100,
+          hasContinuationEvidence ? continueScore / 100 : null,
 
         stage:
           "opening",
@@ -801,10 +820,12 @@ export class LocalIntelligenceEngine {
         decision: "pause",
 
         probability:
-          this.clamp(
-            35 +
-            (context.visual?.score || 0) * 0.3
-          ) / 100,
+          visualScore === null
+            ? null
+            : this.clamp(
+                35 +
+                visualScore * 0.3
+              ) / 100,
 
         stage:
           "middle",
@@ -886,10 +907,9 @@ export class LocalIntelligenceEngine {
         decision: "skip",
 
         probability:
-          this.clamp(
-            100 -
-            continueScore
-          ) / 100,
+          hasContinuationEvidence
+            ? this.clamp(100 - continueScore) / 100
+            : null,
 
         stage:
           "opening",
@@ -1055,18 +1075,17 @@ export class LocalIntelligenceEngine {
       });
 
 
+    const curiosityScore =
+      score === null ? null : this.clamp(score + knowledgeGapSignal);
+
     return {
 
       score:
-        this.clamp(
-          score +
-          knowledgeGapSignal
-        ),
+        curiosityScore,
 
       strength:
         this.classifyScore(
-          score +
-          knowledgeGapSignal
+          curiosityScore
         ),
 
       signals: {
@@ -1083,9 +1102,11 @@ export class LocalIntelligenceEngine {
       },
 
       interpretation:
-        score >= 70
-          ? "توجد إشارات جيدة إلى وجود فجوة معلوماتية أو وعد يدفع للاستمرار."
-          : "لا توجد إشارات محلية كافية لإثبات فضول قوي.",
+        curiosityScore === null
+          ? "لا توجد إشارات كافية لقياس الفضول."
+          : curiosityScore >= 70
+            ? "توجد إشارات جيدة إلى وجود فجوة معلوماتية أو وعد يدفع للاستمرار."
+            : "لا توجد إشارات محلية كافية لإثبات فضول قوي.",
 
       knowledgeSupport:
         this.getRelevantKnowledge(
@@ -1114,7 +1135,7 @@ export class LocalIntelligenceEngine {
   ) {
 
     const textLength =
-      context.transcript.length;
+      String(context.transcript || "").length;
 
 
     const duration =
@@ -1125,13 +1146,30 @@ export class LocalIntelligenceEngine {
 
 
     const wordsPerSecond =
-      context.speech?.analysis
-        ?.wordsPerSecond ||
+      context.speech?.analysis?.wordsPerSecond ||
       (
         (context.speech?.wordCount || 0) /
         duration
       );
 
+    const hasCognitiveEvidence =
+      textLength > 0 ||
+      Number(context.speech?.wordCount || 0) > 0 ||
+      Number.isFinite(Number(context.speech?.analysis?.wordsPerSecond));
+
+
+    if (!hasCognitiveEvidence) {
+      return {
+        score: null,
+        cognitiveLoad: null,
+        wordsPerSecond: null,
+        interpretation: "لا توجد إشارات كلامية/نصية كافية لقياس الحمل المعرفي.",
+        knowledgeSupport: this.getRelevantKnowledge(
+          context,
+          ["cognition", "cognitive_load", "processing_fluency", "chunking"]
+        )
+      };
+    }
 
     let loadScore =
       50;
@@ -1306,15 +1344,9 @@ export class LocalIntelligenceEngine {
 
         idea: [idea, 0.60],
 
-        speechPresence: [
-
-          speech > 0
-            ? 70
-            : 20,
-
-          0.40
-
-        ]
+        speechPresence: speech > 0
+          ? [70, 0.40]
+          : [null, 0.40]
 
       });
 
@@ -1329,9 +1361,11 @@ export class LocalIntelligenceEngine {
         ),
 
       interpretation:
-        score >= 70
-          ? "هناك بنية معلوماتية أو فكرة واضحة يمكن أن تدعم مساراً سردياً."
-          : "البنية السردية غير واضحة بما يكفي من الإشارات المحلية.",
+        score === null
+          ? "لا توجد إشارات كافية لقراءة البنية السردية."
+          : score >= 70
+            ? "هناك بنية معلوماتية أو فكرة واضحة يمكن أن تدعم مساراً سردياً."
+            : "البنية السردية غير واضحة بما يكفي من الإشارات المحلية.",
 
       knowledgeSupport:
         this.getRelevantKnowledge(
@@ -1382,9 +1416,11 @@ export class LocalIntelligenceEngine {
       duration,
 
       interpretation:
-        score >= 70
-          ? "الإيقاع يحتوي على مستوى جيد من التغيرات الزمنية."
-          : "الإيقاع قد يحتاج إلى مراجعة بحسب طبيعة المحتوى.",
+        score === null
+          ? "لا توجد بيانات كافية لقياس الإيقاع."
+          : score >= 70
+            ? "الإيقاع يحتوي على مستوى جيد من التغيرات الزمنية."
+            : "الإيقاع قد يحتاج إلى مراجعة بحسب طبيعة المحتوى.",
 
       knowledgeSupport:
         this.getRelevantKnowledge(
@@ -1464,49 +1500,64 @@ export class LocalIntelligenceEngine {
     context
   ) {
 
-    const available =
-      context.speechAvailable;
+    const measured = context.audio || {};
+    const speechAvailable = context.speechAvailable;
+    const speechScore = this.normalize(context.speech?.analysis?.score);
 
+    // Audio quality is intentionally reported from measured signals rather
+    // than guessed from speech presence alone. RMS is level, not quality;
+    // silence/dynamism are descriptive signals, not platform-performance claims.
+    const level = Number(measured.avgRms);
+    const silenceRatio = Number(measured.silenceRatio);
+    const dynamism = Number(measured.dynamism);
+    const hasMeasuredAudio = Number.isFinite(level);
 
-    const score =
-      this.normalize(
-        context.speech?.analysis?.score
-      );
+    const levelScore = hasMeasuredAudio
+      ? this.clamp(100 - Math.abs(level - 0.08) / 0.08 * 45)
+      : 0;
 
+    const score = speechAvailable
+      ? this.weightedAverage({ speech: [speechScore, 0.55], level: [levelScore, 0.45] })
+      : (hasMeasuredAudio ? levelScore : null);
 
     return {
 
-      available,
+      available: hasMeasuredAudio || speechAvailable,
 
       score,
 
-      speechDetected:
-        available,
+      speechDetected: speechAvailable,
 
       wordCount:
-        context.speech?.wordCount ||
-        0,
+        context.speech?.wordCount || 0,
+
+      measured: hasMeasuredAudio
+        ? {
+            avgRms: Number(level.toFixed(4)),
+            silenceRatio: Number(silenceRatio.toFixed(3)),
+            dynamism: Number(dynamism.toFixed(4)),
+            earlyAvgRms: Number.isFinite(Number(measured.earlyAvgRms))
+              ? Number(Number(measured.earlyAvgRms).toFixed(4))
+              : null
+          }
+        : null,
 
       interpretation:
-        available
-          ? "توجد بيانات كلام يمكن استخدامها في التحليل."
-          : "لا تتوفر بيانات كلام كافية للتحليل الصوتي العميق.",
+        hasMeasuredAudio
+          ? (speechAvailable
+              ? "تم قياس الإشارة الصوتية والكلام محلياً؛ المؤشرات تصف التسجيل نفسه ولا تثبت أداء المنصة."
+              : "تم قياس مستوى الإشارة الصوتية محلياً، لكن لم يتوفر تفريغ كلام موثوق.")
+          : "لا تتوفر بيانات صوتية قابلة للقياس على هذا المتصفح.",
 
       knowledgeSupport:
         this.getRelevantKnowledge(
           context,
-          [
-            "audio",
-            "voice",
-            "speech",
-            "silence"
-          ]
+          ["audio", "voice", "speech", "silence"]
         )
 
     };
 
   }
-
 
 
   /* =======================================================
@@ -1784,7 +1835,9 @@ export class LocalIntelligenceEngine {
 
 
     if (
-      hook < 45
+      hook !== null &&
+      hook < 45 &&
+      context.deliveryPattern?.type !== "spoken_setup_pause"
     ) {
 
       risks.push({
@@ -1808,7 +1861,9 @@ export class LocalIntelligenceEngine {
 
 
     if (
-      pacing < 40
+      pacing !== null &&
+      pacing < 40 &&
+      context.deliveryPattern?.type !== "spoken_setup_pause"
     ) {
 
       risks.push({
@@ -1957,7 +2012,10 @@ export class LocalIntelligenceEngine {
     const push = (data) =>
       recommendations.push(createRecommendation(data));
 
-    if (this.normalize(domains.attention?.score) < 55) {
+    if (
+      this.normalize(domains.attention?.score) < 55 &&
+      context.deliveryPattern?.type !== "spoken_setup_pause"
+    ) {
       push({
         priority: "high",
         category: "attention",
@@ -1965,11 +2023,14 @@ export class LocalIntelligenceEngine {
         action: "أضف تغيير بصري أو صوتي واضح (قصة/حركة/جملة مباشرة) بأول ثانيتين.",
         reason: "الفيديوهات القصيرة بتخسر جزء كبير من المشاهدين إذا ما في إشارة جذب مبكرة.",
         expectedEffect: "رفع محتمل بنسبة الاستمرار بالثواني الأولى.",
-        confidence: this.scoreConfidence(domains.attention?.score ?? 0)
+        confidence: this.scoreConfidence(domains.attention?.score)
       });
     }
 
-    if (this.normalize(domains.pacing?.score) < 50) {
+    if (
+      this.normalize(domains.pacing?.score) < 50 &&
+      context.deliveryPattern?.type !== "spoken_setup_pause"
+    ) {
       push({
         priority: "medium",
         category: "pacing",
@@ -1977,7 +2038,7 @@ export class LocalIntelligenceEngine {
         action: "قصّر اللقطات الطويلة الثابتة أو أضف قطع/زاوية جديدة كل 2-3 ثوانٍ.",
         reason: "قلة التغير الزمني بترفع احتمال فقدان الانتباه بمنتصف المقطع.",
         expectedEffect: "تحسين محتمل بالاحتفاظ بالمشاهدين لمنتصف الفيديو.",
-        confidence: this.scoreConfidence(domains.pacing?.score ?? 0)
+        confidence: this.scoreConfidence(domains.pacing?.score)
       });
     }
 
@@ -1993,7 +2054,7 @@ export class LocalIntelligenceEngine {
       });
     }
 
-    if (this.normalize(domains.curiosity?.score) < 50) {
+    if (this.normalize(domains.curiosity?.score) !== null && this.normalize(domains.curiosity?.score) < 50) {
       push({
         priority: "medium",
         category: "curiosity",
@@ -2001,20 +2062,26 @@ export class LocalIntelligenceEngine {
         action: "استخدم سؤال أو وعد صريح بأول جملة (مثال: كيف/ليش/شو رح يصير).",
         reason: "فجوة معلوماتية واضحة بترفع احتمال الاستمرار بالمشاهدة.",
         expectedEffect: "رفع محتمل بالفضول ونية الاستمرار.",
-        confidence: this.scoreConfidence(domains.curiosity?.score ?? 0)
+        confidence: this.scoreConfidence(domains.curiosity?.score)
       });
     }
 
     if (recommendations.length === 0) {
-      push({
-        priority: "low",
-        category: "general",
-        problem: "لا توجد نقطة ضعف واضحة حسب الإشارات المحلية المتاحة.",
-        action: "حافظ على نفس البنية، وجرّب اختبار A/B على الهوك بفيديوهات مشابهة.",
-        reason: "الإشارات المقاسة ضمن نطاق جيد.",
-        expectedEffect: "استقرار الأداء الحالي.",
-        confidence: CONFIDENCE.MEDIUM
-      });
+      const hasAnyEvidence = Object.values(domains || {}).some(
+        domain => domain && this.normalize(domain.score) !== null
+      );
+
+      if (hasAnyEvidence) {
+        push({
+          priority: "low",
+          category: "general",
+          problem: "لا توجد نقطة ضعف واضحة ضمن الإشارات المقاسة.",
+          action: "حافظ على البنية الحالية، وجرّب اختبار نسخة بديلة من الهوك إذا عندك سبب إبداعي واضح.",
+          reason: "الإشارات المحلية المتاحة لا تكشف نقطة ضعف محددة تستحق تعديلاً إلزامياً.",
+          expectedEffect: "اختبار تحسيني، وليس وعداً بارتفاع الأداء.",
+          confidence: CONFIDENCE.MEDIUM
+        });
+      }
     }
 
     return recommendations;
@@ -2029,58 +2096,93 @@ export class LocalIntelligenceEngine {
 
 
   buildPrediction(context, domains) {
-
     const score = this.weightedAverage({
-      attention: [this.normalize(domains.attention?.score), 0.30],
-      curiosity: [this.normalize(domains.curiosity?.score), 0.20],
-      cognition: [this.normalize(domains.cognition?.score), 0.10],
-      emotion: [this.normalize(domains.emotion?.score), 0.15],
-      narrative: [this.normalize(domains.narrative?.score), 0.10],
-      pacing: [this.normalize(domains.pacing?.score), 0.15]
+      attention: [domains.attention?.score, 0.30],
+      curiosity: [domains.curiosity?.score, 0.20],
+      cognition: [domains.cognition?.score, 0.10],
+      emotion: [domains.emotion?.score, 0.15],
+      narrative: [domains.narrative?.score, 0.10],
+      pacing: [domains.pacing?.score, 0.15]
     });
 
+    const personalSignals = context.personalMemory?.contentSignals?.signals || [];
+    const personalSampleSize = Number(context.personalMemory?.contentSignals?.sampleSize || 0);
+    const accountLearning = context.accountLearning || null;
+    const learningSampleSize = Number(accountLearning?.sampleSize || 0);
+
+    if (score === null) {
+      return {
+        retentionEstimate: null,
+        estimateType: "insufficient_local_evidence",
+        basis: [],
+        platformRetentionAvailable: false,
+        decision: "INSUFFICIENT_EVIDENCE",
+        confidence: CONFIDENCE.LOW,
+        personalLearning: {
+          available: personalSampleSize >= 3,
+          sampleSize: personalSampleSize,
+          signals: personalSignals
+        },
+        accountLearning: {
+          available: learningSampleSize >= 3,
+          sampleSize: learningSampleSize,
+          stage: accountLearning?.stage || "cold-start",
+          adjustment: 0
+        },
+        explanation: "لا توجد إشارات محلية كافية لبناء تقدير مسؤول.",
+        knowledgeSupport: []
+      };
+    }
+
+    let calibratedScore = score;
+    let learningAdjustment = 0;
+
+    if (
+      accountLearning?.profile?.averages &&
+      learningSampleSize >= 3 &&
+      Number.isFinite(Number(accountLearning.profile.averages.overall))
+    ) {
+      const accountAverage = Number(accountLearning.profile.averages.overall);
+      learningAdjustment = Math.max(-8, Math.min(8, (score - accountAverage) * 0.12));
+      calibratedScore = this.clamp(score + learningAdjustment);
+    }
+
     const decision =
-      score >= 65
+      calibratedScore >= 65
         ? "PUBLISH"
-        : score >= 45
+        : calibratedScore >= 45
           ? "PUBLISH AFTER MINOR FIXES"
           : "REWORK";
 
     return {
-
-      retentionEstimate: score,
-
+      retentionEstimate: calibratedScore,
       estimateType: "local_heuristic_proxy",
-
       basis: [
         "local_hook_signal",
         "local_pacing_signal",
         "local_visual_signal",
         "local_text_or_speech_signal",
-        "local_emotion_narrative_rules"
+        ...(learningSampleSize >= 3 ? ["account_learning_calibration"] : [])
       ],
-
       platformRetentionAvailable: false,
-
       decision,
-
-      confidence:
-        this.scoreConfidence(score),
-
+      confidence: this.scoreConfidence(calibratedScore),
+      personalLearning: {
+        available: personalSampleSize >= 3,
+        sampleSize: personalSampleSize,
+        signals: personalSignals
+      },
+      accountLearning: {
+        available: learningSampleSize >= 3,
+        sampleSize: learningSampleSize,
+        stage: accountLearning?.stage || "cold-start",
+        adjustment: Math.round(learningAdjustment * 10) / 10
+      },
       explanation:
-        "هذا تقدير مبني على تجميع إشارات محلية قابلة للقياس (جذب، إيقاع، فكرة، عاطفة، سردية)، وليس ضمانة أداء فعلي على المنصة.",
-
-      knowledgeSupport:
-        this.getRelevantKnowledge(
-          context,
-          ["prediction", "retention"]
-        )
-
+        "هذا تقدير مبني على تجميع إشارات محلية قابلة للقياس، وليس ضمانة أداء فعلي على المنصة.",
+      knowledgeSupport: this.getRelevantKnowledge(context, ["prediction", "retention"])
     };
-
   }
-
-
 
   /* =======================================================
      SUMMARY
@@ -2121,7 +2223,7 @@ export class LocalIntelligenceEngine {
 
     const limitations = [
 
-      "هذا محرك قواعد محلي (Local Reasoning Engine) وليس نموذج ذكاء اصطناعي مدرّب، ويعتمد فقط على إشارات قابلة للقياس من الصورة والصوت والنص.",
+      "هذا محرك قواعد محلي (Local Reasoning Engine) وليس نموذجاً مدرّباً على بيانات أداء المنصات، ويعتمد فقط على إشارات قابلة للقياس من الصورة والصوت والنص.",
 
       "النتائج مؤشرات احتمالية مبنية على الأدلة المتاحة، وليست ضمانة لأداء الفيديو الفعلي على أي منصة."
 
@@ -2154,9 +2256,9 @@ export class LocalIntelligenceEngine {
 
     let points = 0;
 
-    if (context.hook?.score !== undefined) points++;
-    if (context.pacing?.score !== undefined) points++;
-    if (context.visual?.score !== undefined) points++;
+    if (context.hook?.score != null) points++;
+    if (context.pacing?.score != null) points++;
+    if (context.visual?.score != null) points++;
     if (context.speechAvailable) points++;
     if (Array.isArray(evidence) && evidence.length >= 4) points++;
 
@@ -2202,28 +2304,31 @@ export class LocalIntelligenceEngine {
 
 
   normalize(score) {
-    if (score === undefined || score === null || Number.isNaN(Number(score))) {
-      return 0;
+    if (score === undefined || score === null || !Number.isFinite(Number(score))) {
+      return null;
     }
-    return this.clamp(score);
+    return this.clamp(Number(score));
   }
 
 
   weightedAverage(map) {
     let total = 0;
     let weightSum = 0;
+
     for (const key in map) {
       const [value, weight] = map[key];
-      total += (this.normalize(value)) * weight;
+      if (!Number.isFinite(Number(value)) || !Number.isFinite(Number(weight)) || weight <= 0) continue;
+      total += Number(value) * weight;
       weightSum += weight;
     }
-    if (weightSum === 0) return 0;
+
+    if (weightSum === 0) return null;
     return this.clamp(total / weightSum);
   }
 
-
   classifyScore(score) {
     const s = this.normalize(score);
+    if (s === null) return "غير متاح";
     if (s >= 75) return "قوي";
     if (s >= 50) return "متوسط";
     if (s >= 25) return "ضعيف";
@@ -2247,13 +2352,16 @@ export class LocalIntelligenceEngine {
 
   attentionInterpretation(score) {
     const s = this.normalize(score);
+    if (s === null) {
+      return "لا توجد إشارات كافية لقياس الجذب المبكر.";
+    }
     if (s >= 70) {
       return "إشارات الجذب المبكرة قوية نسبياً حسب القياس المحلي.";
     }
     if (s >= 45) {
       return "إشارات الجذب المبكرة متوسطة، في مجال للتحسين بأول ثوانٍ.";
     }
-    return "إشارات الجذب المبكرة ضعيفة، احتمال ترك الفيديو بالثواني الأولى مرتفع نسبياً.";
+    return "إشارة الجذب البصرية المبكرة منخفضة حسب القياس المحلي؛ هذا لا يثبت وحده أن المشاهد سيغادر.";
   }
 
 
@@ -2285,7 +2393,11 @@ export class LocalIntelligenceEngine {
       reasons.push("توجد بنية فكرة يمكن أن تشد الانتباه.");
     }
     if (reasons.length === 0) {
-      reasons.push("الإشارات المحلية المتاحة لا تدعم استمراراً قوياً بشكل واضح.");
+      reasons.push(
+        continueScore === null
+          ? "لا توجد إشارات محلية كافية لبناء تفسير مسؤول للاستمرار."
+          : "الإشارات المحلية المتاحة لا تدعم استمراراً قوياً بشكل واضح."
+      );
     }
     return reasons;
   }
@@ -2294,6 +2406,7 @@ export class LocalIntelligenceEngine {
   calculateRewatchPotential(context) {
     const idea = this.normalize(context.idea?.score);
     const cognition = this.normalize(context.speech?.wordCount ? 60 : 30);
+    if (idea === null || cognition === null) return null;
     return this.clamp(idea * 0.6 + cognition * 0.4);
   }
 
@@ -2301,6 +2414,7 @@ export class LocalIntelligenceEngine {
   calculateSharePotential(context) {
     const emotionalWords = this.countEmotionalSignals(context.transcript);
     const idea = this.normalize(context.idea?.score);
+    if (idea === null) return null;
     return this.clamp(emotionalWords * 0.5 + idea * 0.5);
   }
 
@@ -2309,6 +2423,7 @@ export class LocalIntelligenceEngine {
     const idea = this.normalize(context.idea?.score);
     const wordCount = context.speech?.wordCount || 0;
     const infoDensity = wordCount > 20 ? 65 : 35;
+    if (idea === null) return null;
     return this.clamp(idea * 0.5 + infoDensity * 0.5);
   }
 
@@ -2395,3 +2510,13 @@ export class LocalIntelligenceEngine {
   }
 
 }
+
+
+/* =========================================================
+   SINGLETON
+========================================================= */
+
+export const localIntelligenceEngine =
+  new LocalIntelligenceEngine();
+
+export default localIntelligenceEngine;

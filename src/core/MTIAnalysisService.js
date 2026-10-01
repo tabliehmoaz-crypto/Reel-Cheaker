@@ -51,13 +51,13 @@ import {
 
 import {
   localIntelligenceEngine
-} from "../ai/LocalIntelligenceEngine.js";
+} from "../ai/LocalIntelligenceEngine.js?v=6.4.0";
 
 
 import {
   MTIError,
-  normalizeError
-} from "./MTIError.js";
+  normalizeMTIError
+} from "./MTIError.js?v=6.4.0";
 
 
 
@@ -131,21 +131,14 @@ export class MTIAnalysisService {
         !this.engine
       ) {
 
-        throw new MTIError({
-
-          message:
-            "لم يتم العثور على محرك تحليل الفيديو.",
-
-          type:
-            "engine",
-
-          code:
-            "ANALYSIS_ENGINE_NOT_FOUND",
-
-          stage:
-            "initialization"
-
-        });
+        throw new MTIError(
+          "لم يتم العثور على محرك تحليل الفيديو.",
+          {
+            type: "engine",
+            code: "ANALYSIS_ENGINE_NOT_FOUND",
+            stage: "initialization"
+          }
+        );
 
       }
 
@@ -155,21 +148,14 @@ export class MTIAnalysisService {
         "function"
       ) {
 
-        throw new MTIError({
-
-          message:
-            "محرك التحليل لا يدعم عملية analyze.",
-
-          type:
-            "engine",
-
-          code:
-            "ANALYSIS_ENGINE_INVALID",
-
-          stage:
-            "initialization"
-
-        });
+        throw new MTIError(
+          "محرك التحليل لا يدعم عملية analyze.",
+          {
+            type: "engine",
+            code: "ANALYSIS_ENGINE_INVALID",
+            stage: "initialization"
+          }
+        );
 
       }
 
@@ -180,21 +166,14 @@ export class MTIAnalysisService {
           "function"
       ) {
 
-        throw new MTIError({
-
-          message:
-            "محرك الذكاء المحلي غير جاهز.",
-
-          type:
-            "ai",
-
-          code:
-            "LOCAL_INTELLIGENCE_NOT_READY",
-
-          stage:
-            "initialization"
-
-        });
+        throw new MTIError(
+          "محرك الذكاء المحلي غير جاهز.",
+          {
+            type: "ai",
+            code: "LOCAL_INTELLIGENCE_NOT_READY",
+            stage: "initialization"
+          }
+        );
 
       }
 
@@ -205,21 +184,14 @@ export class MTIAnalysisService {
           "function"
       ) {
 
-        throw new MTIError({
-
-          message:
-            "سياق الذكاء غير جاهز.",
-
-          type:
-            "unknown",
-
-          code:
-            "INTELLIGENCE_CONTEXT_NOT_READY",
-
-          stage:
-            "initialization"
-
-        });
+        throw new MTIError(
+          "سياق الذكاء غير جاهز.",
+          {
+            type: "unknown",
+            code: "INTELLIGENCE_CONTEXT_NOT_READY",
+            stage: "initialization"
+          }
+        );
 
       }
 
@@ -259,7 +231,7 @@ export class MTIAnalysisService {
     } catch (error) {
 
       this.lastError =
-        normalizeError(
+        normalizeMTIError(
           error,
           {
             stage:
@@ -300,11 +272,34 @@ export class MTIAnalysisService {
         Local video analysis
       */
 
-      const localAnalysis =
+      const jobSnapshot =
         await this.pipeline.execute(
           file,
-          options
+          {
+            ...options,
+            saveResult: false
+          }
         );
+
+      const localAnalysis =
+        jobSnapshot?.result || null;
+
+      if (!localAnalysis) {
+        throw new MTIError(
+          "محرك التحليل المحلي لم يُرجع نتيجة قابلة للقراءة.",
+          {
+            type: "engine",
+            code: "LOCAL_ANALYSIS_EMPTY",
+            stage: "local-analysis"
+          }
+        );
+      }
+
+      options.progressCallback?.({
+        stage: "LOCAL_READY",
+        progress: 93,
+        message: "اكتمل التحليل المحلي. عم نبني Intelligence..."
+      });
 
 
       /*
@@ -324,7 +319,30 @@ export class MTIAnalysisService {
               options.includeScientificKnowledge !== false,
 
             includeBenchmarks:
-              options.includeBenchmarks !== false
+              options.includeBenchmarks !== false,
+
+            reelId:
+              options.reelId || null,
+
+            accountProfile:
+              options.accountProfile || null,
+
+            contentAccount:
+              options.contentAccount || null,
+
+            contentAccountId:
+              options.contentAccountId ||
+              options.contentAccount?.id ||
+              null,
+
+            baselineViews:
+              options.baselineViews ?? null,
+
+            followerCount:
+              options.followerCount ?? null,
+
+            contentTypes:
+              options.contentTypes || []
 
           }
         );
@@ -347,11 +365,23 @@ export class MTIAnalysisService {
           }
         );
 
+      options.progressCallback?.({
+        stage: "INTELLIGENCE_COMPLETE",
+        progress: 98,
+        message: "اكتمل Intelligence. عم نتحقق من النتيجة..."
+      });
+
 
       /*
         STEP 4
         Final result
       */
+
+      options.progressCallback?.({
+        stage: "ANALYSIS_COMPLETE",
+        progress: 100,
+        message: "اكتمل تحليل MTI."
+      });
 
       return {
 
@@ -384,7 +414,7 @@ export class MTIAnalysisService {
     } catch (error) {
 
       this.lastError =
-        normalizeError(
+        normalizeMTIError(
           error,
           {
             stage:
@@ -444,13 +474,27 @@ export class MTIAnalysisService {
         await this.pipeline.executeWithJob(
           job,
           file,
-          options
+          {
+            ...options,
+            saveResult: false
+          }
         );
 
 
       const localAnalysis =
-        result?.analysis ||
-        result;
+        result?.result ||
+        null;
+
+      if (!localAnalysis) {
+        throw new MTIError(
+          "محرك التحليل المحلي لم يُرجع نتيجة قابلة للقراءة.",
+          {
+            type: "engine",
+            code: "LOCAL_ANALYSIS_EMPTY",
+            stage: "local-analysis"
+          }
+        );
+      }
 
 
       /*
@@ -470,7 +514,21 @@ export class MTIAnalysisService {
               options.includeScientificKnowledge !== false,
 
             includeBenchmarks:
-              options.includeBenchmarks !== false
+              options.includeBenchmarks !== false,
+
+            reelId:
+              options.reelId || null,
+
+            accountProfile:
+              options.accountProfile || null,
+
+            contentAccount:
+              options.contentAccount || null,
+
+            contentAccountId:
+              options.contentAccountId ||
+              options.contentAccount?.id ||
+              null
 
           }
         );
@@ -516,7 +574,7 @@ export class MTIAnalysisService {
     } catch (error) {
 
       this.lastError =
-        normalizeError(
+        normalizeMTIError(
           error,
           {
             stage:

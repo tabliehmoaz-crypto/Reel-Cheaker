@@ -25,13 +25,13 @@ import {
   attachPrediction,
   attachActualPerformance,
   comparePredictionToReality,
-  addContextVariable,
-  addUserNote,
-  addLearningObservation,
-  addLearningHypothesis,
-  addLearningPattern,
+  addContext,
+  addNote as addUserNote,
+  attachLearning as addLearningObservation,
+  attachLearning as addLearningHypothesis,
+  attachLearning as addLearningPattern,
   addConversationMessage,
-  addExtractedConversationData,
+  saveExtractedData as addExtractedConversationData,
   getExperimentSummary,
   getEngineInfo
 } from "../engine/ExperimentEngine.js";
@@ -562,7 +562,7 @@ export class EngineAdapter {
     try {
 
       const result =
-        await addContextVariable(
+        await addContext(
           id,
           variable
         );

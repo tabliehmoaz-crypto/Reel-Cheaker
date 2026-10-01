@@ -233,6 +233,13 @@ export function searchKnowledge(query, options = {}) {
     return [];
   }
 
+  // Queries are usually multi-topic (e.g. "hook attention curiosity").
+  // Matching the entire phrase against one JSON item made retrieval return
+  // almost nothing. Token matching keeps retrieval local and deterministic.
+  const terms = [...new Set(
+    text.split(/\s+/).map(term => term.trim()).filter(term => term.length >= 2)
+  )];
+
   const requestedCategories = Array.isArray(options.categories)
     ? options.categories
     : Object.keys(knowledgeBase.categories);
@@ -249,19 +256,18 @@ export function searchKnowledge(query, options = {}) {
     for (const item of items) {
       const searchableText = JSON.stringify(item).toLowerCase();
 
-      if (!searchableText.includes(text)) {
-        continue;
-      }
+      const matches = terms.filter(term => searchableText.includes(term));
+      if (!matches.length) continue;
 
       results.push({
         ...item,
-        relevance: 1,
+        relevance: Number((matches.length / terms.length).toFixed(3)),
         source: "MTI Knowledge Base"
       });
     }
   }
 
-  return results.slice(0, limit);
+  return results.sort((a, b) => b.relevance - a.relevance).slice(0, limit);
 }
 
 /**

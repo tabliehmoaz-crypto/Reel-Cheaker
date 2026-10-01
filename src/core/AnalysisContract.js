@@ -1,3 +1,7 @@
+import {
+  createAnalysisResult,
+  validateAnalysisResult as validateCanonicalAnalysisResult
+} from "./MTIAnalysisResult.js";
 /*
   MTI — Analysis Contract
   -----------------------
@@ -12,7 +16,7 @@
   - Preserve account isolation.
 */
 
-export const ANALYSIS_VERSION = "4.0.0";
+export const ANALYSIS_VERSION = "5.1.0";
 
 
 export const ANALYSIS_FEATURES = Object.freeze([
@@ -309,7 +313,7 @@ export function createEmptyPrediction() {
    RESULT
 ===================================================== */
 
-export function createAnalysisResult(data = {}) {
+function createLegacyAnalysisResult(data = {}) {
 
   return {
 
@@ -828,75 +832,8 @@ export function validateAnalysisInput(
    VALIDATE RESULT
 ===================================================== */
 
-export function validateAnalysisResult(
-  result
-) {
-
-  const errors = [];
-
-
-  if (!result) {
-
-    errors.push(
-      "Analysis result is required."
-    );
-
-
-    return {
-
-      valid:
-        false,
-
-      errors
-
-    };
-
-  }
-
-
-  if (!result.version) {
-
-    errors.push(
-      "Analysis result version is missing."
-    );
-
-  }
-
-
-  if (
-    !result.scores ||
-    typeof result.scores !==
-    "object"
-  ) {
-
-    errors.push(
-      "Analysis scores are missing."
-    );
-
-  }
-
-
-  if (
-    result.accountId ===
-    undefined
-  ) {
-
-    errors.push(
-      "Analysis accountId is missing."
-    );
-
-  }
-
-
-  return {
-
-    valid:
-      errors.length === 0,
-
-    errors
-
-  };
-
+export function validateAnalysisResult(result) {
+  return validateCanonicalAnalysisResult(result);
 }
 
 

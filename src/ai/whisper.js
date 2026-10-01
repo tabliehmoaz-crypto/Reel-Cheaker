@@ -34,11 +34,12 @@ env.useBrowserCache = true;
 */
 
 const DESKTOP_MODEL = "Xenova/whisper-base";
+const MOBILE_MODEL = "Xenova/whisper-tiny";
 const TARGET_SAMPLE_RATE = 16000;
 
-// DIAGNOSTIC: disable local Whisper completely.
-// This flag is intentionally false for the crash-isolation test.
-const USE_LOCAL_WHISPER = false;
+// Real local speech analysis is enabled on supported desktop browsers.
+// Mobile is still blocked inside loadWhisper/transcribeVideo to protect RAM.
+const USE_LOCAL_WHISPER = true;
 
 function isMobileDevice() {
   if (typeof navigator === "undefined") return false;
@@ -48,7 +49,7 @@ function isMobileDevice() {
 function getModel() {
   // لا نشغّل Whisper المحلي على الهواتف: هذا المسار هو الأكثر عرضة
   // لاستهلاك RAM/CPU والتسبب بانهيار التبويب.
-  return DESKTOP_MODEL;
+  return isMobileDevice() ? MOBILE_MODEL : DESKTOP_MODEL;
 }
 
 
@@ -64,10 +65,6 @@ async function loadWhisper() {
 
   if (!USE_LOCAL_WHISPER) {
     throw new Error("LOCAL_WHISPER_DISABLED_FOR_DIAGNOSTIC");
-  }
-
-  if (isMobileDevice()) {
-    throw new Error("LOCAL_WHISPER_UNAVAILABLE_ON_MOBILE");
   }
 
   if (transcriber)
@@ -303,12 +300,119 @@ function audioBufferToMono(audioBuffer) {
 // تحليل الكلام
 // -----------------------------------------------------
 
+export async function transcribeAudioBufferChunked(audioBuffer, options = {}) {
+  if (!audioBuffer) throw new Error("لم يتم توفير AudioBuffer.");
+
+  const whisper = await loadWhisper();
+  const sampleRate = audioBuffer.sampleRate || 48000;
+  const channels = audioBuffer.numberOfChannels || 1;
+  const chunkSeconds = Math.max(4, Math.min(Number(options.chunkLength || 12), 15));
+  const overlapSeconds = Math.max(0, Math.min(Number(options.overlap || 1.5), 3));
+  const totalDuration = audioBuffer.duration || (audioBuffer.length / sampleRate);
+  const targetRate = TARGET_SAMPLE_RATE;
+  const segments = [];
+  const texts = [];
+
+  const mono = audioBufferToMono(audioBuffer).data;
+  const samplesPerSecond = targetRate;
+  const chunkSamples = Math.max(1, Math.round(chunkSeconds * samplesPerSecond));
+  const overlapSamples = Math.max(0, Math.round(overlapSeconds * samplesPerSecond));
+  const stepSamples = Math.max(1, chunkSamples - overlapSamples);
+
+  for (let startSample = 0; startSample < mono.length; startSample += stepSamples) {
+    const endSample = Math.min(mono.length, startSample + chunkSamples);
+    const chunk = mono.slice(startSample, endSample);
+    const offset = startSample / samplesPerSecond;
+
+    const result = await whisper(chunk, {
+      chunk_length_s: Math.min(chunkSeconds, 15),
+      stride_length_s: 1,
+      return_timestamps: true,
+      language: options.language || "ar",
+      task: "transcribe"
+    });
+
+    const normalized = normalizeResult(result);
+    if (normalized.text) texts.push(normalized.text);
+
+    for (const segment of normalized.segments) {
+      if (!segment.text) continue;
+      const start = Number.isFinite(segment.start) ? segment.start + offset : offset;
+      const end = Number.isFinite(segment.end) ? segment.end + offset : Math.min(totalDuration, offset + chunkSeconds);
+      segments.push({
+        text: segment.text,
+        start: Number(Math.max(0, start).toFixed(2)),
+        end: Number(Math.min(totalDuration, end).toFixed(2))
+      });
+    }
+
+    if (endSample >= mono.length) break;
+  }
+
+  const deduped = dedupeTranscriptSegments(segments, texts);
+  const text = deduped.text;
+  const cleanSegments = deduped.segments;
+  return {
+    text,
+    segments: cleanSegments,
+    wordCount: text ? text.split(/\s+/).filter(Boolean).length : 0,
+    hasSpeech: cleanSegments.length > 0 || text.length > 0,
+    chunked: true,
+    chunkSeconds,
+    totalDuration: Number(totalDuration.toFixed(2))
+  };
+}
+
+function dedupeTranscriptSegments(segments, fallbackTexts = []) {
+  const sorted = [...segments]
+    .filter((s) => s && String(s.text || "").trim())
+    .map((s) => ({
+      ...s,
+      text: String(s.text || "").replace(/\s+/g, " ").trim(),
+      start: Number.isFinite(Number(s.start)) ? Number(s.start) : null,
+      end: Number.isFinite(Number(s.end)) ? Number(s.end) : null
+    }))
+    .sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
+
+  const clean = [];
+  for (const segment of sorted) {
+    const previous = clean[clean.length - 1];
+    if (
+      previous &&
+      previous.end != null &&
+      segment.start != null &&
+      segment.start <= previous.end + 0.65 &&
+      (
+        previous.text === segment.text ||
+        previous.text.includes(segment.text) ||
+        segment.text.includes(previous.text)
+      )
+    ) {
+      if (segment.text.length > previous.text.length) previous.text = segment.text;
+      previous.end = Math.max(previous.end ?? 0, segment.end ?? previous.end ?? 0);
+      continue;
+    }
+    clean.push(segment);
+  }
+
+  const finalSegments = clean.map((s) => ({
+    text: s.text,
+    start: s.start,
+    end: s.end
+  }));
+
+  const text = finalSegments.length
+    ? finalSegments.map((s) => s.text).join(" ").replace(/\s+/g, " ").trim()
+    : String(fallbackTexts.join(" ") || "").replace(/\s+/g, " ").trim();
+
+  return { text, segments: finalSegments };
+}
+
 export async function transcribeVideo(
   videoFile,
   options = {}
 ) {
 
-  // Hard stop: this diagnostic build must never initialize or run Whisper.
   if (!USE_LOCAL_WHISPER) {
     return {
       text: "",
@@ -328,17 +432,6 @@ export async function transcribeVideo(
 
   }
 
-
-  if (isMobileDevice()) {
-    return {
-      text: "",
-      segments: [],
-      wordCount: 0,
-      hasSpeech: false,
-      unavailable: true,
-      reason: "mobile-safe-mode"
-    };
-  }
 
   const whisper =
     await loadWhisper();

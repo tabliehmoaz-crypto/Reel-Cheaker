@@ -15,7 +15,7 @@
 
 
 export const RESULT_VERSION =
-  "4.0.0";
+  "5.1.0";
 
 
 export const RESULT_STATUS = {
@@ -220,8 +220,14 @@ export function createAnalysisResult(
 
 
     diagnosis:
-      localAnalysis.diagnosis ||
       data.diagnosis ||
+      localAnalysis.diagnosis ||
+      null,
+
+    editPlan:
+      data.editPlan ||
+      data.diagnosis?.editPlan ||
+      localAnalysis.editPlan ||
       null,
 
 
@@ -414,17 +420,18 @@ export function createAnalysisResult(
     ----------------------------------------------------- */
 
 
-    metadata:
-      data.metadata ||
-      {
-
-        source:
-          "local",
-
-        externalAI:
-          false
-
-      }
+    metadata: {
+      ...(localAnalysis.metadata || {}),
+      ...(data.metadata || {}),
+      source: data.metadata?.source || localAnalysis.metadata?.source || "local",
+      externalAI: data.metadata?.externalAI ?? localAnalysis.metadata?.externalAI ?? false,
+      duration:
+        data.metadata?.duration ??
+        localAnalysis.metadata?.duration ??
+        localAnalysis.video?.dimensions?.duration ??
+        data.video?.dimensions?.duration ??
+        null
+    }
 
   };
 
@@ -520,6 +527,53 @@ export function hasAnalysisErrors(
 
 }
 
+
+
+/* =========================================================
+   CANONICAL VALIDATION
+========================================================= */
+
+export function validateAnalysisResult(result) {
+  const errors = [];
+
+  if (!result || typeof result !== "object") {
+    return { valid: false, errors: ["Analysis result is required."] };
+  }
+
+  const required = ["version", "id", "status", "createdAt", "accountId", "reelId", "versionId"];
+  for (const field of required) {
+    if (!(field in result)) errors.push(`Missing result field: ${field}`);
+  }
+
+  if (!Object.values(RESULT_STATUS).includes(result.status)) {
+    errors.push("Invalid analysis result status.");
+  }
+
+  if (!result.scores || typeof result.scores !== "object") {
+    errors.push("Analysis scores are missing.");
+  }
+
+  if (!result.intelligence || typeof result.intelligence !== "object") {
+    errors.push("Intelligence layer is missing.");
+  }
+
+  if (!Array.isArray(result.errors)) {
+    errors.push("Result errors must be an array.");
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+export function assertValidAnalysisResult(result) {
+  const validation = validateAnalysisResult(result);
+  if (!validation.valid) {
+    const error = new Error(`Invalid MTI analysis result: ${validation.errors.join(" ")}`);
+    error.code = "INVALID_ANALYSIS_RESULT";
+    error.validation = validation;
+    throw error;
+  }
+  return result;
+}
 
 
 /* =========================================================

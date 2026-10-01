@@ -11,7 +11,7 @@ export const MTI_CONFIG = Object.freeze({
 
   app: {
     name: "MTI",
-    version: "3.0.0",
+    version: "5.1.0",
     environment: "offline",
     mode: "local-first"
   },
@@ -26,7 +26,7 @@ export const MTI_CONFIG = Object.freeze({
       "reel-engine"
     ],
 
-    version: "3.0.0"
+    version: "5.1.0"
 
   },
 
@@ -127,7 +127,7 @@ export const MTI_CONFIG = Object.freeze({
 
     provider: "google",
 
-    requireAuthentication: false,
+    requireAuthentication: true,
 
     isolationKey: "uid"
 
@@ -162,7 +162,7 @@ export const MTI_CONFIG = Object.freeze({
 
     text: true,
 
-    chatInsights: true,
+    chatInsights: false,
 
     cloudSync: false,
 

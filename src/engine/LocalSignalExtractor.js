@@ -16,6 +16,8 @@
   إرجاع قيمة محافظة مع الإفصاح عن ذلك بدل اختلاق رقم.
 */
 
+import { analyzeSpeech } from "./SpeechIntelligenceEngine.js";
+
 let whisperModulePromise = null;
 
 async function getWhisperModule() {
@@ -33,7 +35,8 @@ async function getWhisperModule() {
 const MAX_FRAME_SAMPLES = 48;
 const MOBILE_MAX_FRAME_SAMPLES = 10;
 
-// DIAGNOSTIC: local Whisper is disabled globally for this crash-isolation test.
+// Whisper is attempted only where the speech engine itself is available.
+// Mobile remains protected by safeTranscribe() and never loads the model.
 const USE_LOCAL_WHISPER = true;
 const FRAME_SAMPLE_SIZE = { width: 64, height: 114 }; // نسبة عمودية تقريبية
 const HOOK_WINDOW_SECONDS = 3;
@@ -51,6 +54,12 @@ export async function extractLocalSignals(videoFile, progressCallback = () => {}
   if (!videoFile) throw new Error("لم يتم اختيار فيديو.");
   if (!videoFile.type?.startsWith("video/")) throw new Error("الملف المختار ليس فيديو.");
 
+  progressCallback({
+    stage: "VALIDATING",
+    progress: 3,
+    message: "تم استلام الفيديو. عم نجهّزه للتحليل..."
+  });
+
   // Mobile/Safari gets a lower-cost real decoding path — not a fake zero-signal fallback.
   // We still decode actual frames. Only expensive full-file audio/Whisper work is optional.
   const metadata = await getVideoMetadata(videoFile);
@@ -60,29 +69,35 @@ export async function extractLocalSignals(videoFile, progressCallback = () => {}
   const visualSignals = await extractVisualSignals(videoFile, metadata, progressCallback);
 
   progressCallback({ stage: "AUDIO", progress: 55, message: "تحليل الإشارة الصوتية..." });
-  const decodedAudio = isMobileDevice() ? null : await decodeAudioOnce(videoFile);
+  // Audio analysis is real on mobile too when the browser can decode the file.
+  // decodeAudioOnce already fails safely and returns null if Safari/codec support
+  // prevents decoding, so we don't need a blanket mobile skip.
+  const decodedAudio = await decodeAudioOnce(videoFile, metadata);
   const audioSignals = decodedAudio ? computeAudioSignals(decodedAudio, metadata) : null;
 
   progressCallback({ stage: "SPEECH", progress: 70, message: "تحليل الكلام..." });
-  const speechResult = await safeTranscribe(videoFile, decodedAudio);
+  const speechResult = await safeTranscribe(videoFile, decodedAudio, metadata);
 
   progressCallback({ stage: "SCORING", progress: 90, message: "ربط الأدلة وبناء الإشارات..." });
 
-  const hook = buildHookSignal(visualSignals, audioSignals);
+  const deliveryPattern = buildDeliveryPattern(speechResult, metadata);
+  const hook = buildHookSignal(visualSignals, audioSignals, speechResult);
   const pacing = buildPacingSignal(visualSignals, metadata);
   const visual = buildVisualQualitySignal(visualSignals);
-  const dropOff = buildDropOffSignal(visualSignals, metadata);
+  const dropOff = buildDropOffSignal(visualSignals, metadata, deliveryPattern);
   const idea = buildIdeaSignal(speechResult, metadata);
   const speech = buildSpeechSignal(speechResult, metadata);
   const technical = buildTechnicalSignal(metadata);
   const scenes = buildSceneAnalysis(visualSignals.frames, metadata);
   const attentionMap = buildAttentionMap(visualSignals.frames, audioSignals, speechResult, metadata, { hook, pacing, dropOff });
 
-  progressCallback({ stage: "COMPLETE", progress: 100, message: "اكتمل الاستخراج المحلي الحقيقي." });
+  progressCallback({ stage: "LOCAL_SIGNALS_READY", progress: 90, message: "اكتمل استخراج الإشارات المحلية الحقيقية." });
 
   return {
     video: { dimensions: metadata },
     hook, pacing, visual, technical, speech, idea, dropOff,
+    deliveryPattern,
+    voiceProfile: speechResult?.voiceProfile || null,
     audio: audioSignals,
     scores: {},
     frames: visualSignals.frames.map((f) => f.thumbnailDataUrl).filter(Boolean),
@@ -382,12 +397,38 @@ function analyzePixels(data) {
    AUDIO SIGNALS (Web Audio API)
 ========================================================= */
 
-async function decodeAudioOnce(videoFile) {
+async function decodeAudioOnce(videoFile, metadata = {}) {
   try {
-    return await extractAudio(videoFile);
+    return await withTimeout(
+      loadAndExtractAudio(videoFile),
+      isMobileDevice() ? 9000 : 12000,
+      "انتهت مهلة تحليل الصوت على هذا المتصفح."
+    );
   } catch (error) {
     console.warn("MTI Audio Decode Error (متابعة بدون تحليل صوتي):", error);
     return null;
+  }
+}
+
+async function loadAndExtractAudio(videoFile) {
+  const AudioContextCtor =
+    typeof window !== "undefined"
+      ? (window.AudioContext || window.webkitAudioContext)
+      : null;
+
+  if (!AudioContextCtor) {
+    throw new Error("المتصفح لا يدعم Web Audio.");
+  }
+
+  const arrayBuffer = await videoFile.arrayBuffer();
+  const audioContext = new AudioContextCtor();
+
+  try {
+    return await audioContext.decodeAudioData(arrayBuffer.slice(0));
+  } finally {
+    try {
+      await audioContext.close();
+    } catch {}
   }
 }
 
@@ -446,8 +487,7 @@ function stdDev(arr) {
    SPEECH (local Whisper — runs fully in-browser)
 ========================================================= */
 
-async function safeTranscribe(videoFile, preDecodedAudioBuffer) {
-  // Hard stop: do not invoke the local Whisper module in this diagnostic build.
+async function safeTranscribe(videoFile, preDecodedAudioBuffer, metadata = {}) {
   if (!USE_LOCAL_WHISPER) {
     return {
       text: "",
@@ -460,30 +500,38 @@ async function safeTranscribe(videoFile, preDecodedAudioBuffer) {
   }
 
   try {
-    // على الهواتف Whisper المحلي ممنوع عمداً لحماية التبويب من ضغط الذاكرة.
-    // باقي التحليل البصري والصوتي يستمر بشكل طبيعي.
-    if (typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "")) {
+    if (!preDecodedAudioBuffer) {
       return {
         text: "",
         wordCount: 0,
         hasSpeech: false,
         segments: [],
         unavailable: true,
-        reason: "mobile-safe-mode"
+        reason: "no-decoded-audio"
       };
     }
 
-    return await withTimeout(
-      transcribeVideo(videoFile, {
-        language: "ar",
-        preDecodedAudioBuffer
-      }),
-      45000,
-      "انتهت مهلة تحميل/تشغيل محرك الكلام المحلي (Whisper)."
-    );
+    const result = await analyzeSpeech(preDecodedAudioBuffer, {
+      language: "ar",
+      // Keep mobile on the crash-safe activity path for now.
+      // We will enable mobile Whisper only after device-safe testing.
+      mobileWhisper: false
+    });
+
+    return {
+      ...result,
+      duration: Number(metadata.duration || 0)
+    };
   } catch (error) {
-    console.warn("MTI Whisper Error (متابعة بدون نص):", error);
-    return { text: "", wordCount: 0, hasSpeech: false, segments: [], unavailable: true };
+    console.warn("MTI Speech Intelligence Error (متابعة بدون نص):", error);
+    return {
+      text: "",
+      wordCount: 0,
+      hasSpeech: false,
+      segments: [],
+      unavailable: true,
+      reason: error?.message || "speech-analysis-failed"
+    };
   }
 }
 
@@ -508,7 +556,7 @@ function clamp(v, min = 0, max = 100) {
   return Math.min(max, Math.max(min, v));
 }
 
-function buildHookSignal(visualSignals, audioSignals) {
+function buildHookSignal(visualSignals, audioSignals, speechResult = null) {
 
   const earlyFrames = visualSignals.frames.filter(
     (f) => f.timestamp <= HOOK_WINDOW_SECONDS
@@ -522,15 +570,32 @@ function buildHookSignal(visualSignals, audioSignals) {
     ? clamp((audioSignals.earlyAvgRms / 0.15) * 100)
     : 0;
 
-  const score = audioSignals
-    ? clamp(visualHookScore * 0.6 + audioHookScore * 0.4)
-    : visualHookScore;
+  const earlySpeech =
+    Boolean(
+      speechResult?.hasSpeech &&
+      Array.isArray(speechResult?.segments) &&
+      speechResult.segments.some(
+        (segment) =>
+          Number(segment?.start ?? 999) < HOOK_WINDOW_SECONDS &&
+          Number(segment?.end ?? segment?.start ?? 0) > 0
+      )
+    );
+
+  const speechPresenceComponent = earlySpeech ? 70 : 0;
+
+  const score = clamp(
+    visualHookScore * 0.45 +
+    audioHookScore * 0.30 +
+    speechPresenceComponent * 0.25
+  );
 
   return {
     score,
     visualComponent: visualHookScore,
     audioComponent: audioSignals ? audioHookScore : null,
-    measuredWindowSeconds: HOOK_WINDOW_SECONDS
+    speechPresenceComponent: earlySpeech ? speechPresenceComponent : null,
+    measuredWindowSeconds: HOOK_WINDOW_SECONDS,
+    basis: "visual_audio_speech_presence"
   };
 }
 
@@ -580,7 +645,7 @@ function buildVisualQualitySignal(visualSignals) {
   };
 }
 
-function buildDropOffSignal(visualSignals, metadata) {
+function buildDropOffSignal(visualSignals, metadata, deliveryPattern = null) {
 
   const frames = visualSignals.frames;
   if (frames.length < 4) return { points: [] };
@@ -599,7 +664,12 @@ function buildDropOffSignal(visualSignals, metadata) {
       frames[i].timestamp > 2.5 &&
       frames[i].timestamp < (metadata.duration || 0) - 1;
 
-    if (isLowChange && isMidVideo) {
+    const likelyIntentionalPause =
+      deliveryPattern?.type === "spoken_setup_pause" &&
+      Number.isFinite(deliveryPattern?.speechEnd) &&
+      frames[i].timestamp >= deliveryPattern.speechEnd;
+
+    if (isLowChange && isMidVideo && !likelyIntentionalPause) {
       points.push({
         stage: "middle",
         timestamp: Number(frames[i].timestamp.toFixed(1)),
@@ -625,6 +695,51 @@ function buildDropOffSignal(visualSignals, metadata) {
   };
 }
 
+function buildDeliveryPattern(speechResult, metadata) {
+  const segments = Array.isArray(speechResult?.segments)
+    ? speechResult.segments
+        .filter((s) => Number.isFinite(Number(s?.start)) && Number.isFinite(Number(s?.end)))
+        .sort((a, b) => Number(a.start) - Number(b.start))
+    : [];
+
+  if (!speechResult?.hasSpeech || !segments.length) {
+    return { type: "unknown", basis: "no_timed_speech", confidence: "low" };
+  }
+
+  const duration = Number(metadata.duration || 0);
+  const speechStart = Number(segments[0].start);
+  const speechEnd = Math.max(...segments.map((s) => Number(s.end)), 0);
+  const finalPause = Math.max(0, duration - speechEnd);
+
+  const pauses = [];
+  for (let i = 1; i < segments.length; i++) {
+    const gap = Number(segments[i].start) - Number(segments[i - 1].end);
+    if (gap >= 0.35) {
+      pauses.push({
+        start: Number(Number(segments[i - 1].end).toFixed(2)),
+        end: Number(Number(segments[i].start).toFixed(2)),
+        duration: Number(gap.toFixed(2))
+      });
+    }
+  }
+
+  const likelyFinalPayoffPause =
+    finalPause >= 0.35 &&
+    finalPause <= 3.5 &&
+    speechEnd >= Math.max(1.0, duration * 0.45);
+
+  return {
+    type: likelyFinalPayoffPause ? "spoken_setup_pause" : "timed_speech",
+    speechStart: Number(speechStart.toFixed(2)),
+    speechEnd: Number(speechEnd.toFixed(2)),
+    finalPause: Number(finalPause.toFixed(2)),
+    pauses,
+    likelyPayoffPause: likelyFinalPayoffPause,
+    basis: "timestamped_speech_and_pause_structure",
+    confidence: likelyFinalPayoffPause ? "medium" : "high"
+  };
+}
+
 const IDEA_STRUCTURE_MARKERS = [
   "بعدين", "لكن", "لأن", "السبب", "النتيجة", "الحل", "المشكلة",
   "أول شي", "بالنهاية", "يعني", "مثلاً", "بالنسبة", "أهم شي"
@@ -635,7 +750,7 @@ function buildIdeaSignal(speechResult, metadata) {
   if (!speechResult?.hasSpeech || !speechResult.text) {
     // بدون كلام، لا يمكن قياس بنية الفكرة من النص؛
     // نعطي قيمة متحفظة بدل اختلاق تقييم.
-    return { score: 30, basis: "no_speech_detected" };
+    return { score: null, available: false, basis: "no_speech_detected" };
   }
 
   const text = speechResult.text;
@@ -667,7 +782,7 @@ function buildSpeechSignal(speechResult, metadata) {
 
   const deliveryScore = speechResult?.hasSpeech
     ? clamp(100 - Math.abs(wordsPerSecond - 2.4) * 22)
-    : 0;
+    : null;
 
   return {
     available: Boolean(speechResult?.hasSpeech),
@@ -676,7 +791,8 @@ function buildSpeechSignal(speechResult, metadata) {
     segments: speechResult?.segments || [],
     analysis: {
       score: deliveryScore,
-      wordsPerSecond: Number(wordsPerSecond.toFixed(2))
+      wordsPerSecond: Number(wordsPerSecond.toFixed(2)),
+      voiceProfile: speechResult?.voiceProfile || null
     }
   };
 }

@@ -32,17 +32,20 @@ import {
 
 import {
   analysisService
-} from "./MTIAnalysisService.js";
+} from "./MTIAnalysisService.js?v=6.4.0";
 
 
 import {
-  createAnalysisResult
+  createAnalysisResult,
+  assertValidAnalysisResult
 } from "./MTIAnalysisResult.js";
 
 
 import {
   resultMemoryBridge
 } from "./MTIResultMemoryBridge.js";
+
+import { diagnoseReel } from "../editing/MTIDiagnosisEngine.js";
 
 
 
@@ -210,6 +213,7 @@ export class MTIAnalysisOrchestrator {
             ...options,
             experimentId,
             accountId: options.accountId || experiment?.accountId || null,
+            contentAccountId: options.contentAccountId || experiment?.contentAccountId || null,
             reelId: options.reelId || experiment?.reelId || null,
             versionId: options.versionId || experiment?.versionId || null,
             versionNumber: options.versionNumber || experiment?.versionNumber || null,
@@ -242,6 +246,11 @@ export class MTIAnalysisOrchestrator {
         Build Unified Result
       */
 
+      const diagnosis = diagnoseReel(rawResult, {
+        experimentId,
+        versionId: options.versionId || experiment?.versionId || null
+      });
+
       const result =
         createAnalysisResult({
 
@@ -249,6 +258,7 @@ export class MTIAnalysisOrchestrator {
 
           experimentId,
           accountId: options.accountId || experiment?.accountId || null,
+          contentAccountId: options.contentAccountId || experiment?.contentAccountId || null,
           reelId: options.reelId || experiment?.reelId || null,
           versionId: options.versionId || experiment?.versionId || null,
           versionNumber: options.versionNumber || experiment?.versionNumber || null,
@@ -267,16 +277,21 @@ export class MTIAnalysisOrchestrator {
 
           recommendations:
             rawResult.recommendations ||
-            rawResult
-              ?.intelligence
-              ?.recommendations ||
-            []
+            rawResult?.intelligence?.recommendations ||
+            [],
+
+          diagnosis,
+          editPlan: diagnosis.editPlan
 
         });
 
+      // One canonical result contract leaves the orchestrator.
+      // Reject malformed results before Memory/UI can consume them.
+      assertValidAnalysisResult(result);
 
 
-      /*
+
+/*
         STEP 7
         Save Complete Result
         into Private Memory
@@ -508,7 +523,7 @@ export class MTIAnalysisOrchestrator {
         "MTIAnalysisOrchestrator",
 
       version:
-        "4.0.0",
+        "5.1.0",
 
       localFirst:
         true,

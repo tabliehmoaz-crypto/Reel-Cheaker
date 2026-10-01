@@ -30,6 +30,10 @@ import {
 } from "../knowledge/MTIKnowledgeBase.js";
 
 import "../knowledge/MTIKnowledgeData.js";
+import { memoryService } from "./MTIMemoryService.js";
+import { getReelRoomContext } from "./MTIContentService.js";
+import { accountLearningEngine } from "../learning/AccountLearningEngine.js";
+import { getAccountProfile, getActiveContentAccount } from "../account/MTIAccountProfileService.js";
 
 
 const CONTEXT_VERSION =
@@ -148,6 +152,43 @@ export class MTIIntelligenceContext {
           : this.knowledge
               .getBenchmarks();
 
+      // Private account learning is read-only here. It never leaves the
+      // account-scoped memory bucket and is kept separate from shared knowledge.
+      let personalMemory = null;
+      let accountLearning = null;
+      let accountProfile = null;
+      let activeContentAccount = null;
+      let reelContext = null;
+      try {
+        memoryService.ensureInitialized();
+        personalMemory = {
+          summary: memoryService.getMemorySummary(),
+          contentSignals: memoryService.getContentSignals()
+        };
+        accountLearning = accountLearningEngine.getSnapshot(
+          options.contentAccount?.id ||
+          getActiveContentAccount()?.id ||
+          null
+        );
+        accountProfile = options.accountProfile || getAccountProfile();
+        activeContentAccount = options.contentAccount || getActiveContentAccount();
+        if (options.reelId) {
+          const room = getReelRoomContext(options.reelId);
+          reelContext = room
+            ? {
+                reelId: room.reelId,
+                latestVersion: room.latestVersion,
+                results: room.results,
+                learning: room.learning,
+                brain: room.brain,
+                ideas: room.ideas
+              }
+            : null;
+        }
+      } catch {
+        personalMemory = null;
+      }
+
 
       /* ---------------------------------------------------
          FINAL CONTEXT
@@ -231,12 +272,29 @@ export class MTIIntelligenceContext {
         knowledge:
           knowledgeContext,
 
+        // Flatten the knowledge context for LocalIntelligenceEngine.
+        // The engine consumes arrays directly; keeping only the nested object
+        // made the scientific/general knowledge layer effectively invisible.
+        relevantKnowledge:
+          knowledgeContext?.relevantKnowledge || [],
+
+        scientificKnowledge:
+          knowledgeContext?.scientificKnowledge || [],
+
+        globalKnowledge:
+          knowledgeContext?.globalKnowledge || null,
+
+        evidencePolicy:
+          knowledgeContext?.evidencePolicy || null,
+
 
         /* -----------------------------------------------
            NEW GENERAL KNOWLEDGE BRAIN
         ----------------------------------------------- */
 
-        generalKnowledge: {
+        generalKnowledge: relevantGeneralKnowledge,
+
+        generalKnowledgeSnapshot: {
 
           version:
             generalKnowledgeSnapshot.version,
@@ -270,6 +328,12 @@ export class MTIIntelligenceContext {
         ----------------------------------------------- */
 
         benchmarks,
+
+        personalMemory,
+        accountLearning,
+        accountProfile,
+        activeContentAccount,
+        reelContext,
 
 
         /* -----------------------------------------------

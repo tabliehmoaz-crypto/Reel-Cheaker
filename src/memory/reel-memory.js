@@ -670,6 +670,13 @@ export function addContext(
 
 }
 
+/*
+  Backward-compatible alias.
+  Older MTI modules may import addContextVariable.
+  Keep both names pointing to the same implementation.
+*/
+export const addContextVariable = addContext;
+
 
 /* =====================================================
    USER NOTES
@@ -1010,6 +1017,11 @@ export function getLearningDataset() {
         accountId:
           experiment.accountId,
 
+        contentAccountId:
+          experiment.contentAccountId ||
+          experiment.metadata?.contentAccountId ||
+          null,
+
         platform:
           experiment.platform,
 
@@ -1237,169 +1249,62 @@ export function getContentSignals() {
     [];
 
 
-  const hookScores =
-    dataset
-      .map(
-        item =>
-          Number(
-            item.analysis?.scores?.hook
-          )
-      )
-      .filter(
-        Number.isFinite
-      );
+  // Build metric/view pairs per experiment. Filtering each array
+  // independently would shift indices and create false correlations.
+  const pairFor = (metric) => dataset
+    .map(item => [
+      Number(item.analysis?.scores?.[metric]),
+      Number(item.actual?.views)
+    ])
+    .filter(([metricValue, views]) => Number.isFinite(metricValue) && Number.isFinite(views));
 
+  const hookPairs = pairFor("hook");
+  const pacingPairs = pairFor("pacing");
+  const visualPairs = pairFor("visual");
 
-  const pacingScores =
-    dataset
-      .map(
-        item =>
-          Number(
-            item.analysis?.scores?.pacing
-          )
-      )
-      .filter(
-        Number.isFinite
-      );
+  const hookCorrelation = correlation(
+    hookPairs.map(pair => pair[0]),
+    hookPairs.map(pair => pair[1])
+  );
 
-
-  const visualScores =
-    dataset
-      .map(
-        item =>
-          Number(
-            item.analysis?.scores?.visual
-          )
-      )
-      .filter(
-        Number.isFinite
-      );
-
-
-  const views =
-    dataset
-      .map(
-        item =>
-          Number(
-            item.actual?.views
-          )
-      )
-      .filter(
-        Number.isFinite
-      );
-
-
-  const hookCorrelation =
-    correlation(
-      hookScores,
-      views
-    );
-
-
-  if (
-    hookCorrelation !== null
-  ) {
-
+  if (hookCorrelation !== null) {
     signals.push({
-
-      type:
-        "hook_vs_views",
-
-      correlation:
-        round(
-          hookCorrelation,
-          3
-        ),
-
-      confidence:
-        confidenceFromSample(
-          dataset.length
-        ),
-
-      interpretation:
-        interpretCorrelation(
-          hookCorrelation,
-          "Hook"
-        )
-
+      type: "hook_vs_views",
+      correlation: round(hookCorrelation, 3),
+      sampleSize: hookPairs.length,
+      confidence: confidenceFromSample(hookPairs.length),
+      interpretation: interpretCorrelation(hookCorrelation, "Hook")
     });
-
   }
 
+  const pacingCorrelation = correlation(
+    pacingPairs.map(pair => pair[0]),
+    pacingPairs.map(pair => pair[1])
+  );
 
-  const pacingCorrelation =
-    correlation(
-      pacingScores,
-      views
-    );
-
-
-  if (
-    pacingCorrelation !== null
-  ) {
-
+  if (pacingCorrelation !== null) {
     signals.push({
-
-      type:
-        "pacing_vs_views",
-
-      correlation:
-        round(
-          pacingCorrelation,
-          3
-        ),
-
-      confidence:
-        confidenceFromSample(
-          dataset.length
-        ),
-
-      interpretation:
-        interpretCorrelation(
-          pacingCorrelation,
-          "Pacing"
-        )
-
+      type: "pacing_vs_views",
+      correlation: round(pacingCorrelation, 3),
+      sampleSize: pacingPairs.length,
+      confidence: confidenceFromSample(pacingPairs.length),
+      interpretation: interpretCorrelation(pacingCorrelation, "Pacing")
     });
-
   }
 
+  const visualCorrelation = correlation(
+    visualPairs.map(pair => pair[0]),
+    visualPairs.map(pair => pair[1])
+  );
 
-  const visualCorrelation =
-    correlation(
-      visualScores,
-      views
-    );
-
-
-  if (
-    visualCorrelation !== null
-  ) {
-
+  if (visualCorrelation !== null) {
     signals.push({
-
-      type:
-        "visual_vs_views",
-
-      correlation:
-        round(
-          visualCorrelation,
-          3
-        ),
-
-      confidence:
-        confidenceFromSample(
-          dataset.length
-        ),
-
-      interpretation:
-        interpretCorrelation(
-          visualCorrelation,
-          "Visual quality"
-        )
-
+      type: "visual_vs_views",
+      correlation: round(visualCorrelation, 3),
+      sampleSize: visualPairs.length,
+      confidence: confidenceFromSample(visualPairs.length),
+      interpretation: interpretCorrelation(visualCorrelation, "Visual quality")
     });
-
   }
 
 
@@ -2991,6 +2896,7 @@ export default {
   saveComparison,
 
   addContext,
+  addContextVariable,
 
   addNote,
 

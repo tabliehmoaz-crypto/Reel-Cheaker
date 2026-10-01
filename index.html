@@ -277,15 +277,15 @@
                   <div class="font-syne font-extrabold text-2xl sm:text-3xl text-brand-navy mt-1" id="valHookScore">--</div>
                 </div>
 
-                <!-- Metric 2: Retention Score -->
+                <!-- Metric 2: Continuation Proxy -->
                 <div class="bg-white/85 border border-black/5 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
-                  <span class="text-[11px] font-inter font-medium text-brand-slate block">Retention Score:</span>
+                  <span class="text-[11px] font-inter font-medium text-brand-slate block">Continuation Proxy:</span>
                   <div class="font-syne font-extrabold text-2xl sm:text-3xl text-brand-navy mt-1" id="valRetentionScore">--</div>
                 </div>
 
-                <!-- Metric 3: Overall Score (Gold Box from Board) -->
+                <!-- Metric 3: Local Prediction Proxy (Gold Box from Board) -->
                 <div class="gold-score-box rounded-2xl p-4 flex flex-col justify-between shadow-md">
-                  <span class="text-[11px] font-syne font-bold text-brand-navy block uppercase tracking-wider">Overall Score:</span>
+                  <span class="text-[11px] font-syne font-bold text-brand-navy block uppercase tracking-wider">Local Prediction Proxy:</span>
                   <div class="font-syne font-extrabold text-3xl sm:text-4xl text-brand-navy mt-1" id="valOverallScore">--</div>
                 </div>
 
@@ -481,11 +481,12 @@
 
   <!-- ================= CLIENT LOGIC ================= -->
   <script type="module">
-    import { mtiCore } from './src/core/MTICore.js?v=4.4';
-    import { initGoogleAuth, logout } from './src/auth/googleAuth.js';
+    import { initGoogleAuth } from './src/auth/googleAuth.js';
+    import { initMTIOnboarding } from './src/account/MTIOnboarding.js';
     import { updateExperiment, saveExperiment, getAllExperiments } from './src/engine/ExperimentEngine.js';
     import { saveReelVideo, getReelVideo } from './src/memory/ReelAssetStore.js';
     import { createReel, createReelVersion, getReel, getReelVersions, getReelHistory } from './src/core/MTIContentService.js';
+    import { getActiveContentAccount } from './src/account/MTIAccountProfileService.js';
 
     // Lucide is visual enhancement only. Never let a blocked CDN stop the app/auth.
     try {
@@ -509,10 +510,32 @@
     const heroSelectVideoBtn = document.getElementById('heroSelectVideoBtn');
     const loginHintText = document.getElementById('loginHintText');
 
-    const engine = mtiCore;
+    let engine = null;
+    let engineLoadPromise = null;
     let isAuthenticated = false;
+
+    async function getMTIEngine() {
+      if (engine) return engine;
+      if (!engineLoadPromise) {
+        engineLoadPromise = import('./src/core/MTICore.js?v=6.4.0')
+          .then((module) => {
+            if (!module?.mtiCore) {
+              throw new Error('MTI Core loaded without mtiCore export.');
+            }
+            engine = module.mtiCore;
+            return engine;
+          })
+          .catch((error) => {
+            engineLoadPromise = null;
+            console.error('[MTI Core Bootstrap] Failed:', error);
+            throw error;
+          });
+      }
+      return engineLoadPromise;
+    }
     let activeReelId = null;
     let activeObjectURL = null;
+    window.__mtiGetActiveReelId = () => activeReelId;
 
     // ---------------------------------------------------------
     // AUTH GATING
@@ -545,17 +568,34 @@
     // الحالة الابتدائية: غير مسجّل دخول
     setAuthenticatedState(false);
 
-    try {
-      initGoogleAuth({
-        onLogin: async (user) => { setAuthenticatedState(true, user); await refreshReelLibrary(); },
-        onLogout: () => { activeReelId = null; setAuthenticatedState(false); document.getElementById('myReelsSection')?.classList.add('hidden'); }
-      });
-    } catch (err) {
-      console.warn('Google Auth waiting for credentials:', err);
+    async function handleMTIAuthState(user) {
+      if (user) {
+        setAuthenticatedState(true, user);
+        await refreshReelLibrary();
+      } else {
+        activeReelId = null;
+        setAuthenticatedState(false);
+        document.getElementById('myReelsSection')?.classList.add('hidden');
+      }
     }
+
+    // Firebase session ownership lives in googleAuth.js.
+    // The UI only renders the authenticated state and starts account onboarding.
+    initGoogleAuth({
+      onLogin: async (user) => {
+        window.__mtiAuthUser = user;
+        await handleMTIAuthState(user);
+        initMTIOnboarding();
+      },
+      onLogout: async () => {
+        window.__mtiAuthUser = null;
+        await handleMTIAuthState(null);
+      }
+    });
 
     document.getElementById('logoutBtn')?.addEventListener('click', async () => {
       try {
+        const { logout } = await import('./src/auth/googleAuth.js?v=5.1.0');
         await logout();
         setAuthenticatedState(false);
       } catch (err) {
@@ -598,6 +638,16 @@
       emptyHeroState.classList.add('hidden');
       dashboardReportContainer.classList.add('hidden');
       scanProgressBar.classList.remove('hidden');
+      scanProgressFill.style.width = '1%';
+      scanPercentLabel.textContent = '1%';
+      scanStageLabel.textContent = 'تهيئة الريل…';
+
+      const reportProgress = (progress = {}) => {
+        const value = Math.max(1, Math.min(100, Number(progress.progress) || 0));
+        scanProgressFill.style.width = value + '%';
+        scanPercentLabel.textContent = Math.round(value) + '%';
+        scanStageLabel.textContent = progress.message || 'MTI عم يحلل الريل…';
+      };
 
       try {
         // -----------------------------------------------------
@@ -624,6 +674,8 @@
         }
 
         activeReelId = reel.reelId;
+        window.dispatchEvent(new CustomEvent('mti:reel-changed', { detail: { reelId: activeReelId } }));
+        reportProgress({ progress: 3, message: 'تم إنشاء هوية الـReel…' });
 
         const asset = await saveReelVideo(file, {
           name: file.name,
@@ -635,17 +687,18 @@
         });
 
         reel.assetId = asset.assetId;
+        reportProgress({ progress: 6, message: 'تم حفظ الفيديو محلياً…' });
         await saveExperiment(reel);
+        reportProgress({ progress: 8, message: 'بدء التحليل الفعلي…' });
 
-        // على الموبايل لا ننشئ decoder ثانٍ للفيديو. هذا يمنع تكرار buffers داخل Safari.
-        const isMobileMTI = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
-        if (!isMobileMTI) {
-          await extractFiveKeyframes(file);
-        }
-
+        // لا ننشئ decoder ثانٍ هنا.
+        // MTI Core يستخرج الإطارات الفعلية ضمن نفس مسار التحليل، وإعادة فتح الفيديو
+        // قبل التحليل كانت تسبب timeout على Safari/iOS وتوقف العملية عند 8%.
+        
         // التحليل الفعلي يمر الآن عبر MTI Core فقط.
         // لا يوجد مسار UI يتجاوز Orchestrator/Contract/Memory.
-        const run = await engine.analyze(file, {
+        const mti = await getMTIEngine();
+        const run = await mti.analyze(file, {
           experimentId: reel.id,
           accountId: reel.accountId,
           reelId: reel.reelId,
@@ -653,13 +706,11 @@
           versionNumber: reel.versionNumber,
           platform: 'instagram',
           progressCallback: (progress) => {
-            scanStageLabel.innerHTML = `<span>${progress.message}</span>`;
-            scanPercentLabel.textContent = `${Math.round(progress.progress)}%`;
-            scanProgressFill.style.width = `${progress.progress}%`;
+            reportProgress(progress);
           }
         });
 
-        const report = run?.analysis ?? run?.result ?? run ?? null;
+        const report = run?.success ? run.analysis : null;
         if (!report) throw new Error('MTI Core لم يُرجع نتيجة تحليل موحّدة.');
         console.log('[MTI V4.4] analysis boundary:', {
           wrapper: run,
@@ -686,9 +737,12 @@
           }
         });
 
+        window.__mtiCurrentFile = file;
         renderBrandReport(report, file.name);
+        renderImprovePanel(report, file, reel);
         await refreshReelLibrary();
         await renderVersionIntelligence(activeReelId);
+        document.dispatchEvent(new CustomEvent('mti:analysis-complete', { detail: { reelId: activeReelId } }));
       } catch (err) {
         console.error(err);
         alert(err.message || 'حدث خطأ أثناء فحص الفيديو');
@@ -713,10 +767,10 @@
     function getScoreSet(version) {
       const intel = version?.analysis?.intelligence || {};
       const journey = Array.isArray(intel.viewerJourney) ? intel.viewerJourney : [];
-      const continuation = journey.find((j) => j.decision === 'continue')?.probability ?? 0;
+      const continuation = journey.find((j) => j.decision === 'continue')?.probability ?? null;
       return {
         hook: intel.attention?.score != null ? Math.round(intel.attention.score) : '--',
-        retention: Math.round(continuation * 100),
+        retention: continuation != null ? Math.round(continuation * 100) : '--',
         overall: intel.prediction?.retentionEstimate != null ? Math.round(intel.prediction.retentionEstimate) : '--'
       };
     }
@@ -727,8 +781,13 @@
       const list = document.getElementById('myReelsList');
       if (!section || !list) return;
 
+      const activeContentAccount = getActiveContentAccount();
       const reels = getAllExperiments()
-        .filter((item) => item.type === 'reel' && item.reelId)
+        .filter((item) =>
+          item.type === 'reel' &&
+          item.reelId &&
+          (!activeContentAccount?.id || item.contentAccountId === activeContentAccount.id)
+        )
         .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
 
       const latestByReel = new Map();
@@ -758,6 +817,7 @@
         const latest = getReel(reelId);
         if (!latest) throw new Error('Reel غير موجود.');
         activeReelId = reelId;
+        window.dispatchEvent(new CustomEvent('mti:reel-opened', { detail: { reelId } }));
 
         const accountId = latest.accountId || 'local';
         const asset = latest.assetId ? await getReelVideo(latest.assetId, accountId) : null;
@@ -771,7 +831,10 @@
         const analysis = latest.analysis;
         if (analysis) {
           dashboardReportContainer.classList.remove('hidden');
+          const latestFile = asset?.blob ? new File([asset.blob], latest.name || 'reel.mp4', { type: asset.blob.type || 'video/mp4' }) : null;
+          window.__mtiCurrentFile = latestFile;
           renderBrandReport(analysis, latest.title || latest.name || 'Reel');
+          renderImprovePanel(analysis, latestFile, latest);
           await renderVersionIntelligence(reelId);
         } else {
           dashboardReportContainer.classList.add('hidden');
@@ -803,8 +866,8 @@
 
       grid.innerHTML = [
         ['Hook', a.hook, b.hook],
-        ['Retention', a.retention, b.retention],
-        ['Overall', a.overall, b.overall]
+        ['Continuation Proxy', a.retention, b.retention],
+        ['Prediction Proxy', a.overall, b.overall]
       ].map(([label, x, y]) => `
         <div class="p-4 rounded-xl bg-brand-navy border border-brand-navyBorder">
           <div class="text-[10px] text-gray-500 uppercase tracking-wider">${label}</div>
@@ -829,6 +892,7 @@
       const version = getReelVersions(reelId).find((item) => item.versionId === versionId);
       if (!version) return;
       activeReelId = reelId;
+      window.dispatchEvent(new CustomEvent('mti:reel-opened', { detail: { reelId, versionId } }));
       const asset = version.assetId ? await getReelVideo(version.assetId, version.accountId || 'local') : null;
       if (asset?.blob) {
         if (activeObjectURL) URL.revokeObjectURL(activeObjectURL);
@@ -838,7 +902,10 @@
       }
       if (version.analysis) {
         dashboardReportContainer.classList.remove('hidden');
-        renderBrandReport(version.analysis, version.title || version.name || `V${version.versionNumber}`);
+        const versionFile = asset?.blob ? new File([asset.blob], version.name || ('reel_v' + version.versionNumber + '.mp4'), { type: asset.blob.type || 'video/mp4' }) : null;
+        window.__mtiCurrentFile = versionFile;
+        renderBrandReport(version.analysis, version.title || version.name || ('V' + version.versionNumber));
+        renderImprovePanel(version.analysis, versionFile, version);
       }
       await renderVersionIntelligence(reelId);
     }
@@ -883,6 +950,19 @@
       const topRec = intel.recommendations?.[0];
       document.getElementById('theOneActionTitle').textContent = topRec?.action || 'لا توجد توصية بأولوية عالية حالياً';
       document.getElementById('theOneActionImpact').textContent = topRec?.expectedEffect || '';
+
+      // Attention Map thumbnails تأتي من الإطارات التي قاسها LocalSignalExtractor
+      // ضمن نفس جلسة التحليل. لا نعيد فتح الفيديو ولا ننشئ decoder ثانياً.
+      const measuredFrames = Array.isArray(local.frames) ? local.frames : [];
+      for (let i = 0; i < 5; i++) {
+        const img = document.getElementById(`thumbFrame${i + 1}`);
+        if (!img) continue;
+        const frame = measuredFrames[Math.min(
+          measuredFrames.length - 1,
+          Math.round((i / 4) * Math.max(measuredFrames.length - 1, 0))
+        )];
+        img.src = typeof frame === 'string' ? frame : '';
+      }
 
       // الهوك: نص فعلي مستخرج (وليس مخترع) + تفسير محلي
       const speechText = local.speech?.text?.trim();
@@ -934,29 +1014,221 @@
     }
     }
 
+
+    // ---------------------------------------------------------
+    // MTI IMPROVE — evidence-backed editing
+    // ---------------------------------------------------------
+    function renderImprovePanel(report, sourceFile, version) {
+      let panel = document.getElementById('mtiImprovePanel');
+      if (!panel) {
+        panel = document.createElement('section');
+        panel.id = 'mtiImprovePanel';
+        panel.className = 'mt-6 p-5 rounded-2xl bg-brand-navy border border-brand-navyBorder';
+        dashboardReportContainer.insertAdjacentElement('afterend', panel);
+      }
+
+      const plan = report?.diagnosis?.editPlan || report?.editPlan || null;
+      const operations = Array.isArray(plan?.operations) ? plan.operations : [];
+      if (!plan || !operations.length) {
+        panel.innerHTML = `
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <div class="text-brand-gold text-[10px] uppercase tracking-widest">MTI Improve</div>
+              <h3 class="text-white font-bold mt-1">ما في تعديل آمن كفاية حالياً</h3>
+              <p class="text-gray-500 text-xs mt-1">MTI ما رح يخترع قصّات أو تغييرات بدون دليل زمني واضح.</p>
+            </div>
+          </div>`;
+        return;
+      }
+
+      panel.innerHTML = `
+        <div class="flex flex-col gap-4">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <div class="text-brand-gold text-[10px] uppercase tracking-widest">MTI Improve</div>
+              <h3 class="text-white font-bold mt-1">خلّي MTI يعدّل الريل</h3>
+              <p class="text-gray-500 text-xs mt-1">${escapeHTML(plan.summary || '')}</p>
+            </div>
+            <span class="text-[10px] text-gray-500">${operations.length} اقتراح</span>
+          </div>
+          <div id="mtiEditOperations" class="space-y-2">
+            ${operations.map((op, i) => `
+              <label class="flex items-start gap-3 p-3 rounded-xl bg-black/10 border border-brand-navyBorder cursor-pointer">
+                <input type="checkbox" data-edit-index="${i}" class="mt-1 accent-brand-gold" ${op.executable ? 'checked' : 'disabled'}>
+                <span class="flex-1">
+                  <span class="block text-sm text-white">${escapeHTML(op.action)} · ${escapeHTML(op.target || 'video')}</span>
+                  <span class="block text-[11px] text-gray-500 mt-1">${escapeHTML(op.reason || '')}</span>
+                  <span class="block text-[10px] text-brand-gold/70 mt-1">confidence ${Math.round((op.confidence || 0) * 100)}%</span>
+                </span>
+              </label>`).join('')}
+          </div>
+          <button id="mtiApplyEditsBtn" type="button" class="w-full px-4 py-3 rounded-xl bg-brand-gold text-brand-navy font-bold disabled:opacity-40">
+            Apply MTI edits → V2 + Re-analyze
+          </button>
+          <div id="mtiEditStatus" class="hidden text-xs text-gray-400"></div>
+        </div>`;
+
+      panel.querySelector('#mtiApplyEditsBtn')?.addEventListener('click', async () => {
+        const file = sourceFile || window.__mtiCurrentFile;
+        if (!file) {
+          alert('ما عاد في نسخة الفيديو الأصلية متاحة. ارفع الريل من جديد.');
+          return;
+        }
+
+        const selected = [...panel.querySelectorAll('[data-edit-index]:checked')]
+          .map(input => operations[Number(input.dataset.editIndex)])
+          .filter(Boolean);
+
+        if (!selected.length) {
+          alert('اختار تعديل واحد على الأقل.');
+          return;
+        }
+
+        const status = panel.querySelector('#mtiEditStatus');
+        const button = panel.querySelector('#mtiApplyEditsBtn');
+        button.disabled = true;
+        status.classList.remove('hidden');
+        status.textContent = 'MTI عم يطبّق التعديلات فعلياً…';
+
+        try {
+          const selectedPlan = { ...plan, operations: selected, executableOperations: selected.filter(op => op.executable) };
+          const mti = await getMTIEngine();
+          const editedFile = await mti.renderEdit(file, selectedPlan);
+          status.textContent = 'تم التعديل. عم ننشئ V2 ونرجع نحلّلها…';
+
+          const next = await createReelVersion(version?.reelId || activeReelId, {
+            name: editedFile.name,
+            title: (version?.title || version?.name || 'Reel') + ' · MTI Edit',
+            platform: 'instagram',
+            status: 'DRAFT',
+            metadata: {
+              sourceVersionId: version?.versionId || null,
+              editPlan: selectedPlan,
+              editOperations: selected
+            }
+          });
+
+          const asset = await saveReelVideo(editedFile, {
+            name: editedFile.name,
+            mimeType: editedFile.type,
+            reelId: next.reelId,
+            versionId: next.versionId,
+            accountId: next.accountId,
+            createdAt: next.createdAt
+          });
+          next.assetId = asset.assetId;
+          next.metadata = {
+            ...(next.metadata || {}),
+            assetId: asset.assetId,
+            editPlan: selectedPlan,
+            editOperations: selected
+          };
+          await saveExperiment(next);
+
+          const run = await engine.analyze(editedFile, {
+            experimentId: next.id,
+            accountId: next.accountId,
+            reelId: next.reelId,
+            versionId: next.versionId,
+            versionNumber: next.versionNumber,
+            platform: 'instagram',
+            progressCallback: (progress) => {
+              status.textContent = progress?.message || 'عم نعيد التحليل…';
+            }
+          });
+
+          if (!run?.success || !run?.analysis?.intelligence) {
+            throw new Error(run?.error || 'V2 ما رجعت بنتيجة Intelligence كاملة.');
+          }
+
+          activeReelId = next.reelId;
+          window.__mtiCurrentFile = editedFile;
+          renderBrandReport(run.analysis, editedFile.name);
+          renderImprovePanel(run.analysis, editedFile, next);
+          await refreshReelLibrary();
+          await renderVersionIntelligence(next.reelId);
+          status.textContent = 'تم إنشاء V2 وتحليلها. قارنها مع V1 قبل ما تقرر النشر.';
+        } catch (error) {
+          console.error('[MTI Improve]', error);
+          status.textContent = error?.message || 'فشل تنفيذ التعديل.';
+          alert(error?.message || 'فشل تنفيذ التعديل.');
+          button.disabled = false;
+        }
+      });
+    }
+
     // Helper: Extract 5 live canvas frames for Attention Map
     async function extractFiveKeyframes(file) {
       const v = document.createElement('video');
-      v.src = URL.createObjectURL(file);
+      const objectURL = URL.createObjectURL(file);
+      v.src = objectURL;
       v.muted = true;
-      await new Promise(r => { v.onloadeddata = r; });
+      v.playsInline = true;
+      v.setAttribute('playsinline', '');
 
-      const canvas = document.createElement('canvas');
-      canvas.width = 160;
-      canvas.height = 284;
-      const ctx = canvas.getContext('2d');
-      const duration = v.duration || 10;
-      const timestamps = [0.2, duration * 0.25, duration * 0.5, duration * 0.75, Math.max(0.5, duration - 0.5)];
+      try {
+        await Promise.race([
+          new Promise((resolve, reject) => {
+            v.onloadeddata = resolve;
+            v.onerror = () => reject(new Error('تعذّر تجهيز الإطارات المصغّرة.'));
+          }),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('انتهت مهلة تجهيز الإطارات المصغّرة.')), 12000)
+          )
+        ]);
 
-      for (let i = 0; i < 5; i++) {
-        v.currentTime = timestamps[i];
-        await new Promise(r => { v.onseeked = r; });
-        ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
-        const img = document.getElementById(`thumbFrame${i + 1}`);
-        if (img) img.src = canvas.toDataURL('image/jpeg', 0.7);
+        const canvas = document.createElement('canvas');
+        canvas.width = 160;
+        canvas.height = 284;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const duration = v.duration || 10;
+        const timestamps = [
+          0.2,
+          duration * 0.25,
+          duration * 0.5,
+          duration * 0.75,
+          Math.max(0.5, duration - 0.5)
+        ];
+
+        for (let i = 0; i < 5; i++) {
+          await Promise.race([
+            new Promise((resolve) => {
+              const onSeeked = () => {
+                v.removeEventListener('seeked', onSeeked);
+                resolve();
+              };
+              v.addEventListener('seeked', onSeeked);
+              try {
+                v.currentTime = Math.min(timestamps[i], Math.max(duration - 0.05, 0));
+              } catch {
+                v.removeEventListener('seeked', onSeeked);
+                resolve();
+              }
+            }),
+            new Promise((resolve) => setTimeout(resolve, 1500))
+          ]);
+
+          ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+          const img = document.getElementById(`thumbFrame${i + 1}`);
+          if (img) img.src = canvas.toDataURL('image/jpeg', 0.7);
+        }
+      } finally {
+        try {
+          v.pause();
+          v.removeAttribute('src');
+          v.load();
+        } catch {}
+        URL.revokeObjectURL(objectURL);
       }
-      URL.revokeObjectURL(v.src);
     }
+  </script>
+  <script type="module">
+    import { initMTIWorkspaceNavigation } from './src/ui/MTIWorkspaceNavigation.js?v=1.0.0';
+    import { initMTIProductExperience } from './src/ui/MTIProductExperience.js?v=1.0.0';
+    initMTIWorkspaceNavigation();
+    initMTIProductExperience();
   </script>
 </body>
 </html>

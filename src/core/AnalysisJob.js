@@ -399,10 +399,16 @@ export class AnalysisJob {
     options = {}
   ) {
 
+    // Video/File/Blob inputs must never pass through JSON cloning.
+    // JSON.stringify(File) becomes {}, which used to make the Reel Engine
+    // receive an empty object and fail before the first progress callback.
+    const isBinaryInput =
+      typeof Blob !== "undefined" && input instanceof Blob;
+
     this.input =
-      safeClone(
-        input
-      );
+      isBinaryInput
+        ? input
+        : safeClone(input);
 
 
     this.accountId =
@@ -444,7 +450,8 @@ export class AnalysisJob {
   =================================================== */
 
   async process(
-    processor
+    processor,
+    processorOptions = {}
   ) {
 
     if (
@@ -495,9 +502,10 @@ export class AnalysisJob {
       const processedData =
         await processor(
 
-          safeClone(
-            this.input
-          ),
+          // Preserve the original File/Blob. The processor decodes the video.
+          this.input,
+
+          processorOptions,
 
           this
 
@@ -1167,7 +1175,13 @@ export class AnalysisJob {
         {},
 
       accountId =
-        null
+        null,
+
+      processorOptions =
+        {},
+
+      saveResult =
+        true
 
     } = config;
 
@@ -1187,7 +1201,8 @@ export class AnalysisJob {
 
       const processedData =
         await this.process(
-          processor
+          processor,
+          processorOptions
         );
 
 
@@ -1201,16 +1216,16 @@ export class AnalysisJob {
 
 
       /*
-        CRITICAL:
-
-        التحليل الأساسي يُحفظ
-        قبل التوصيات.
-
-        إذا فشلت التوصيات،
-        النتيجة تبقى محفوظة.
+        The caller may continue enriching the raw result before persistence.
+        MTIAnalysisService uses this mode so Intelligence is never persisted
+        as a separate/partial pipeline result.
       */
 
-      await this.save();
+      if (saveResult) {
+        await this.save();
+      } else {
+        this._record("save_deferred");
+      }
 
 
       if (performance) {

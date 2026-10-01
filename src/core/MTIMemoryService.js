@@ -56,6 +56,9 @@ import {
 ========================================================= */
 
 
+/* Compatibility export for legacy modules that import this binding directly. */
+export const addContextVariable = (...args) => addContext(...args);
+
 export class MTIMemoryService {
 
 
@@ -397,6 +400,20 @@ export class MTIMemoryService {
 
   }
 
+
+
+  /* Backward-compatible alias for older MTI modules. */
+  addContextVariable(
+    experimentId,
+    variable
+  ) {
+
+    return this.addContext(
+      experimentId,
+      variable
+    );
+
+  }
 
 
   /* =======================================================

@@ -15,13 +15,17 @@ import {
   memoryService
 } from "../core/MTIMemoryService.js";
 
+import {
+  getActiveContentAccount
+} from "../account/MTIAccountProfileService.js";
+
 
 // ============================================================
 // ENGINE CONFIG
 // ============================================================
 
 export const ENGINE_VERSION =
-  "4.0.0";
+  "5.1.0";
 
 
 export const EXPERIMENT_STATUS = {
@@ -295,6 +299,11 @@ function toStoredExperiment(
 
     accountId:
       experiment.accountId ||
+      null,
+
+    contentAccountId:
+      experiment.contentAccountId ||
+      experiment.metadata?.contentAccountId ||
       null,
 
     input:
@@ -574,6 +583,11 @@ export function createExperiment(
     accountId:
       data.accountId ||
       memoryService.getActiveAccountId() ||
+      null,
+
+    contentAccountId:
+      data.contentAccountId ||
+      getActiveContentAccount()?.id ||
       null,
 
     type:
@@ -1138,7 +1152,8 @@ export async function comparePredictionToReality(
 
       prediction.overall ??
       prediction.score ??
-      prediction.predictedScore
+      prediction.predictedScore ??
+      prediction.retentionEstimate
 
     );
 
@@ -1147,7 +1162,8 @@ export async function comparePredictionToReality(
     normalizeScore(
 
       actual.overall ??
-      actual.score
+      actual.score ??
+      actual.performanceScore
 
     );
 
