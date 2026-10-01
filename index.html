@@ -767,10 +767,10 @@
     function getScoreSet(version) {
       const intel = version?.analysis?.intelligence || {};
       const journey = Array.isArray(intel.viewerJourney) ? intel.viewerJourney : [];
-      const continuation = journey.find((j) => j.decision === 'continue')?.probability ?? 0;
+      const continuation = journey.find((j) => j.decision === 'continue')?.probability ?? null;
       return {
         hook: intel.attention?.score != null ? Math.round(intel.attention.score) : '--',
-        retention: Math.round(continuation * 100),
+        retention: continuation != null ? Math.round(continuation * 100) : '--',
         overall: intel.prediction?.retentionEstimate != null ? Math.round(intel.prediction.retentionEstimate) : '--'
       };
     }
