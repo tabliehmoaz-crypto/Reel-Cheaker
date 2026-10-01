@@ -785,16 +785,13 @@ export class LocalIntelligenceEngine {
 
     const continueScore =
       this.weightedAverage({
-
         hook: [hookScore, 0.35],
-
         pacing: [pacingScore, 0.20],
-
         visual: [visualScore, 0.20],
-
         idea: [ideaScore, 0.25]
-
       });
+
+    const hasContinuationEvidence = continueScore !== null;
 
 
     return [
@@ -804,7 +801,7 @@ export class LocalIntelligenceEngine {
         decision: "continue",
 
         probability:
-          continueScore / 100,
+          hasContinuationEvidence ? continueScore / 100 : null,
 
         stage:
           "opening",
@@ -2074,14 +2071,13 @@ export class LocalIntelligenceEngine {
 
 
   buildPrediction(context, domains) {
-
     const score = this.weightedAverage({
-      attention: [this.normalize(domains.attention?.score), 0.30],
-      curiosity: [this.normalize(domains.curiosity?.score), 0.20],
-      cognition: [this.normalize(domains.cognition?.score), 0.10],
-      emotion: [this.normalize(domains.emotion?.score), 0.15],
-      narrative: [this.normalize(domains.narrative?.score), 0.10],
-      pacing: [this.normalize(domains.pacing?.score), 0.15]
+      attention: [domains.attention?.score, 0.30],
+      curiosity: [domains.curiosity?.score, 0.20],
+      cognition: [domains.cognition?.score, 0.10],
+      emotion: [domains.emotion?.score, 0.15],
+      narrative: [domains.narrative?.score, 0.10],
+      pacing: [domains.pacing?.score, 0.15]
     });
 
     const personalSignals = context.personalMemory?.contentSignals?.signals || [];
@@ -2089,8 +2085,30 @@ export class LocalIntelligenceEngine {
     const accountLearning = context.accountLearning || null;
     const learningSampleSize = Number(accountLearning?.sampleSize || 0);
 
-    // Account learning is deliberately a small calibration signal, not a replacement
-    // for the video's measured signals. It only activates after 3 real performances.
+    if (score === null) {
+      return {
+        retentionEstimate: null,
+        estimateType: "insufficient_local_evidence",
+        basis: [],
+        platformRetentionAvailable: false,
+        decision: "INSUFFICIENT_EVIDENCE",
+        confidence: CONFIDENCE.LOW,
+        personalLearning: {
+          available: personalSampleSize >= 3,
+          sampleSize: personalSampleSize,
+          signals: personalSignals
+        },
+        accountLearning: {
+          available: learningSampleSize >= 3,
+          sampleSize: learningSampleSize,
+          stage: accountLearning?.stage || "cold-start",
+          adjustment: 0
+        },
+        explanation: "لا توجد إشارات محلية كافية لبناء تقدير مسؤول.",
+        knowledgeSupport: []
+      };
+    }
+
     let calibratedScore = score;
     let learningAdjustment = 0;
 
@@ -2112,54 +2130,34 @@ export class LocalIntelligenceEngine {
           : "REWORK";
 
     return {
-
       retentionEstimate: calibratedScore,
-
       estimateType: "local_heuristic_proxy",
-
       basis: [
         "local_hook_signal",
         "local_pacing_signal",
         "local_visual_signal",
         "local_text_or_speech_signal",
-        "local_emotion_narrative_rules",
         ...(learningSampleSize >= 3 ? ["account_learning_calibration"] : [])
       ],
-
       platformRetentionAvailable: false,
-
       decision,
-
-      confidence:
-        this.scoreConfidence(calibratedScore),
-
+      confidence: this.scoreConfidence(calibratedScore),
       personalLearning: {
         available: personalSampleSize >= 3,
         sampleSize: personalSampleSize,
         signals: personalSignals
       },
-
       accountLearning: {
         available: learningSampleSize >= 3,
         sampleSize: learningSampleSize,
         stage: accountLearning?.stage || "cold-start",
         adjustment: Math.round(learningAdjustment * 10) / 10
       },
-
       explanation:
-        "هذا تقدير مبني على تجميع إشارات محلية قابلة للقياس (جذب، إيقاع، فكرة، عاطفة، سردية)، وليس ضمانة أداء فعلي على المنصة.",
-
-      knowledgeSupport:
-        this.getRelevantKnowledge(
-          context,
-          ["prediction", "retention"]
-        )
-
+        "هذا تقدير مبني على تجميع إشارات محلية قابلة للقياس، وليس ضمانة أداء فعلي على المنصة.",
+      knowledgeSupport: this.getRelevantKnowledge(context, ["prediction", "retention"])
     };
-
   }
-
-
 
   /* =======================================================
      SUMMARY
@@ -2281,28 +2279,31 @@ export class LocalIntelligenceEngine {
 
 
   normalize(score) {
-    if (score === undefined || score === null || Number.isNaN(Number(score))) {
-      return 0;
+    if (score === undefined || score === null || !Number.isFinite(Number(score))) {
+      return null;
     }
-    return this.clamp(score);
+    return this.clamp(Number(score));
   }
 
 
   weightedAverage(map) {
     let total = 0;
     let weightSum = 0;
+
     for (const key in map) {
       const [value, weight] = map[key];
-      total += (this.normalize(value)) * weight;
+      if (!Number.isFinite(Number(value)) || !Number.isFinite(Number(weight)) || weight <= 0) continue;
+      total += Number(value) * weight;
       weightSum += weight;
     }
-    if (weightSum === 0) return 0;
+
+    if (weightSum === 0) return null;
     return this.clamp(total / weightSum);
   }
 
-
   classifyScore(score) {
     const s = this.normalize(score);
+    if (s === null) return "غير متاح";
     if (s >= 75) return "قوي";
     if (s >= 50) return "متوسط";
     if (s >= 25) return "ضعيف";
